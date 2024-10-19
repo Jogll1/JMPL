@@ -17,7 +17,8 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.Scanner;
+
+import com.jmpl.Scanner;
 
 public class JMPL {
     /** Boolean to ensure code which contains an error is not executed.*/
@@ -78,13 +79,13 @@ public class JMPL {
      * @param source a byte array as a String containing the source code
      */
     private static void run(String source) {
-        // Scanner scanner = new Scanner(source);
-        // List<Token> tokens = scanner.scanTokens();
+        Scanner scanner = new Scanner(source);
+        List<Token> tokens = scanner.scanTokens();
 
-        // // Test to print tokens
-        // for(Token token : tokens) {
-        //     System.out.println(token);
-        // }
+        // Test to print tokens
+        for(Token token : tokens) {
+            System.out.println(token);
+        }
     }
 
     //#region Error Handling
@@ -100,7 +101,8 @@ public class JMPL {
     }
 
     /**
-     * Helper function for error(). Prints the error message to the console.
+     * Helper function for the {@link #error(int, String)} method. Prints the error message to the console.
+     * Ensures code is still scanned but not executed if any errors are detected.
      * 
      * @param line    the line number where the error occured
      * @param where   

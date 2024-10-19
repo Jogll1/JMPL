@@ -18,8 +18,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
 
-import com.jmpl.Scanner;
-
 public class JMPL {
     /** Boolean to ensure code which contains an error is not executed.*/
     static boolean hadError = false;

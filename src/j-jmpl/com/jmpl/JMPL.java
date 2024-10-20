@@ -1,3 +1,8 @@
+// To run: cd to root of this repo and run:
+// java -cp ./bin com.jmpl.JMPL <args>
+// To compile to build: cd to root of repo and run:
+// javac -d ./bin ./src/j-jmpl/com/jmpl/*.java
+
 /**
  * The main class that defines the JMPL language.
  * Implementation based of the book Crafting Interpreters by Bob Nystrom.
@@ -16,10 +21,14 @@ import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 public class JMPL {
-    /** Boolean to ensure code which contains an error is not executed.*/
+    /** Character set used by the interpreter. */
+    static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
+
+    /** Boolean to ensure code which contains an error is not executed. */
     static boolean hadError = false;
 
     public static void main(String[] args) throws IOException {
@@ -41,7 +50,9 @@ public class JMPL {
      */
     private static void runFile(String path) throws IOException {
         byte[] bytes = Files.readAllBytes(Paths.get(path));
-        run(new String(bytes, Charset.defaultCharset()));
+        String source = new String(bytes, DEFAULT_CHARSET);
+
+        run(source);
         
         // Indicate an error in the exit code
         if (hadError) System.exit(65); // Data format error
@@ -53,7 +64,8 @@ public class JMPL {
      * @throws IOException if an I/O error occurs
      */
     private static void runPrompt() throws IOException {
-        InputStreamReader input = new InputStreamReader(System.in);
+        // For some reason, doesn't support certain unicode characters
+        InputStreamReader input = new InputStreamReader(System.in, DEFAULT_CHARSET);
         BufferedReader reader = new BufferedReader(input);
 
         // Infinite REPL
@@ -61,7 +73,9 @@ public class JMPL {
             System.out.println("> ");
             String line = reader.readLine();
 
-            // Break loop on null line (^D)
+            System.out.println(line);
+
+            // Break loop on null line (^D ?)
             if(line == null) break;
 
             run(line);
@@ -107,7 +121,7 @@ public class JMPL {
      * @param message the message detailing the error
      */
     private static void report(int line, String where, String message) {
-        System.err.println("[line ]" + line + "] Error" + where + ": " + message);
+        System.err.println("[line " + line + "] Error" + where + ": " + message);
         hadError = true;
     }
 

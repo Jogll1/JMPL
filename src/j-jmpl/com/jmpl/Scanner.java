@@ -43,6 +43,7 @@ class Scanner {
         keywords.put("out",    TokenType.OUT);
         keywords.put("return", TokenType.RETURN);
         keywords.put("func",   TokenType.FUNCTION);
+        keywords.put("in",     TokenType.IN); // Alternative to '∈'
     }
 
     Scanner (String source) {
@@ -84,7 +85,6 @@ class Scanner {
             case '.': addToken(TokenType.DOT); break;
             case '-': addToken(TokenType.MINUS); break;
             case '+': addToken(TokenType.PLUS); break;
-            case '*': addToken(TokenType.ASTERISK); break;
             case '^': addToken(TokenType.CARET); break;
             case '%': addToken(TokenType.PERCENT); break;
             case ';': addToken(TokenType.SEMICOLON); break;
@@ -111,10 +111,19 @@ class Scanner {
                 if(match('/')) {
                     // If it is a comment, keep consuming until end of the line
                     while (peek() != '\n' && !isAtEnd()) advance();
+                } else if(match('*')) {
+                    // If it is a multi-line comment, keep consuming until closed off
+                    while ((peek() != '*' || peekNext() != '/') && !isAtEnd()) advance();
                 } else {
                     addToken(TokenType.SLASH);
                 }
                 break;
+            case '*': 
+                if(!match('/')) {
+                    // Doesn't continue comment if / is missed after an * in a multi-line comment?
+                    // Only register an '*' if it is not closing a multi-line comment
+                    addToken(TokenType.ASTERISK); break;
+                }
             // Whitesapce and newlines
             case ' ':
             case '\r':
@@ -132,7 +141,7 @@ class Scanner {
                 }
                 else {
                     // Else return an error
-                    JMPL.error(line, "Unexpected character.");
+                    JMPL.error(line, "Unexpected character: '" + c + "'.");
                 }
                 break;
         }
@@ -162,7 +171,7 @@ class Scanner {
     private void number() {
         // Does not detect leading '.'
 
-        while (!isDigit(peek())) advance();
+        while (isDigit(peek())) advance();
 
         // Look for the fractional part
         if(peek() == '.' && isDigit(peekNext())) {
@@ -219,8 +228,7 @@ class Scanner {
     }
 
     /**
-     * Get the next characters in the source code (one character lookahead). Only supports
-     * peeking 1 or 2 characters at most.
+     * Gets the next character in the source code (one character lookahead). This is the character pointed to by current.
      * 
      * @return the next character of the source or null character if at end of file
      */
@@ -230,7 +238,7 @@ class Scanner {
     }
 
     /**
-     * Gets the character two ahead in the source code. Used for getting a second character of look ahead.
+     * Gets the character two ahead in the source code. Used for looking ahead two spaces.
      * 
      * @return the character two ahead or null character if at end of file
      */

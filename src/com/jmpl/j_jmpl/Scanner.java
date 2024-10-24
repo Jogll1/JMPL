@@ -7,7 +7,7 @@
  * @version 0.1
  */
 
-package com.jmpl;
+package com.jmpl.j_jmpl;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -93,6 +93,10 @@ class Scanner {
             case '∈': addToken(TokenType.IN); break;
             case '#': addToken(TokenType.HASHTAG); break;
             case '≠': addToken(TokenType.NOT_EQUAL); break;
+            case '≥': addToken(TokenType.GREATER_EQUAL); break;
+            case '≤': addToken(TokenType.LESS_EQUAL); break;
+            case '→': addToken(TokenType.MAPS_TO); break;
+            case '⇒': addToken(TokenType.IMPLIES); break;
             // Switch one or two character symbols
             case '=':
                 addToken(match('=') ? TokenType.EQUAL_EQUAL : TokenType.EQUAL);

@@ -6,7 +6,7 @@
  * @version 0.1
  */
 
-package com.jmpl;
+package com.jmpl.j_jmpl;
 
 class Token {
     final TokenType type;

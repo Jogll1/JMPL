@@ -1,4 +1,4 @@
-package com.jmpl;
+package com.jmpl.j_jmpl;
 
 enum TokenType {
     // Single-character tokens - some can be represented by words
@@ -12,11 +12,11 @@ enum TokenType {
     // One or two character tokens 
     // This is when a common character can be followed by another
     // To Do: add support for unicode of these
-    EQUAL, EQUAL_EQUAL,                                // = ==
+    EQUAL, EQUAL_EQUAL,                                // = == (≡?)
     NOT, NOT_EQUAL,                                    // ¬ ¬= (≠)
-    GREATER, GREATER_EQUAL,                            // > >=
-    LESS, LESS_EQUAL,                                  // < <=
-    MAPS_TO, IMPLIES,                                  // -> =>
+    GREATER, GREATER_EQUAL,                            // > >= (≥)
+    LESS, LESS_EQUAL,                                  // < <= (≤)
+    MAPS_TO, IMPLIES,                                  // -> => (→, ⇒)
 
     // Literals
     IDENTIFIER, STRING, NUMBER,

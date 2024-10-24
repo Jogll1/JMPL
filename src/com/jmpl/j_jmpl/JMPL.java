@@ -1,11 +1,12 @@
 // To run: cd to root of this repo and run:
-// java -cp ./bin com.jmpl.JMPL <args>
+// java -cp ./bin com.jmpl.j_jmpl.JMPL <args>
 // To compile to build: cd to root of repo and run:
-// javac -d ./bin ./src/j-jmpl/com/jmpl/*.java
+// javac -d ./bin ./src/com/jmpl/j-jmpl/*.java
 
 /**
  * The main class that defines the JMPL language.
  * Implementation based of the book Crafting Interpreters by Bob Nystrom.
+ * Requires chcp 65001 to work on terminal (on Windows).
  * 
  * @author Joel Luckett
  * @version 0.1
@@ -13,7 +14,7 @@
 
 // To Do: Implemment ErrorReporter interface that passes to scanner and parser
 
-package com.jmpl;
+package com.jmpl.j_jmpl;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -70,12 +71,10 @@ public class JMPL {
 
         // Infinite REPL
         for(;;) {
-            System.out.println("> ");
+            System.out.print("> ");
             String line = reader.readLine();
 
-            System.out.println(line);
-
-            // Break loop on null line (^D ?)
+            // Break loop on null line (^D on Linux, ^C on Windows)
             if(line == null) break;
 
             run(line);
@@ -117,7 +116,7 @@ public class JMPL {
      * Ensures code is still scanned but not executed if any errors are detected.
      * 
      * @param line    the line number where the error occured
-     * @param where   
+     * @param where   the type of error
      * @param message the message detailing the error
      */
     private static void report(int line, String where, String message) {

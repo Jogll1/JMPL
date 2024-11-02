@@ -47,6 +47,9 @@ public class GenerateAst {
         writer.println();
         writer.println("abstract class " + baseName + " {");
 
+        // Add the visitor pattern interface
+        defineVisitor(writer, baseName, types);
+
         // The AST classes
         for(String type : types) {
             String className = type.split(":")[0].trim();
@@ -54,14 +57,36 @@ public class GenerateAst {
             defineType(writer, baseName, className, fields);
         }
 
+        // The base accept() method for the visitor interface
+        writer.println("    abstract <R> R accept(Visitor<R> visitor);");
+
         writer.println("}");
         writer.close();
     }
 
     /**
+     * Generates the visitor pattern interface.
+     * 
+     * @param writer   the writer of the base class
+     * @param baseName the name of the base class
+     * @param types    a list of types of ast that can be generated. Each element of the list in the format: 'name : parameters'
+     */
+    private static void defineVisitor(PrintWriter writer, String baseName, List<String> types) {
+        writer.println("    interface Visitor<R> {");
+
+        for(String type : types) {
+            String typeName = type.split(":")[0].trim();
+            writer.println("        R visit" + typeName + baseName + "(" + typeName + " " + baseName.toLowerCase() + ");");
+        }
+
+        writer.println("    }");
+        writer.println();
+    }
+
+    /**
      * Method to write types of abstract syntax tree to the base class.
      * 
-     * @param writer    the write of the base class
+     * @param writer    the writer of the base class
      * @param baseName  the name of the base class
      * @param className the name of the sub class
      * @param fieldList String of the parameters of the subclass
@@ -88,6 +113,14 @@ public class GenerateAst {
         }
 
         writer.println("        }");
+
+        // Visitor pattern
+        writer.println();
+        writer.println("        @Override");
+        writer.println("        <R> R accept(Visitor<R> visitor) {");
+        writer.println("            return visitor.visit" + className + baseName + "(this);");
+        writer.println("        }");
+
         writer.println("    }");
         writer.println();
     }

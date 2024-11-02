@@ -1,3 +1,5 @@
+package com.jmpl.j_jmpl;
+
 /**
  * A way of printer abstract-syntax trees nicely for interpretation.
  * Implementation based of the book Crafting Interpreters by Bob Nystrom.
@@ -5,10 +7,7 @@
  * @author Joel Luckett
  * @version 0.1
  */
-
-package com.jmpl.j_jmpl;
-
-public class AstPrinter implements Expr.Visitor<String> {
+class AstPrinter implements Expr.Visitor<String> {
     String print(Expr expr) {
         return expr.accept(this);
     }

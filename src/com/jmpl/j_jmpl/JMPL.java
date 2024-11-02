@@ -3,17 +3,6 @@
 // To compile to build: cd to root of repo and run:
 // javac -d ./bin ./src/com/jmpl/j_jmpl/*.java
 
-/**
- * The main class that defines the JMPL language.
- * Implementation based of the book Crafting Interpreters by Bob Nystrom.
- * Requires chcp 65001 to work on terminal (on Windows).
- * 
- * @author Joel Luckett
- * @version 0.1
- */
-
-// To Do: Implemment ErrorReporter interface that passes to scanner and parser
-
 package com.jmpl.j_jmpl;
 
 import java.io.BufferedReader;
@@ -25,6 +14,15 @@ import java.nio.file.Paths;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+/**
+ * The main class that defines the JMPL language.
+ * Implementation based of the book Crafting Interpreters by Bob Nystrom.
+ * Requires chcp 65001 to work on terminal (on Windows).
+ * To Do: Implemment ErrorReporter interface that passes to scanner and parser
+ * 
+ * @author Joel Luckett
+ * @version 0.1
+ */
 public class JMPL {
     /** Character set used by the interpreter. */
     static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;

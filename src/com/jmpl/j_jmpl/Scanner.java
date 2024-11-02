@@ -1,3 +1,10 @@
+package com.jmpl.j_jmpl;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 /**
  * Scanner class for j-jmpl. It reads the input source code character by character
  * and generate tokens from it.
@@ -6,14 +13,6 @@
  * @author Joel Luckett
  * @version 0.1
  */
-
-package com.jmpl.j_jmpl;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 class Scanner {
     private final String source;
     private final List<Token> tokens = new ArrayList<>();

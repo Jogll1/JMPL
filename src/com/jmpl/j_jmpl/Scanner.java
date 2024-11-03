@@ -8,6 +8,7 @@ import java.util.Map;
 /**
  * Scanner class for j-jmpl. It reads the input source code character by character
  * and generate tokens from it.
+ * <p>
  * Implementation based of the book Crafting Interpreters by Bob Nystrom.
  * 
  * @author Joel Luckett
@@ -109,7 +110,7 @@ class Scanner {
             case '<':
                 addToken(match('=') ? TokenType.LESS_EQUAL : TokenType.LESS);
                 break;
-            // Case for / as comments are defined with //
+            // Case for / as comments are defined with // or /* */
             case '/':
                 if(match('/')) {
                     // If it is a comment, keep consuming until end of the line

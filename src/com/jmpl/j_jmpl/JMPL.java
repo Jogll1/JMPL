@@ -15,20 +15,26 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
- * The main class that defines the JMPL language.
- * Implementation based of the book Crafting Interpreters by Bob Nystrom.
- * Requires chcp 65001 to work on terminal (on Windows).
+ * The main class that defines j-jmpl, an interpreter for the JMPL language written in Java.
+ * Requires chcp 65001 for use with UTF-8 characters in the terminal (on Windows).
+ * <p>
  * To Do: Implemment ErrorReporter interface that passes to scanner and parser
+ * <p>
+ * Implementation based of the book Crafting Interpreters by Bob Nystrom.
  * 
  * @author Joel Luckett
  * @version 0.1
  */
 public class JMPL {
-    /** Character set used by the interpreter. */
+    /** Default character set used by the interpreter. */
     static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
 
     /** Boolean to ensure code which contains an error is not executed. */
     static boolean hadError = false;
+    /** Boolean to ensure code which contains a runtime error is exited. */
+    static boolean hadRuntimeError = false;
+
+    private static Interpreter interpreter = new Interpreter();
 
     public static void main(String[] args) throws IOException {
         if(args.length > 1) {
@@ -55,6 +61,7 @@ public class JMPL {
         
         // Indicate an error in the exit code
         if (hadError) System.exit(65); // Data format error
+        if (hadRuntimeError) System.exit(70); // Software error
     }
 
     /**
@@ -96,7 +103,7 @@ public class JMPL {
         // Stop if there is a syntax error
         if(hadError) return;
 
-        System.out.println(new AstPrinter().print(expression));
+        interpreter.interpret(expression);
     }
 
     //#region Error Handling
@@ -137,6 +144,16 @@ public class JMPL {
             report(token.line, " at '" + token.lexeme + "'", message);
         }
     }
+
+    /**
+     * Prints a runtime error to the console.
+     * 
+     * @param error a {@link RuntimeError} 
+     */
+    static void runtimeError(RuntimeError error) {
+        System.err.println(error.getMessage() + "\n [line " + error.token.line + "]");
+        hadRuntimeError = true;
+    } 
 
     //#endregion
 }

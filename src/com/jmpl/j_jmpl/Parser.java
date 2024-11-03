@@ -5,16 +5,18 @@ import java.util.List;
 /**
  * Parser class for j-jmpl. Takes in a list of tokens and generates the AST or detects errors and notifies the user.
  * Follows Recursive Descent Parsing.
+ * <p>
  * Follows the precedence (highest to lowest):
- * Primary: true, false, null, literals, parentheses
- * Unary: ! - 
- * Factor: / *
- * Term: - +
- * Comparison: > >= < <=
- * Equality: == !=
- * 
- * To Do: add my other operators
- * 
+ * <ul>
+ * <li>Primary: true, false, null, literals, parentheses
+ * <li>Unary: ! - 
+ * <li>Factor: / *
+ * <li>Term: - +
+ * <li>Comparison: > >= < <=
+ * <li>Equality: == !=
+ * </ul>
+ * To Do: add my other operators.
+ * <p>
  * Implementation based of the book Crafting Interpreters by Bob Nystrom.
  * 
  * @author Joel Luckett
@@ -281,7 +283,7 @@ class Parser {
         while(!isAtEnd()) {
             if(previous().type == TokenType.SEMICOLON) return;
 
-            // Switch the tokens that start a statement
+            // Switch the tokens that should start a statement
             switch(peek().type) {
                 case TokenType.FUNCTION:
                 case TokenType.LET:
@@ -291,8 +293,9 @@ class Parser {
                 case TokenType.OUT:
                 case TokenType.RETURN:
                     return;
-                // default:
-                    // break;
+                default:
+                    // If another token is found
+                    break;
             }
 
             advance();

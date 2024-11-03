@@ -1,7 +1,9 @@
 package com.jmpl.j_jmpl;
 
 /**
- * A way of printing abstract-syntax trees nicely for readability.
+ * A way of printing abstract-syntax trees nicely for readability. Traverses an expression tree and parenthesises expressions
+ * to show the order of execution.
+ * <p>
  * Implementation based of the book Crafting Interpreters by Bob Nystrom.
  * 
  * @author Joel Luckett

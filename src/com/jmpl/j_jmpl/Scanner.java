@@ -116,7 +116,11 @@ class Scanner {
                     while (peek() != '\n' && !isAtEnd()) advance();
                 } else if(match('*')) {
                     // If it is a multi-line comment, keep consuming until closed off
-                    while ((peek() != '*' || peekNext() != '/') && !isAtEnd()) advance();
+                    while ((peek() != '*' || peekNext() != '/') && !isAtEnd()) {
+                        // Increment line counter manually when scanning multi-line comments
+                        if(peek() == '\n') line++;
+                        advance();
+                    }
                 } else {
                     addToken(TokenType.SLASH);
                 }

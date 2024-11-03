@@ -90,17 +90,19 @@ public class JMPL {
     private static void run(String source) {
         Scanner scanner = new Scanner(source);
         List<Token> tokens = scanner.scanTokens();
+        Parser parser = new Parser(tokens);
+        Expr expression = parser.parse();
 
-        // Test to print tokens
-        for(Token token : tokens) {
-            System.out.println(token);
-        }
+        // Stop if there is a syntax error
+        if(hadError) return;
+
+        System.out.println(new AstPrinter().print(expression));
     }
 
     //#region Error Handling
 
     /**
-     * Prints an error message to the console to provide information on syntax errors.
+     * Prints an error message to the console to report syntax errors at a given line.
      * 
      * @param line    the line number where the error occured
      * @param message the message detailing the error
@@ -114,12 +116,26 @@ public class JMPL {
      * Ensures code is still scanned but not executed if any errors are detected.
      * 
      * @param line    the line number where the error occured
-     * @param where   the type of error
+     * @param where   where the error occured
      * @param message the message detailing the error
      */
     private static void report(int line, String where, String message) {
         System.err.println("[line " + line + "] Error" + where + ": " + message);
         hadError = true;
+    }
+    
+    /**
+     * Overload of {@link #error(int, String)} to report an error at a given token.
+     * 
+     * @param token   the error token
+     * @param message the error message
+     */
+    static void error(Token token, String message) {
+        if(token.type == TokenType.EOF) {
+            report(token.line, " at end", message);
+        } else {
+            report(token.line, " at '" + token.lexeme + "'", message);
+        }
     }
 
     //#endregion

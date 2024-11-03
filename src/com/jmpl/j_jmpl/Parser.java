@@ -12,6 +12,7 @@ import java.util.List;
  * Term: - +
  * Comparison: > >= < <=
  * Equality: == !=
+ * 
  * To Do: add my other operators
  * 
  * Implementation based of the book Crafting Interpreters by Bob Nystrom.
@@ -20,6 +21,8 @@ import java.util.List;
  * @version 0.1
  */
 class Parser {
+    private static class ParseError extends RuntimeException {}
+
     private final List<Token> tokens;
     /** Pointer to the next token to be parsed. */
     private int current = 0;
@@ -28,6 +31,25 @@ class Parser {
         this.tokens = tokens;
     }
 
+    /**
+     * Initial method to start the parser.
+     * 
+     * @return an {@link Expr} expression
+     */
+    Expr parse() {
+        try{
+            return expression();
+        } catch(ParseError e) {
+            // Return null if an error occurs
+            return null;
+        }
+    }
+
+    /**
+     * Starts the precedence chain from the bottom?
+     * 
+     * @return an {@link Expr} expression
+     */
     private Expr expression() {
         return equality();
     }
@@ -154,12 +176,15 @@ class Parser {
             consume(TokenType.RIGHT_PAREN, "Expect ')' after expression.");
             return new Expr.Grouping(expr);
         }
+
+        // Throw an error if unexpected token
+        throw error(peek(), "Expression expected.");
     }
 
     /**
-     * Checks to see if the current token has any of the given types.
+     * Checks to see if the current token is any of the given types.
      * 
-     * @param types a list of TokenTypes to check against
+     * @param types a list of {@link TokenType}s to check against
      * @return      if the current token matches to one of the given types
      */
     private boolean match(TokenType... types) {
@@ -174,7 +199,21 @@ class Parser {
     }
 
     /**
-     * Returns true if the current token is of a given type
+     * Checks a token against a desired type which is consumed if it is a match. If not, it throws an error.
+     * 
+     * @param type    the expected token to consume
+     * @param message the potential error message if the token is not found
+     * @return        the current token if it is the desired token
+     * @throws error  signified by the message parameter, thrown if the desired token is not found
+     */
+    private Token consume(TokenType type, String message) {
+        if(check(type)) return advance();
+
+        throw error(peek(), message);
+    }
+
+    /**
+     * Returns true if the current token is of a given type.
      * 
      * @param type the type to check
      * @return     whether current token matches the given type
@@ -185,7 +224,7 @@ class Parser {
     }
 
     /**
-     * Consume the current token and turn it. Increments the current token pointer
+     * Consume the current token and returns it. Increments the current token pointer.
      * 
      * @return the current token
      */
@@ -219,5 +258,44 @@ class Parser {
      */
     private Token previous() {
         return tokens.get(current - 1);
+    }
+
+    /**
+     * Shows an error to the user.
+     * 
+     * @param token   the token that caused an error
+     * @param message the error message
+     * @return        a {@link ParseError}
+     */
+    private ParseError error(Token token, String message) {
+        JMPL.error(token, message);
+        return new ParseError();
+    }
+    
+    /**
+     * Synchronises the parser by discarding tokens until we reach the start of the next statement.
+     */
+    private void synchronise() {
+        advance();
+
+        while(!isAtEnd()) {
+            if(previous().type == TokenType.SEMICOLON) return;
+
+            // Switch the tokens that start a statement
+            switch(peek().type) {
+                case TokenType.FUNCTION:
+                case TokenType.LET:
+                case TokenType.FOR:
+                case TokenType.IF:
+                case TokenType.WHILE:
+                case TokenType.OUT:
+                case TokenType.RETURN:
+                    return;
+                // default:
+                    // break;
+            }
+
+            advance();
+        }
     }
 }

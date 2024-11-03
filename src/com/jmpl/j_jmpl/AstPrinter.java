@@ -1,7 +1,7 @@
 package com.jmpl.j_jmpl;
 
 /**
- * A way of printer abstract-syntax trees nicely for interpretation.
+ * A way of printing abstract-syntax trees nicely for readability.
  * Implementation based of the book Crafting Interpreters by Bob Nystrom.
  * 
  * @author Joel Luckett

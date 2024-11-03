@@ -149,7 +149,7 @@ class Scanner {
                 }
                 else {
                     // Else return an error
-                    JMPL.error(line, "Unexpected character: '" + c + "'.");
+                    JMPL.error(line, ErrorType.SYNTAX, "Unexpected character: '" + c + "'.");
                 }
                 break;
         }
@@ -209,7 +209,7 @@ class Scanner {
         }
 
         if(isAtEnd()) {
-            JMPL.error(line, "Unterminated string");
+            JMPL.error(line, ErrorType.TYPE, "Unterminated string");
             return;
         }
         

@@ -10,9 +10,11 @@ package com.jmpl.j_jmpl;
  */
 public class RuntimeError extends RuntimeException {
     final Token token;
+    final ErrorType type;
 
-    RuntimeError(Token token, String message) {
+    RuntimeError(Token token, ErrorType type, String message) {
         super(message);
         this.token = token;
+        this.type = type;
     }
 }

@@ -175,12 +175,12 @@ class Parser {
             Expr expr = expression();
 
             // Call an error if a corresponding right parentheses is not found
-            consume(TokenType.RIGHT_PAREN, "Expect ')' after expression.");
+            consume(TokenType.RIGHT_PAREN, ErrorType.SYNTAX, "Expected ')' after expression");
             return new Expr.Grouping(expr);
         }
 
         // Throw an error if unexpected token
-        throw error(peek(), "Expression expected.");
+        throw error(peek(), ErrorType.SYNTAX, "Expression expected");
     }
 
     /**
@@ -208,10 +208,10 @@ class Parser {
      * @return        the current token if it is the desired token
      * @throws error  signified by the message parameter, thrown if the desired token is not found
      */
-    private Token consume(TokenType type, String message) {
+    private Token consume(TokenType type, ErrorType errorType, String message) {
         if(check(type)) return advance();
 
-        throw error(peek(), message);
+        throw error(peek(), ErrorType.SYNTAX, message);
     }
 
     /**
@@ -266,11 +266,12 @@ class Parser {
      * Shows an error to the user.
      * 
      * @param token   the token that caused an error
+     * @param type    the type of error
      * @param message the error message
      * @return        a {@link ParseError}
      */
-    private ParseError error(Token token, String message) {
-        JMPL.error(token, message);
+    private ParseError error(Token token, ErrorType type, String message) {
+        JMPL.error(token, type, message);
         return new ParseError();
     }
     

@@ -48,15 +48,17 @@ public class Interpreter implements Expr.Visitor<Object> {
                 }
 
                 // String concatenation
-                if(left instanceof String && right instanceof String) {
-                    return (String)left + (String)right;
+                if(left instanceof String || right instanceof String) {
+                    return stringify(left) + stringify(right);
                 }
 
-                throw new RuntimeError(expr.operator, "Operands must be both numbers or strings.");
+                throw new RuntimeError(expr.operator, ErrorType.TYPE, "Invalid operand type(s)");
             case TokenType.ASTERISK:
                 checkNumberOperands(expr.operator, left, right);
                 return (double)left * (double)right;
             case TokenType.SLASH:
+                if(isZero(right)) throw new RuntimeError(expr.operator, ErrorType.ZERO_DIVISION, "Division by 0");
+
                 checkNumberOperands(expr.operator, left, right);
                 return (double)left / (double)right;
             case TokenType.NOT_EQUAL: return !isEqual(left, right);
@@ -111,7 +113,7 @@ public class Interpreter implements Expr.Visitor<Object> {
         if(operand instanceof Double) return;
 
         // If not, throw an error
-        throw new RuntimeError(operator, "Operand must be a number.");
+        throw new RuntimeError(operator, ErrorType.TYPE, "Invalid operand type(s).");
     }
 
     /**
@@ -124,7 +126,7 @@ public class Interpreter implements Expr.Visitor<Object> {
     private void checkNumberOperands(Token operator, Object... operands) {
         // Check if any operand is not a number
         for(Object operand : operands) {
-            if(!(operand instanceof Double)) throw new RuntimeError(operator, "Operands must be numbers.");
+            if(!(operand instanceof Double)) throw new RuntimeError(operator, ErrorType.TYPE, "Operands must be numbers");
         }
     }
 
@@ -140,7 +142,7 @@ public class Interpreter implements Expr.Visitor<Object> {
         // What cases are false
         if(object == null) return false;
         if(object instanceof String && ((String)object).isEmpty()) return false;
-        if(object instanceof Double && (Double)object == 0) return false;
+        if(isZero(object)) return false;
         if(object instanceof Boolean) return (boolean)object;
         
         // Everything else is true
@@ -162,7 +164,7 @@ public class Interpreter implements Expr.Visitor<Object> {
     }
     
     /**
-     * Converts a value into a string.
+     * Formats an object into a string.
      * 
      * @param object the object to be converted to a string
      * @return       the stringified value
@@ -174,14 +176,38 @@ public class Interpreter implements Expr.Visitor<Object> {
             String text = object.toString();
             
             // Truncate terminating zero
-            if(text.endsWith(".0")) {
-                text = text.substring(0, text.length() - 2);
-            }
+            text = truncateZeros(text);
 
             return text;
         }
 
         return object.toString();
+    }
+
+    /**
+     * Removes the '.0' at the end of a number casted to a string.
+     *  
+     * @param text th input string
+     * @return     the truncated string
+     */
+    private String truncateZeros(String text) {
+        String s = text;
+
+        if(text.endsWith(".0")) {
+            s = s.substring(0, s.length() - 2);
+        }
+
+        return s;
+    }
+    
+    /**
+     * Returns true if an object is equal to 0.
+     * 
+     * @param object the input object
+     * @return       whether the object is zero
+     */
+    private boolean isZero(Object object) {
+        return object instanceof Double && (Double)object == 0;
     }
 
     /**

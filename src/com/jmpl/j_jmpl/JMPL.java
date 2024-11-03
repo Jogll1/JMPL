@@ -112,10 +112,11 @@ public class JMPL {
      * Prints an error message to the console to report syntax errors at a given line.
      * 
      * @param line    the line number where the error occured
+     * @param type    the type of error
      * @param message the message detailing the error
      */
-    static void error(int line, String message) {
-        report(line, "", message);
+    static void error(int line, ErrorType type, String message) {
+        report(line, type, "", message);
     }
 
     /**
@@ -123,11 +124,12 @@ public class JMPL {
      * Ensures code is still scanned but not executed if any errors are detected.
      * 
      * @param line    the line number where the error occured
+     * @param type    the type of error
      * @param where   where the error occured
      * @param message the message detailing the error
      */
-    private static void report(int line, String where, String message) {
-        System.err.println("[line " + line + "] Error" + where + ": " + message);
+    private static void report(int line, ErrorType type, String where, String message) {
+        System.err.println("[line " + line + "] " + type.getName() + where + ": " + message + ".");
         hadError = true;
     }
     
@@ -135,13 +137,14 @@ public class JMPL {
      * Overload of {@link #error(int, String)} to report an error at a given token.
      * 
      * @param token   the error token
+     * @param type    the type of error
      * @param message the error message
      */
-    static void error(Token token, String message) {
+    static void error(Token token, ErrorType type, String message) {
         if(token.type == TokenType.EOF) {
-            report(token.line, " at end", message);
+            report(token.line, type, " at end", message);
         } else {
-            report(token.line, " at '" + token.lexeme + "'", message);
+            report(token.line, type, " at '" + token.lexeme + "'", message);
         }
     }
 
@@ -151,7 +154,7 @@ public class JMPL {
      * @param error a {@link RuntimeError} 
      */
     static void runtimeError(RuntimeError error) {
-        System.err.println(error.getMessage() + "\n [line " + error.token.line + "]");
+        System.err.println("[line " + error.token.line + "] " + error.type.getName() + ": " + error.getMessage() + ".");
         hadRuntimeError = true;
     } 
 

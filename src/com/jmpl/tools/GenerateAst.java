@@ -1,6 +1,5 @@
 /**
  * Script for generating abstract syntax tree types.
- * Implementation based of the book Crafting Interpreters by Bob Nystrom.
  * 
  * @author Joel Luckett
  * @version 0.1
@@ -23,11 +22,17 @@ public class GenerateAst {
         String outputDir = args[0];
 
         defineAst(outputDir, "Expr", Arrays.asList(
-        "Binary : Expr left, Token operator, Expr right",
+        "Binary   : Expr left, Token operator, Expr right",
              "Grouping : Expr expression",
-             "Literal : Object value",
-             "Unary : Token operator, Expr right"
+             "Literal  : Object value",
+             "Unary    : Token operator, Expr right",
+             "Variable : Token name"
         ));
+
+        // defineAst(outputDir, "Stmt", Arrays.asList(
+        // "Expression : Expr expression",
+        //      "Output     : Expr expression"
+        // ));
     }
     
     /**

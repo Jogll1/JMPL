@@ -8,8 +8,6 @@ import java.util.Map;
 /**
  * Scanner class for j-jmpl. It reads the input source code character by character
  * and generate tokens from it.
- * <p>
- * Implementation based of the book Crafting Interpreters by Bob Nystrom.
  * 
  * @author Joel Luckett
  * @version 0.1
@@ -30,8 +28,8 @@ class Scanner {
 
     static {
         keywords = new HashMap<>();
-        keywords.put("and",    TokenType.AND);
-        keywords.put("or",     TokenType.OR);
+        keywords.put("and",    TokenType.AND); // Alternative to '∧'
+        keywords.put("or",     TokenType.OR); // Alternative to '∨'
         keywords.put("true",   TokenType.TRUE);
         keywords.put("false",  TokenType.FALSE);
         keywords.put("let",    TokenType.LET);

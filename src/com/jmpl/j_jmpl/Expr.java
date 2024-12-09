@@ -1,11 +1,7 @@
 package com.jmpl.j_jmpl;
 
-// import java.util.List;
-
 /**
  * Abstract class for expressions. Combines values and operators to create a new value.
- * <p> 
- * Implementation based of the book Crafting Interpreters by Bob Nystrom.
  * 
  * @author Joel Luckett
  * @version 0.1
@@ -16,6 +12,7 @@ abstract class Expr {
         R visitGroupingExpr(Grouping expr);
         R visitLiteralExpr(Literal expr);
         R visitUnaryExpr(Unary expr);
+        R visitVariableExpr(Variable expr);
     }
 
     static class Binary extends Expr {
@@ -35,9 +32,6 @@ abstract class Expr {
         }
     }
 
-    /**
-     * Expressions using explicit parentheses.
-     */
     static class Grouping extends Expr {
         final Expr expression;
 
@@ -76,6 +70,19 @@ abstract class Expr {
         @Override
         <R> R accept(Visitor<R> visitor) {
             return visitor.visitUnaryExpr(this);
+        }
+    }
+
+    static class Variable extends Expr {
+        final Token name;
+
+        Variable(Token name) {
+            this.name = name;
+        }
+
+        @Override
+        <R> R accept(Visitor<R> visitor) {
+            return visitor.visitVariableExpr(this);
         }
     }
 

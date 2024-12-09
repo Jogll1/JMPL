@@ -1,7 +1,3 @@
-/* Multi-line comment
-Hi
-Joel*/
-let x ∈ Z;
-let s = "Hi";
-let z = 1.5;
-x ≠ z
+let x = 5;
+let y = 6;
+out x + y;

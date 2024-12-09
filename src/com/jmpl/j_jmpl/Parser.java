@@ -1,5 +1,6 @@
 package com.jmpl.j_jmpl;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -9,15 +10,13 @@ import java.util.List;
  * Follows the precedence (highest to lowest):
  * <ul>
  * <li>Primary: true, false, null, literals, parentheses
- * <li>Unary: ! - 
- * <li>Factor: / *
- * <li>Term: - +
- * <li>Comparison: > >= < <=
- * <li>Equality: == !=
+ * <li>Unary: !, - 
+ * <li>Factor: /, *
+ * <li>Term: -, +
+ * <li>Comparison: >, >=, <, <=
+ * <li>Equality: ==, !=
  * </ul>
  * To Do: add my other operators.
- * <p>
- * Implementation based of the book Crafting Interpreters by Bob Nystrom.
  * 
  * @author Joel Luckett
  * @version 0.1
@@ -36,24 +35,94 @@ class Parser {
     /**
      * Initial method to start the parser.
      * 
-     * @return an {@link Expr} expression
+     * @return a list of {@link Stmt} statements
      */
-    Expr parse() {
-        try{
-            return expression();
-        } catch(ParseError e) {
-            // Return null if an error occurs
-            return null;
+    List<Stmt> parse() {
+        List<Stmt> statements = new ArrayList<>();
+        
+        while(!isAtEnd()) {
+            // Create a list of statements to be evaluated
+            statements.add(declaration());
         }
+
+        return statements;
     }
 
     /**
-     * Starts the precedence chain from the bottom?
+     * Starts the parser's expression precedence chain from the bottom.
      * 
      * @return an {@link Expr} expression
      */
     private Expr expression() {
         return equality();
+    }
+
+    /**
+     * Parse a declaration statement.
+     * 
+     * @return a {@link Stmt} statement
+     */
+    private Stmt declaration() {
+        try {
+            if(match(TokenType.LET)) return variableDeclaration();
+
+            return statement();
+        } catch (ParseError e) {
+            synchronise();
+            return null;
+        }
+    }
+
+    /**
+     * Parses a statement based on its type. So far handles expressions and output.
+     * 
+     * @return a {@link Stmt} statement
+     */
+    private Stmt statement() {
+        if(match(TokenType.OUT)) return outputStatement();
+
+        return expressionStatement();
+    }
+
+    /** 
+     * Parses a statement that outputs to the console (identified by the OUT token)
+     * 
+     * @return a statement that performs an output
+     */
+    private Stmt outputStatement() {
+        Expr value = expression();
+        consumeSemicolon();
+        return new Stmt.Output(value);
+    }
+
+    /**
+     * Parses a statement that declares a new variable (identified by the LET token).
+     * 
+     * @return a statement that declares a new variable
+     */
+    private Stmt variableDeclaration() {
+        Token name = consume(TokenType.IDENTIFIER, ErrorType.SYNTAX, "Expected variable name");
+
+        Expr initialiser = null;
+
+        // If there is no '=', initial value remains null
+        if(match(TokenType.EQUAL)) {
+            initialiser = expression();
+        }
+
+        consumeSemicolon();
+        return new Stmt.Let(name, initialiser);
+    }
+
+    /** 
+     * Parse a statement that is an expression.
+     * 
+     * @return a statement that is an expression
+     */
+    private Stmt expressionStatement() {
+        Expr expr = expression();
+        consumeSemicolon();
+        return new Stmt.Expression(expr);
     }
 
     /**
@@ -144,7 +213,7 @@ class Parser {
 
     /**
      * Checks if the current token is a unary (not and negation) operator to be parsed.
-     * It is the top of the operation precedence level chain.
+     * It is the top of the operation precedence level chain (before primary statements).
      * 
      * @return a Binary expression abstract syntax tree node for unary operations
      */
@@ -162,6 +231,11 @@ class Parser {
         return primary();
     }
 
+    /**
+     * Evaluates primary expressions (literals, boolean values, etc.).
+     * 
+     * @return a Binary expression abstract syntax tree node for primary operations
+     */
     private Expr primary() {
         if (match(TokenType.FALSE)) return new Expr.Literal(false);
         if (match(TokenType.TRUE)) return new Expr.Literal(true);
@@ -169,6 +243,10 @@ class Parser {
     
         if (match(TokenType.NUMBER, TokenType.STRING)) {
             return new Expr.Literal(previous().literal);
+        }
+
+        if(match(TokenType.IDENTIFIER)) {
+            return new Expr.Variable(previous());
         }
     
         if (match(TokenType.LEFT_PAREN)) {
@@ -202,6 +280,7 @@ class Parser {
 
     /**
      * Checks a token against a desired type which is consumed if it is a match. If not, it throws an error.
+     * Message does not need a full stop at the end.
      * 
      * @param type    the expected token to consume
      * @param message the potential error message if the token is not found
@@ -212,6 +291,13 @@ class Parser {
         if(check(type)) return advance();
 
         throw error(peek(), ErrorType.SYNTAX, message);
+    }
+
+    /**
+     * Shorthand way to consume a semicolon and report potential errors.
+     */
+    private void consumeSemicolon() {
+        consume(TokenType.SEMICOLON, ErrorType.SYNTAX, "Expected ';' after value");
     }
 
     /**

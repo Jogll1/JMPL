@@ -1,18 +1,22 @@
 package com.jmpl.j_jmpl;
 
+import java.util.List;
+
 /**
- * Interpreter class for j-jmpl. Uses the Visitor pattern. Will use {@link java.lang.Object} to store values as dynamic types (for now).
- * <p>
- * Implementation based of the book Crafting Interpreters by Bob Nystrom.
+ * Interpreter class for j-jmpl. Uses the Visitor pattern. 
+ * Will use {@link java.lang.Object} to store values as dynamic types (for now).
  * 
  * @author Joel Luckett
  * @version 0.1
  */
-public class Interpreter implements Expr.Visitor<Object> {
-    void interpret(Expr expression) {
+public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
+    private Environment environment = new Environment();
+
+    void interpret(List<Stmt> statements) {
         try {
-            Object value = evaluate(expression);
-            System.out.println(stringify(value));
+            for(Stmt statement : statements) {
+                execute(statement);
+            }
         } catch(RuntimeError e) {
             JMPL.runtimeError(e);
         } 
@@ -100,6 +104,11 @@ public class Interpreter implements Expr.Visitor<Object> {
 
         // Unreachable
         return null;
+    }
+
+    @Override
+    public Object visitVariableExpr(Expr.Variable expr) {
+        return environment.get(expr.name);
     }
 
     /**
@@ -211,12 +220,46 @@ public class Interpreter implements Expr.Visitor<Object> {
     }
 
     /**
-     * Helper method that sends an expression back into the interpreter's visitor implementation.
+     * Helper method that sends an expression back into the interpreter's Expr visitor.
      * 
      * @param expr input expression
      * @return     an {@link Object} of the expression
      */
     private Object evaluate(Expr expr) {
         return expr.accept(this);
+    }
+
+    /**
+     * Helper method that sends a statement back into the interpreter's Stmt visitor.
+     * 
+     * @param statement input statement
+     */
+    private void execute(Stmt statement) {
+        statement.accept(this);
+    }
+
+    @Override
+    public Void visitExpressionStmt(Stmt.Expression stmt) {
+        evaluate(stmt.expression);
+        return null;
+    }
+
+    @Override
+    public Void visitOutputStmt(Stmt.Output stmt) {
+        Object value = evaluate(stmt.expression);
+        System.out.println(stringify(value));
+        return null;
+    }
+
+    @Override
+    public Void visitLetStmt(Stmt.Let stmt) {
+        Object value = null;
+
+        if(stmt.initialiser != null) {
+            value = evaluate(stmt.initialiser);
+        }
+
+        environment.define(stmt.name.lexeme, value);
+        return null;
     }
 }

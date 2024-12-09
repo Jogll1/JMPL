@@ -2,8 +2,6 @@ package com.jmpl.j_jmpl;
 
 /**
  * Class for tokens that are interpreted by the scanner.
- * <p>
- * Implementation based of the book Crafting Interpreters by Bob Nystrom.
  * 
  * @author Joel Luckett
  * @version 0.1

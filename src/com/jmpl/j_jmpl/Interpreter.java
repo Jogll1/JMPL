@@ -4,12 +4,13 @@ import java.util.List;
 
 /**
  * Interpreter class for j-jmpl. Uses the Visitor pattern. 
- * Will use {@link java.lang.Object} to store values as dynamic types (for now).
+ * Uses {@link java.lang.Object} to store values as dynamic types (for now).
  * 
  * @author Joel Luckett
  * @version 0.1
  */
 public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
+    /** The current environment the interpreter is in. */
     private Environment environment = new Environment();
 
     void interpret(List<Stmt> statements) {
@@ -238,6 +239,28 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         statement.accept(this);
     }
 
+    /**
+     * Execute each statement in a block in the correct environment.
+     * 
+     * @param statements  the list of statements in the block
+     * @param environment the environment the block stores variables in
+     */
+    private void executeBlock(List<Stmt> statements, Environment environment) {
+        Environment previous = this.environment;
+
+        try {
+            // Execute all statements in the block in the new environment
+            this.environment = environment;
+
+            for(Stmt statement : statements) {
+                execute(statement);
+            }
+        } finally {
+            // Return to the old environment
+            this.environment = previous;
+        }
+    }
+
     @Override
     public Void visitExpressionStmt(Stmt.Expression stmt) {
         evaluate(stmt.expression);
@@ -259,7 +282,7 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
             value = evaluate(stmt.initialiser);
         }
 
-        environment.define(stmt.name.lexeme, value);
+        environment.define(stmt.name, value);
         return null;
     }
 
@@ -268,5 +291,11 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         Object value = evaluate(expr.value);
         environment.assign(expr.name, value);
         return value;
+    }
+
+    @Override
+    public Void visitBlockStmt(Stmt.Block stmt) {
+        executeBlock(stmt.statements, new Environment(environment));
+        return null;
     }
 }

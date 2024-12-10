@@ -10,7 +10,18 @@ import java.util.Map;
  * @version 0.1
  */
 public class Environment {
+    /** This environment's enclosing environment (higher scope). */
+    final Environment enclosing;
+    /** Map to store all variables as name-value pairs. */
     private final Map<String, Object> values = new HashMap<>();
+
+    Environment() {
+        enclosing = null;
+    }
+
+    Environment(Environment enclosing) {
+        this.enclosing = enclosing;
+    }
 
     /**
      * Gets the value of a stored variable by its name. Throws an error if variable is undefined.
@@ -22,6 +33,9 @@ public class Environment {
         if(values.containsKey(name.lexeme)) {
             return values.get(name.lexeme);
         }
+
+        // If there is an enclosing scope, get the variable from that if it cannot be found here
+        if(enclosing != null) return enclosing.get(name);
 
         throw new RuntimeError(name, ErrorType.VARIABLE, "Undefined variable '" + name.lexeme + "'");
     }
@@ -38,18 +52,28 @@ public class Environment {
             return;
         }
 
+        // If there is an enclosing scope, try to assign to a variable in there if it cannot be found here
+        if(enclosing != null) {
+            enclosing.assign(name, value);
+            return;
+        }
+
         throw new RuntimeError(name, ErrorType.VARIABLE, "Undefined variable '" + name.lexeme + "'");
     }
 
     /**
      * Defines a new variable by binding a name to a value and adding it to the map.
-     * <p>
-     * To Do: Add an error when trying to redefine an existing variable.
      * 
      * @param name  the name of the variable
      * @param value the value of the variable
      */
-    void define(String name, Object value) {
-        values.put(name, value);
+    void define(Token name, Object value) {
+        // Only check if this scope defines the variable already
+        if(!values.containsKey(name.lexeme)) {
+            values.put(name.lexeme, value);
+            return;
+        }
+
+        throw new RuntimeError(name, ErrorType.VARIABLE, "Variable with identifier '" + name.lexeme + "' already defined in this scope");
     }
 }

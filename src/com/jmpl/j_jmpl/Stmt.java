@@ -1,5 +1,7 @@
 package com.jmpl.j_jmpl;
 
+import java.util.List;
+
 /**
  * Abstract class for statements.
  * 
@@ -8,9 +10,23 @@ package com.jmpl.j_jmpl;
  */
 abstract class Stmt {
     interface Visitor<R> {
+        R visitBlockStmt(Block stmt);
         R visitExpressionStmt(Expression stmt);
         R visitOutputStmt(Output stmt);
         R visitLetStmt(Let stmt);
+    }
+
+    static class Block extends Stmt {
+        final List<Stmt> statements;
+
+        Block(List<Stmt> statements) {
+            this.statements = statements;
+        }
+
+        @Override
+        <R> R accept(Visitor<R> visitor) {
+            return visitor.visitBlockStmt(this);
+        }
     }
 
     static class Expression extends Stmt {
@@ -55,4 +71,4 @@ abstract class Stmt {
     }
 
     abstract <R> R accept(Visitor<R> visitor);
-}
+}  

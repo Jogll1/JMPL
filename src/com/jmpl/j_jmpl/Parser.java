@@ -58,7 +58,7 @@ class Parser {
     }
 
     /**
-     * Parse a declaration statement.
+     * Declare a new statement.
      * 
      * @return a {@link Stmt} statement
      */
@@ -80,6 +80,7 @@ class Parser {
      */
     private Stmt statement() {
         if(match(TokenType.OUT)) return outputStatement();
+        if(match(TokenType.LEFT_PAREN)) return new Stmt.Block(block());
 
         return expressionStatement();
     }
@@ -123,6 +124,23 @@ class Parser {
         Expr expr = expression();
         consumeSemicolon();
         return new Stmt.Expression(expr);
+    }
+
+    /**
+     * Parses a new block of statements to be treated as a new environment.
+     * 
+     * @return a list of statements that form the block
+     */
+    private List<Stmt> block() {
+        List<Stmt> statements = new ArrayList<>();
+
+        // Until a ')' is found to close of the block, add the statements inside
+        while(!check(TokenType.RIGHT_PAREN) && !isAtEnd()) {
+            statements.add(declaration());
+        }
+
+        consume(TokenType.RIGHT_PAREN, ErrorType.SYNTAX, "Expected ')' after block");
+        return statements;
     }
 
     /**

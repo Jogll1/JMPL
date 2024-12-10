@@ -1,4 +1,8 @@
 let x = 5;
 let y = 6;
-x := 8;
+(
+    let x = 4;
+    out x;
+)
+
 out x + y;

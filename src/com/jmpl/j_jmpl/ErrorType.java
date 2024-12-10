@@ -3,6 +3,7 @@ package com.jmpl.j_jmpl;
 public enum ErrorType {
     SYNTAX,
     TYPE,
+    VARIABLE,
     ZERO_DIVISION;
 
     private final String name;

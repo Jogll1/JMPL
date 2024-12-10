@@ -35,6 +35,7 @@ class Scanner {
         keywords.put("let",    TokenType.LET);
         keywords.put("null",   TokenType.NULL);
         keywords.put("if",     TokenType.IF);
+        keywords.put("then",   TokenType.THEN);
         keywords.put("else",   TokenType.ELSE);
         keywords.put("while",  TokenType.WHILE);
         keywords.put("for",    TokenType.FOR);
@@ -86,9 +87,10 @@ class Scanner {
             case '^': addToken(TokenType.CARET); break;
             case '%': addToken(TokenType.PERCENT); break;
             case ';': addToken(TokenType.SEMICOLON); break;
-            case ':': addToken(TokenType.COLON); break;
             case '|': addToken(TokenType.PIPE); break;
             case '∈': addToken(TokenType.IN); break;
+            case '∧': addToken(TokenType.AND); break;
+            case '∨': addToken(TokenType.OR); break;
             case '#': addToken(TokenType.HASHTAG); break;
             case '≠': addToken(TokenType.NOT_EQUAL); break;
             case '≥': addToken(TokenType.GREATER_EQUAL); break;
@@ -96,6 +98,9 @@ class Scanner {
             case '→': addToken(TokenType.MAPS_TO); break;
             case '⇒': addToken(TokenType.IMPLIES); break;
             // Switch one or two character symbols
+            case ':': 
+                addToken(match('=') ? TokenType.ASSIGN : TokenType.COLON);
+                break;
             case '=':
                 addToken(match('=') ? TokenType.EQUAL_EQUAL : TokenType.EQUAL);
                 break;

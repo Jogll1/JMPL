@@ -11,8 +11,7 @@ enum TokenType {
  
     // One or two character tokens 
     // This is when a common character can be followed by another
-    // To Do: add support for unicode of these
-    EQUAL, EQUAL_EQUAL,                                // = == (≡?)
+    EQUAL, EQUAL_EQUAL, ASSIGN,                        // = == := (≡?)
     NOT, NOT_EQUAL,                                    // ¬ ¬= (≠)
     GREATER, GREATER_EQUAL,                            // > >= (≥)
     LESS, LESS_EQUAL,                                  // < <= (≤)
@@ -25,7 +24,7 @@ enum TokenType {
     AND, OR,
     TRUE, FALSE,
     LET, NULL,
-    IF, ELSE, WHILE, FOR,
+    IF, THEN, ELSE, WHILE, FOR,
     OUT, RETURN, FUNCTION,
 
     EOF

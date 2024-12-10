@@ -54,7 +54,7 @@ class Parser {
      * @return an {@link Expr} expression
      */
     private Expr expression() {
-        return equality();
+        return assignment();
     }
 
     /**
@@ -123,6 +123,29 @@ class Parser {
         Expr expr = expression();
         consumeSemicolon();
         return new Stmt.Expression(expr);
+    }
+
+    /**
+     * Assign a value to an already stored variable.
+     * 
+     * @return an abstract syntax tree for assignment operations
+     */
+    private Expr assignment() {
+        Expr expr = equality();
+
+        if(match(TokenType.ASSIGN)) {
+            Token equals = previous();
+            Expr value = assignment();
+
+            if(expr instanceof Expr.Variable) {
+                Token name = ((Expr.Variable)expr).name;
+                return new Expr.Assign(name, value);
+            }
+
+            error(equals, ErrorType.SYNTAX, "Invalid assignment target");
+        }
+
+        return expr;
     }
 
     /**

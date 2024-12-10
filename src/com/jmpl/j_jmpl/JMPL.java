@@ -18,7 +18,7 @@ import java.util.List;
  * The main class that defines j-jmpl, an interpreter for the JMPL language written in Java.
  * Requires chcp 65001 for use with UTF-8 characters in the terminal (on Windows).
  * <p>
- * To Do: Implemment ErrorReporter interface that passes to scanner and parser
+ * To Do: Implement ErrorReporter interface that passes to scanner and parser
  * <p>
  * Implementation based of the book Crafting Interpreters by Bob Nystrom.
  * 

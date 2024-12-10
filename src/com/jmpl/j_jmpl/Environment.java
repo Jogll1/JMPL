@@ -15,7 +15,7 @@ public class Environment {
     /**
      * Gets the value of a stored variable by its name. Throws an error if variable is undefined.
      * 
-     * @param name the name of the variable to get
+     * @param name the token of the variable to get
      * @return     the value of the variable if it exists
      */
     Object get(Token name) {
@@ -23,7 +23,22 @@ public class Environment {
             return values.get(name.lexeme);
         }
 
-        throw new RuntimeError(name, ErrorType.SYNTAX, "Undefined variable '" + name.lexeme + "'.");
+        throw new RuntimeError(name, ErrorType.VARIABLE, "Undefined variable '" + name.lexeme + "'");
+    }
+
+    /**
+     * Assigns a value to a stored variable.
+     * 
+     * @param name  the token of the variable to assign to
+     * @param value the value to be assigned to the variable
+     */
+    void assign(Token name, Object value) {
+        if(values.containsKey(name.lexeme)) {
+            values.put(name.lexeme, value);
+            return;
+        }
+
+        throw new RuntimeError(name, ErrorType.VARIABLE, "Undefined variable '" + name.lexeme + "'");
     }
 
     /**

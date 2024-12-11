@@ -2,12 +2,6 @@ package com.jmpl.j_jmpl;
 
 import java.util.List;
 
-/**
- * Abstract class for statements.
- * 
- * @author Joel Luckett
- * @version 0.1
- */
 abstract class Stmt {
     interface Visitor<R> {
         R visitBlockStmt(Block stmt);

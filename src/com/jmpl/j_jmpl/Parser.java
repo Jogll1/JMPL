@@ -10,11 +10,14 @@ import java.util.List;
  * Follows the precedence (highest to lowest):
  * <ul>
  * <li>Primary: true, false, null, literals, parentheses
- * <li>Unary: !, - 
+ * <li>Unary: ¬, - 
  * <li>Factor: /, *
  * <li>Term: -, +
  * <li>Comparison: >, >=, <, <=
- * <li>Equality: ==, !=
+ * <li>Equality: ==, ¬=
+ * <li>And: ∧, and
+ * <li>Or: ∨, or
+ * <li>Assignment: :=
  * </ul>
  * To Do: add my other operators.
  * 
@@ -74,15 +77,39 @@ class Parser {
     }
 
     /**
-     * Parses a statement based on its type. So far handles expressions and output.
+     * Parses a statement based on its type.
      * 
      * @return a {@link Stmt} statement
      */
     private Stmt statement() {
+        if(match(TokenType.IF)) return ifStatement();
         if(match(TokenType.OUT)) return outputStatement();
+        if(match(TokenType.WHILE)) return whileStatement();
         if(match(TokenType.LEFT_PAREN)) return new Stmt.Block(block());
 
         return expressionStatement();
+    }
+
+    /**
+     * Parses an if statement based on a conditional expression.
+     * 
+     * @return an if statement
+     */
+    private Stmt ifStatement() {
+        // Get the condition expression
+        Expr condition = expression();
+        
+        // Get the then statement after a 'then' token
+        consume(TokenType.THEN, ErrorType.SYNTAX, "Expected 'then' after an if condition");
+        Stmt thenBranch = statement();
+
+        // Get the else statement if there's an 'else' token
+        Stmt elseBranch = null;
+        if(match(TokenType.ELSE)) {
+            elseBranch = statement();
+        }
+
+        return new Stmt.If(condition, thenBranch, elseBranch);
     }
 
     /** 
@@ -113,6 +140,21 @@ class Parser {
 
         consumeSemicolon();
         return new Stmt.Let(name, initialiser);
+    }
+
+    /**
+     * Parses a while statement based on a conditional expression.
+     * 
+     * @return a while statement
+     */
+    private Stmt whileStatement() {
+        Expr condition = expression();
+        
+        // The statement starts after the do token
+        consume(TokenType.DO, ErrorType.SYNTAX, "Expected 'do' after condition");
+        Stmt body = statement();
+
+        return new Stmt.While(condition, body);
     }
 
     /** 
@@ -149,12 +191,13 @@ class Parser {
      * @return an abstract syntax tree for assignment operations
      */
     private Expr assignment() {
-        Expr expr = equality();
+        Expr expr = or();
 
         if(match(TokenType.ASSIGN)) {
             Token equals = previous();
             Expr value = assignment();
 
+            // Store a new variable
             if(expr instanceof Expr.Variable) {
                 Token name = ((Expr.Variable)expr).name;
                 return new Expr.Assign(name, value);
@@ -167,12 +210,56 @@ class Parser {
     }
 
     /**
-     * Checks if the current token is an equality operator to be parsed.
-     * It is at the bottom of the precedence level chain.
+     * Checks if there are a series of or expressions to be parsed.
+     * 
+     * @return a Binary expression abstract syntax tree node for an or expression
+     */
+    private Expr or() {
+        // Parse the left hand operand
+        Expr expr = and();
+
+        while(match(TokenType.OR)) {
+            Token operator = previous();
+
+            // Parse the right hand operand
+            Expr right = and();
+
+            // Create new Binary operator syntax tree node
+            expr = new Expr.Logical(expr, operator, right);
+        }
+
+        return expr;
+    }
+
+    /**
+     * Checks if there are a series of and expressions to be parsed.
+     * 
+     * @return a Binary expression abstract syntax tree node for an and expression
+     */
+    private Expr and() {
+        // Parse the left hand operand
+        Expr expr = equality();
+
+        while(match(TokenType.AND)) {
+            Token operator = previous();
+
+            // Parse the right hand operand
+            Expr right = equality();
+
+            // Create new Binary operator syntax tree node
+            expr = new Expr.Logical(expr, operator, right);
+        }
+
+        return expr;
+    }
+
+    /**
+     * Checks if the current token is an equality operation to be parsed.
      * 
      * @return a Binary expression abstract syntax tree node for equality operations
      */
     private Expr equality() {
+        // Parse the left hand operand
         Expr expr = comparison();
 
         // Check if the current token is an equality operator
@@ -190,11 +277,12 @@ class Parser {
     }
 
     /**
-     * Checks if the current token is a comparison operator to be parsed.
+     * Checks if the current token is a comparison operation to be parsed.
      * 
      * @return a Binary expression abstract syntax tree node for comparison operations
      */
     private Expr comparison() {
+        // Parse the left hand operand
         Expr expr = term();
 
         while(match(TokenType.GREATER, TokenType.GREATER_EQUAL, TokenType.LESS, TokenType.LESS_EQUAL)) {
@@ -211,11 +299,12 @@ class Parser {
     }
 
     /**
-     * Checks if the current token is a term (addition and subtraction) operator to be parsed.
+     * Checks if the current token is a term (addition and subtraction) operation to be parsed.
      * 
      * @return a Binary expression abstract syntax tree node for term operations
      */
     private Expr term() {
+        // Parse the left hand operand
         Expr expr = factor();
     
         while (match(TokenType.MINUS, TokenType.PLUS)) {
@@ -232,11 +321,12 @@ class Parser {
     }
 
     /**
-     * Checks if the current token is a factor (multiplication and division) operator to be parsed.
+     * Checks if the current token is a factor (multiplication and division) operation to be parsed.
      * 
      * @return a Binary expression abstract syntax tree node for factor operations
      */
     private Expr factor() {
+        // Parse the left hand operand
         Expr expr = unary();
     
         while (match(TokenType.SLASH, TokenType.ASTERISK)) {
@@ -253,7 +343,7 @@ class Parser {
     }
 
     /**
-     * Checks if the current token is a unary (not and negation) operator to be parsed.
+     * Checks if the current token is a unary (not and negation) operation to be parsed.
      * It is the top of the operation precedence level chain (before primary statements).
      * 
      * @return a Binary expression abstract syntax tree node for unary operations
@@ -415,9 +505,9 @@ class Parser {
             switch(peek().type) {
                 case TokenType.FUNCTION:
                 case TokenType.LET:
-                case TokenType.FOR:
                 case TokenType.IF:
                 case TokenType.WHILE:
+                case TokenType.SUM:
                 case TokenType.OUT:
                 case TokenType.RETURN:
                     return;

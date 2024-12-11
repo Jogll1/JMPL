@@ -31,6 +31,7 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
         // Apply the correct operation to the operands
         switch(expr.operator.type) {
+            // Comparison
             case TokenType.GREATER:
                 checkNumberOperands(expr.operator, left, right);
                 return (double)left > (double)right;
@@ -43,6 +44,7 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
             case TokenType.LESS_EQUAL:
                 checkNumberOperands(expr.operator, left, right);
                 return (double)left <= (double)right;
+            // Arithmetic
             case TokenType.MINUS:
                 checkNumberOperands(expr.operator, left, right);
                 return (double)left - (double)right;
@@ -66,6 +68,7 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
                 checkNumberOperands(expr.operator, left, right);
                 return (double)left / (double)right;
+            // Boolean
             case TokenType.NOT_EQUAL: return !isEqual(left, right);
             case TokenType.EQUAL_EQUAL: return isEqual(left, right);
             default:
@@ -84,6 +87,22 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     @Override
     public Object visitLiteralExpr(Expr.Literal expr) {
         return expr.value;
+    }
+
+    @Override
+    public Object visitLogicalExpr(Expr.Logical expr) {
+        Object left = evaluate(expr.left);
+
+        // Terminate early if we know the solution already
+        if(expr.operator.type == TokenType.OR) {
+            // OR
+            if(isTruthful(left)) return left;
+        } else  {
+            // AND
+            if(!isTruthful(left)) return left;
+        }
+
+        return evaluate(expr.right);
     }
 
     @Override
@@ -141,7 +160,7 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     }
 
     /**
-     * Checks if an object is 'truthful' or 'truthy'. Determines the boolean state of an object, not just if it is a Boolean type.
+     * Checks if an object is 'truthful'. Determines the boolean state of an object, not just if it is a Boolean type.
      * <p>
      * Returns false if object is null, 0, false, or an empty string. Returns true otherwise.
      * 
@@ -268,6 +287,19 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     }
 
     @Override
+    public Void visitIfStmt(Stmt.If stmt) {
+        if(isTruthful(evaluate(stmt.condition))) {
+            // If the condition is true, execute the then branch
+            execute(stmt.thenBranch);
+        } else if(stmt.elseBranch != null) {
+            // If the condition is false and there's an else branch, execute the else branch
+            execute(stmt.elseBranch);
+        } 
+        
+        return null;
+    }
+
+    @Override
     public Void visitOutputStmt(Stmt.Output stmt) {
         Object value = evaluate(stmt.expression);
         System.out.println(stringify(value));
@@ -283,6 +315,15 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         }
 
         environment.define(stmt.name, value);
+        return null;
+    }
+
+    @Override
+    public Void visitWhileStmt(Stmt.While stmt) {
+        while(isTruthful(evaluate(stmt.condition))) {
+            execute(stmt.body);
+        }
+
         return null;
     }
 

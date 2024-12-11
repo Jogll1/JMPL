@@ -38,7 +38,8 @@ class Scanner {
         keywords.put("then",   TokenType.THEN);
         keywords.put("else",   TokenType.ELSE);
         keywords.put("while",  TokenType.WHILE);
-        keywords.put("for",    TokenType.FOR);
+        keywords.put("do",     TokenType.DO);
+        keywords.put("sum",    TokenType.SUM); // Alternative to '∑'
         keywords.put("out",    TokenType.OUT);
         keywords.put("return", TokenType.RETURN);
         keywords.put("func",   TokenType.FUNCTION);
@@ -97,6 +98,7 @@ class Scanner {
             case '≤': addToken(TokenType.LESS_EQUAL); break;
             case '→': addToken(TokenType.MAPS_TO); break;
             case '⇒': addToken(TokenType.IMPLIES); break;
+            case '∑': addToken(TokenType.SUM); break;
             // Switch one or two character symbols
             case ':': 
                 addToken(match('=') ? TokenType.ASSIGN : TokenType.COLON);
@@ -131,7 +133,6 @@ class Scanner {
                 break;
             case '*': 
                 if(!match('/')) {
-                    // Doesn't continue comment if / is missed after an * in a multi-line comment?
                     // Only register an '*' if it is not closing a multi-line comment
                     addToken(TokenType.ASTERISK); break;
                 }

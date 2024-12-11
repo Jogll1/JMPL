@@ -24,7 +24,8 @@ enum TokenType {
     AND, OR,
     TRUE, FALSE,
     LET, NULL,
-    IF, THEN, ELSE, WHILE, FOR,
+    IF, THEN, ELSE, WHILE, DO,
+    SUM, 
     OUT, RETURN, FUNCTION,
 
     EOF

@@ -75,7 +75,75 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
                 break;
         }
 
-        // Unreachable
+        return null;
+    }
+
+    @Override
+    public Object visitSequenceOpExpr(Expr.SequenceOp expr) {
+        if(expr.name.type == TokenType.SUM) {
+            Environment previous = this.environment;
+
+            // Evaluate expressions
+            Object upper = evaluate(expr.upper);
+            Object lower;
+
+            Token lowerVar;
+
+            // Evaluate lower statement
+            if(expr.lower instanceof Stmt.Let) {
+                // If lower declares a new variable, do it in a new block
+                environment = new Environment(previous);
+                lower = evaluate(((Stmt.Let)expr.lower).initialiser);
+                lowerVar = ((Stmt.Let)expr.lower).name;
+                execute(expr.lower);
+            } else {
+                lower = evaluate(((Stmt.Expression)expr.lower).expression);
+                lowerVar = ((Expr.Assign)((Stmt.Expression)expr.lower).expression).name;
+            }
+
+            Object summand = evaluate(expr.summand);
+
+            // Errors
+            if(!(Math.floor((Double)upper) == (Double)upper)) throw new RuntimeError(expr.name, ErrorType.SYNTAX, "Upper bound must be an integer");
+            if(!(Math.floor((Double)lower) == (Double)lower)) throw new RuntimeError(expr.name, ErrorType.SYNTAX, "Lower bound must be an integer");
+            if(!(summand instanceof Double) && !(summand instanceof String) && !(summand instanceof Character)) throw new RuntimeError(expr.name, ErrorType.SYNTAX, "Summand must be a real number");
+            if((Double)lower > (Double)upper) throw new RuntimeError(expr.name, ErrorType.SYNTAX, "Lower bound must be less than or equal to the upper bound");
+
+            // Perform the summation
+            Object s;
+            if(summand instanceof Double) {
+                double sum = 0;
+                while((Double)lower <= (Double)upper) {
+                    sum += (Double)summand;
+    
+                    // Increment lower var and reassign it
+                    environment.assign(lowerVar, (Double)environment.get(lowerVar) + 1);
+                    lower = environment.get(lowerVar);
+    
+                    // Re-evaluate summand
+                    summand = evaluate(expr.summand);
+                }
+                s = sum;
+            } else {
+                StringBuilder sum = new StringBuilder();
+                while((Double)lower <= (Double)upper) {
+                    sum.append(summand);
+    
+                    // Increment lower var and reassign it
+                    environment.assign(lowerVar, (Double)environment.get(lowerVar) + 1);
+                    lower = environment.get(lowerVar);
+    
+                    // Re-evaluate summand
+                    summand = evaluate(expr.summand);
+                }
+                s = sum;
+            }
+
+            environment = previous;
+
+            return s;
+        }
+
         return null;
     }
 

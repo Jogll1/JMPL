@@ -1,12 +1,4 @@
-// Sum - ∑(n; i = 1) i;
-
 let n = 5;
-let i = 1;
-let s = 0;
+let x = 6;
 
-while i ≤ n do (
-    s := s + i;
-    i := i + 1;
-)
-
-out s;
+out ∑(5; let i = 1) x / 2 * i + 1;

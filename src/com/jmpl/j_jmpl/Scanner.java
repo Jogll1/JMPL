@@ -153,7 +153,7 @@ class Scanner {
                 }
                 else {
                     // Else return an error
-                    JMPL.error(line, ErrorType.SYNTAX, "Unexpected character: '" + c + "'.");
+                    JMPL.error(line, ErrorType.SYNTAX, "Unexpected character: '" + c + "'");
                 }
                 break;
         }

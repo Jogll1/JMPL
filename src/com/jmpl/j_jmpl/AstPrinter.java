@@ -19,6 +19,12 @@ class AstPrinter implements Expr.Visitor<String> {
     }
 
     @Override
+    public String visitSequenceOpExpr(Expr.SequenceOp expr) {
+        // Temporary
+        return null;
+    }
+
+    @Override
     public String visitBinaryExpr(Expr.Binary expr) {
         return parenthesise(expr.operator.lexeme, expr.left, expr.right);
     }

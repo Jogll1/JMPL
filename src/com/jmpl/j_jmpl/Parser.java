@@ -17,6 +17,7 @@ import java.util.List;
  * <li>Equality: ==, ¬=
  * <li>And: ∧, and
  * <li>Or: ∨, or
+ * <li>Summation: ∑
  * <li>Assignment: :=
  * </ul>
  * To Do: add my other operators.
@@ -191,7 +192,7 @@ class Parser {
      * @return an abstract syntax tree for assignment operations
      */
     private Expr assignment() {
-        Expr expr = or();
+        Expr expr = summation();
 
         if(match(TokenType.ASSIGN)) {
             Token equals = previous();
@@ -210,9 +211,66 @@ class Parser {
     }
 
     /**
+     * Parses a summation as an expression. It has the form: sum (n; m) i;
+     * Where n, and i are expressions (not assignments) and m is a declaration or assignment
+     * 
+     * @return an abstract syntax tree for a summation operation
+     */
+    private Expr summation() {
+        // If a summation symbol is at the start of the expression
+        if(match(TokenType.SUM)) {
+            Token sum = previous();
+
+            // Requires parentheses
+            consume(TokenType.LEFT_PAREN, ErrorType.SYNTAX, "Expected '('");
+
+            // Get the upperbound expression (n)
+            Expr upperBound = summation();
+            consumeSemicolon();
+
+            // Get the lowerbound statement (m)
+            Stmt lowerBound;
+            if(match(TokenType.LET)) {
+                // When the lowerbound is in the form 'let m = x;'
+                Token name = consume(TokenType.IDENTIFIER, ErrorType.SYNTAX, "Expected variable name");
+
+                Expr initialiser = null;
+
+                // If there is no '=', initial value remains null
+                if(match(TokenType.EQUAL)) {
+                    initialiser = expression();
+                } else {
+                    throw error(peek(), ErrorType.VARIABLE, "Variable must be initialised");
+                }
+
+                lowerBound = new Stmt.Let(name, initialiser);
+            } else {
+                // When the lowerbound is in the form 'm := 0'
+                Expr lowerExpr = assignment();
+                if(lowerExpr instanceof Expr.Assign) {
+                    lowerBound = new Stmt.Expression(lowerExpr);   
+                } else {
+                    throw error(peek(), ErrorType.SYNTAX, "Lower bound must be declaration or assignment");
+                }
+            }
+
+            // Close the parentheses
+            consume(TokenType.RIGHT_PAREN, ErrorType.SYNTAX, "Expected ')'");
+
+            // Get the summand expression statement - this will add to create the sum
+            Expr summand = expression();
+
+            return new Expr.SequenceOp(sum, upperBound, lowerBound, summand);
+        }
+
+        // If not, skip this function
+        return or();
+    }
+
+    /**
      * Checks if there are a series of or expressions to be parsed.
      * 
-     * @return a Binary expression abstract syntax tree node for an or expression
+     * @return a Logical expression abstract syntax tree node for an or expression
      */
     private Expr or() {
         // Parse the left hand operand
@@ -234,7 +292,7 @@ class Parser {
     /**
      * Checks if there are a series of and expressions to be parsed.
      * 
-     * @return a Binary expression abstract syntax tree node for an and expression
+     * @return a Logical expression abstract syntax tree node for an and expression
      */
     private Expr and() {
         // Parse the left hand operand
@@ -346,7 +404,7 @@ class Parser {
      * Checks if the current token is a unary (not and negation) operation to be parsed.
      * It is the top of the operation precedence level chain (before primary statements).
      * 
-     * @return a Binary expression abstract syntax tree node for unary operations
+     * @return a Unary expression abstract syntax tree node for unary operations
      */
     private Expr unary() {
         if (match(TokenType.NOT, TokenType.MINUS)) {
@@ -365,7 +423,7 @@ class Parser {
     /**
      * Evaluates primary expressions (literals, boolean values, etc.).
      * 
-     * @return a Binary expression abstract syntax tree node for primary operations
+     * @return an expression abstract syntax tree node for primary operations
      */
     private Expr primary() {
         if (match(TokenType.FALSE)) return new Expr.Literal(false);
@@ -507,7 +565,6 @@ class Parser {
                 case TokenType.LET:
                 case TokenType.IF:
                 case TokenType.WHILE:
-                case TokenType.SUM:
                 case TokenType.OUT:
                 case TokenType.RETURN:
                     return;

@@ -9,6 +9,7 @@ package com.jmpl.j_jmpl;
 abstract class Expr {
     interface Visitor<R> {
         R visitAssignExpr(Assign expr);
+        R visitSequenceOpExpr(SequenceOp expr);
         R visitBinaryExpr(Binary expr);
         R visitGroupingExpr(Grouping expr);
         R visitLiteralExpr(Literal expr);
@@ -29,6 +30,25 @@ abstract class Expr {
         @Override
         <R> R accept(Visitor<R> visitor) {
             return visitor.visitAssignExpr(this);
+        }
+    }
+
+    static class SequenceOp extends Expr {
+        final Token name;
+        final Expr upper;
+        final Stmt lower;
+        final Expr summand;
+
+        SequenceOp(Token name, Expr upper, Stmt lower, Expr summand) {
+            this.name = name;
+            this.upper = upper;
+            this.lower = lower;
+            this.summand = summand;
+        }
+
+        @Override
+        <R> R accept(Visitor<R> visitor) {
+            return visitor.visitSequenceOpExpr(this);
         }
     }
 

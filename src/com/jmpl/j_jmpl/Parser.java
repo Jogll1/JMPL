@@ -10,6 +10,7 @@ import java.util.List;
  * Follows the precedence (highest to lowest):
  * <ul>
  * <li>Primary: true, false, null, literals, parentheses
+ * <li>Function Call: f()
  * <li>Unary: ¬, - 
  * <li>Factor: /, *
  * <li>Term: -, +
@@ -17,7 +18,7 @@ import java.util.List;
  * <li>Equality: ==, ¬=
  * <li>And: ∧, and
  * <li>Or: ∨, or
- * <li>Summation: ∑
+ * <li>Sequence Operation: ∑
  * <li>Assignment: :=
  * </ul>
  * To Do: add my other operators.
@@ -83,6 +84,7 @@ class Parser {
      * @return a {@link Stmt} statement
      */
     private Stmt statement() {
+        if(match(TokenType.FUNCTION)) return function("function");
         if(match(TokenType.IF)) return ifStatement();
         if(match(TokenType.OUT)) return outputStatement();
         if(match(TokenType.WHILE)) return whileStatement();
@@ -170,6 +172,35 @@ class Parser {
     }
 
     /**
+     * Parse a statement that is a function.
+     * 
+     * @param type the type of function
+     * @return     a statement that declares a function
+     */
+    private Stmt.Function function(String type) {
+        Token name = consume(TokenType.IDENTIFIER, ErrorType.FUNCTION, "Expected " + type + " name");
+        consume(TokenType.LEFT_PAREN, ErrorType.SYNTAX, "Expected '(' after " + type + " name");
+
+        List<Token> parameters = new ArrayList<>();
+        if(!check(TokenType.RIGHT_PAREN)) {
+            do {
+                if(parameters.size() >= 255) {
+                    error(peek(), ErrorType.ARGUMENT, "Can't have more than 255 parameters");
+                }
+
+                parameters.add(consume(TokenType.IDENTIFIER, ErrorType.PARAMETER, "Expected parameter name"));
+            } while(match(TokenType.COMMA));
+        }
+
+        consume(TokenType.RIGHT_PAREN, ErrorType.SYNTAX, "Expected ')' after parameters");
+        consume(TokenType.EQUAL, ErrorType.SYNTAX, "Expected '=' before function body");
+
+        // Parse the body
+        Stmt body = statement();
+        return new Stmt.Function(name,parameters, body);
+    }
+
+    /**
      * Parses a new block of statements to be treated as a new environment.
      * 
      * @return a list of statements that form the block
@@ -226,13 +257,14 @@ class Parser {
 
             // Get the upperbound expression (n)
             Expr upperBound = summation();
-            consumeSemicolon();
+            
+            consume(TokenType.COMMA, ErrorType.SYNTAX, "Expected ',' after upper bound expression");
 
             // Get the lowerbound statement (m)
             Stmt lowerBound;
             if(match(TokenType.LET)) {
                 // When the lowerbound is in the form 'let m = x;'
-                Token name = consume(TokenType.IDENTIFIER, ErrorType.SYNTAX, "Expected variable name");
+                Token name = consume(TokenType.IDENTIFIER, ErrorType.VARIABLE, "Expected variable name");
 
                 Expr initialiser = null;
 
@@ -417,7 +449,43 @@ class Parser {
             return new Expr.Unary(operator, right);
         }
     
-        return primary();
+        return call();
+    }
+
+    private Expr finishCall(Expr callee) {
+        List<Expr> arguments = new ArrayList<>();
+
+        if(!check(TokenType.RIGHT_PAREN)) {
+            // Add argument expressions seperated by commas until a right paranthese is found
+            do {
+                if(arguments.size() >= 255) error(peek(), ErrorType.ARGUMENT, "Function can't have more than 255 arguments");
+
+                arguments.add(expression());
+            } while(match(TokenType.COMMA));
+        }
+
+        Token paren = consume(TokenType.RIGHT_PAREN, ErrorType.SYNTAX, "Expected ')' after arguments");
+
+        return new Expr.Call(callee, paren, arguments);
+    }
+    
+    /**
+     * Evaluate a function call expression.
+     * 
+     * @return a Call expression abstract syntax tree node for function calls
+     */
+    private Expr call() {
+        Expr expr = primary();
+
+        while(true) {
+            if(match(TokenType.LEFT_PAREN)) {
+                expr = finishCall(expr);
+            } else {
+                break;
+            }
+        }
+
+        return expr;
     }
 
     /**
@@ -565,8 +633,6 @@ class Parser {
                 case TokenType.LET:
                 case TokenType.IF:
                 case TokenType.WHILE:
-                case TokenType.OUT:
-                case TokenType.RETURN:
                     return;
                 default:
                     // If another token is found

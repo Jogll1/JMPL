@@ -4,6 +4,10 @@ public enum ErrorType {
     SYNTAX,
     TYPE,
     VARIABLE,
+    ARGUMENT,
+    PARAMETER,
+    FUNCTION,
+    IDENTIFIER,
     ZERO_DIVISION;
 
     private final String name;

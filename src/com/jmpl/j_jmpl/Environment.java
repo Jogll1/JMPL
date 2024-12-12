@@ -74,6 +74,16 @@ public class Environment {
             return;
         }
 
-        throw new RuntimeError(name, ErrorType.VARIABLE, "Variable with identifier '" + name.lexeme + "' already defined in this scope");
+        throw new RuntimeError(name, ErrorType.IDENTIFIER, "Identifier '" + name.lexeme + "' already defined in this scope");
+    }
+
+    /**
+     * Defines a new native variable by binding a name to a value and adding it to the map.
+     * 
+     * @param name  the name of the native variable
+     * @param value the value of the native variable
+     */
+    void defineNative(String name, Object value) {
+        values.put(name, value);
     }
 }

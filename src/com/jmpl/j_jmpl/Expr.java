@@ -1,5 +1,7 @@
 package com.jmpl.j_jmpl;
 
+import java.util.List;
+
 /**
  * Abstract class for expressions. Combines values and operators to create a new value.
  * 
@@ -11,6 +13,7 @@ abstract class Expr {
         R visitAssignExpr(Assign expr);
         R visitSequenceOpExpr(SequenceOp expr);
         R visitBinaryExpr(Binary expr);
+        R visitCallExpr(Call expr);
         R visitGroupingExpr(Grouping expr);
         R visitLiteralExpr(Literal expr);
         R visitLogicalExpr(Logical expr);
@@ -32,7 +35,7 @@ abstract class Expr {
             return visitor.visitAssignExpr(this);
         }
     }
-
+    
     static class SequenceOp extends Expr {
         final Token name;
         final Expr upper;
@@ -66,6 +69,23 @@ abstract class Expr {
         @Override
         <R> R accept(Visitor<R> visitor) {
             return visitor.visitBinaryExpr(this);
+        }
+    }
+
+    static class Call extends Expr {
+        final Expr callee;
+        final Token paren;
+        final List<Expr> arguments;
+
+        Call(Expr callee, Token paren, List<Expr> arguments) {
+            this.callee = callee;
+            this.paren = paren;
+            this.arguments = arguments;
+        }
+
+        @Override
+        <R> R accept(Visitor<R> visitor) {
+            return visitor.visitCallExpr(this);
         }
     }
 

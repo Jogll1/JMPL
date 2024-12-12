@@ -1,4 +1,9 @@
 let n = 5;
 let i = 1;
  
-out ∑(n; i := 1) i * i;
+func f(x, y) = (
+    if x == 5 then out "x = 5";
+    if y == 5 then out "y = 5";
+)
+
+f(n, i);

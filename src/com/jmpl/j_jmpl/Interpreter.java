@@ -1,5 +1,6 @@
 package com.jmpl.j_jmpl;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -10,8 +11,29 @@ import java.util.List;
  * @version 0.1
  */
 public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
+    /** The environment that stores globals. */
+    final Environment globals = new Environment();
     /** The current environment the interpreter is in. */
-    private Environment environment = new Environment();
+    private Environment environment = globals;
+
+    Interpreter() {
+        // When the interpreter is instantiated, stuff native functions into the global scope
+        // So far they are anonymous classes - should probably find a better way
+
+        // clock() - returns the current time
+        globals.defineNative("clock", new JmplCallable() {
+            @Override
+            public int arity() { return 0; }
+
+            @Override
+            public Object call(Interpreter interpreter, List<Object> arguments) {
+                return (double)System.currentTimeMillis() / 1000;
+            }
+
+            @Override
+            public String toString() { return "<native fn>"; }
+        });
+    }
 
     void interpret(List<Stmt> statements) {
         try {
@@ -76,6 +98,31 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         }
 
         return null;
+    }
+
+    @Override
+    public Object visitCallExpr(Expr.Call expr) {
+        Object callee = evaluate(expr.callee);
+
+        List<Object> arguments = new ArrayList<>();
+
+        for(Expr argument : expr.arguments) {
+            arguments.add(evaluate(argument));
+        }
+
+        // If the thing being called isn't a function
+        if(!(callee instanceof JmplCallable)) {
+            throw new RuntimeError(expr.paren, ErrorType.SYNTAX, "Only functions can be called");
+        }
+
+        JmplCallable function = (JmplCallable)callee;
+
+        // Check the amount of arguments is the amount expected
+        if(arguments.size() != function.arity()) {
+            throw new RuntimeError(expr.paren, ErrorType.ARGUMENT, "Expected " + function.arity() + " arguments but got " + arguments.size());
+        }
+
+        return function.call(this, arguments);
     }
 
     /**
@@ -335,7 +382,7 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
      * @param statements  the list of statements in the block
      * @param environment the environment the block stores variables in
      */
-    private void executeBlock(List<Stmt> statements, Environment environment) {
+    void executeBlock(List<Stmt> statements, Environment environment) {
         Environment previous = this.environment;
 
         try {
@@ -354,6 +401,16 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     @Override
     public Void visitExpressionStmt(Stmt.Expression stmt) {
         evaluate(stmt.expression);
+        return null;
+    }
+
+    @Override
+    public Void visitFunctionStmt(Stmt.Function stmt) {
+        JmplFunction function = new JmplFunction(stmt);
+
+        // Variables and functions are stored in the same place
+        environment.define(stmt.name, function);
+
         return null;
     }
 

@@ -30,6 +30,7 @@ class Scanner {
         keywords = new HashMap<>();
         keywords.put("and",    TokenType.AND); // Alternative to '∧'
         keywords.put("or",     TokenType.OR); // Alternative to '∨'
+        keywords.put("not",    TokenType.NOT); // Alternative to '¬'
         keywords.put("true",   TokenType.TRUE);
         keywords.put("false",  TokenType.FALSE);
         keywords.put("let",    TokenType.LET);
@@ -41,7 +42,6 @@ class Scanner {
         keywords.put("do",     TokenType.DO);
         keywords.put("Sum",    TokenType.SUMMATION); // Alternative to '∑'
         keywords.put("out",    TokenType.OUT);
-        keywords.put("return", TokenType.RETURN);
         keywords.put("func",   TokenType.FUNCTION);
         keywords.put("in",     TokenType.IN); // Alternative to '∈'
     }

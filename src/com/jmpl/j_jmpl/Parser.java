@@ -218,7 +218,7 @@ class Parser {
      */
     private Expr summation() {
         // If a summation symbol is at the start of the expression
-        if(match(TokenType.SUM)) {
+        if(match(TokenType.SUMMATION)) {
             Token sum = previous();
 
             // Requires parentheses

@@ -78,9 +78,12 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         return null;
     }
 
+    /**
+     * Should probably rework all the summation code it's not great. But it works!
+     */
     @Override
     public Object visitSequenceOpExpr(Expr.SequenceOp expr) {
-        if(expr.name.type == TokenType.SUM) {
+        if(expr.name.type == TokenType.SUMMATION) {
             Environment previous = this.environment;
 
             // Evaluate expressions
@@ -106,7 +109,7 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
             // Errors
             if(!(Math.floor((Double)upper) == (Double)upper)) throw new RuntimeError(expr.name, ErrorType.SYNTAX, "Upper bound must be an integer");
             if(!(Math.floor((Double)lower) == (Double)lower)) throw new RuntimeError(expr.name, ErrorType.SYNTAX, "Lower bound must be an integer");
-            if(!(summand instanceof Double) && !(summand instanceof String) && !(summand instanceof Character)) throw new RuntimeError(expr.name, ErrorType.SYNTAX, "Summand must be a real number");
+            if(!(summand instanceof Double) && !(summand instanceof String) && !(summand instanceof Character)) throw new RuntimeError(expr.name, ErrorType.SYNTAX, "Summand must be a number or a string");
             if((Double)lower > (Double)upper) throw new RuntimeError(expr.name, ErrorType.SYNTAX, "Lower bound must be less than or equal to the upper bound");
 
             // Perform the summation

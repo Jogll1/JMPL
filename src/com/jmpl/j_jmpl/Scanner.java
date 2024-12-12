@@ -39,7 +39,7 @@ class Scanner {
         keywords.put("else",   TokenType.ELSE);
         keywords.put("while",  TokenType.WHILE);
         keywords.put("do",     TokenType.DO);
-        keywords.put("sum",    TokenType.SUM); // Alternative to '∑'
+        keywords.put("Sum",    TokenType.SUMMATION); // Alternative to '∑'
         keywords.put("out",    TokenType.OUT);
         keywords.put("return", TokenType.RETURN);
         keywords.put("func",   TokenType.FUNCTION);
@@ -98,7 +98,7 @@ class Scanner {
             case '≤': addToken(TokenType.LESS_EQUAL); break;
             case '→': addToken(TokenType.MAPS_TO); break;
             case '⇒': addToken(TokenType.IMPLIES); break;
-            case '∑': addToken(TokenType.SUM); break;
+            case '∑': addToken(TokenType.SUMMATION); break;
             // Switch one or two character symbols
             case ':': 
                 addToken(match('=') ? TokenType.ASSIGN : TokenType.COLON);

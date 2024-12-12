@@ -22,6 +22,7 @@ import java.util.List;
  * <ul>
  * <li> Implement ErrorReporter interface that passes to scanner and parser.
  * <li> Let expressions be allowed in the REPL and print their results? Or print a result for all statements.
+ * <li> Add break token.
  * </ul>
  * <p>
  * Implementation based of the book Crafting Interpreters by Bob Nystrom.

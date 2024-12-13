@@ -87,6 +87,7 @@ class Parser {
         if(match(TokenType.FUNCTION)) return function("function");
         if(match(TokenType.IF)) return ifStatement();
         if(match(TokenType.OUT)) return outputStatement();
+        if(match(TokenType.RETURN)) return returnStatement();
         if(match(TokenType.WHILE)) return whileStatement();
         if(match(TokenType.LEFT_PAREN)) return new Stmt.Block(block());
 
@@ -124,6 +125,26 @@ class Parser {
         Expr value = expression();
         consumeSemicolon();
         return new Stmt.Output(value);
+    }
+
+    /** 
+     * Parses a statement that returns values in a function.
+     * 
+     * @return a statement that returns a value in a function
+     */
+    private Stmt returnStatement() {
+        Token keyword = previous();
+
+        // Return null unless specified
+        Expr value = null;
+
+        // If there is no semicolon after the 'return' keyword, parse the expression
+        if(!check(TokenType.SEMICOLON)) {
+            value = expression();
+        }
+
+        consumeSemicolon();
+        return new Stmt.Return(keyword, value);
     }
 
     /**
@@ -197,7 +218,7 @@ class Parser {
 
         // Parse the body
         Stmt body = statement();
-        return new Stmt.Function(name,parameters, body);
+        return new Stmt.Function(name, parameters, body);
     }
 
     /**
@@ -632,6 +653,7 @@ class Parser {
                 case TokenType.FUNCTION:
                 case TokenType.LET:
                 case TokenType.IF:
+                case TokenType.RETURN:
                 case TokenType.WHILE:
                     return;
                 default:

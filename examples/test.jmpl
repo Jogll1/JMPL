@@ -1,9 +1,11 @@
-let n = 5;
-let i = 1;
- 
-func f(x, y) = (
-    if x == 5 then out "x = 5";
-    if y == 5 then out "y = 5";
+func fib(n) = (
+    if n <= 1 then return n;
+
+    return fib(n - 2) + fib(n - 1);
 )
 
-f(n, i);
+let i = 0;
+while i < 20 do (
+    out "The fib of " + i + " is " + fib(i);
+    i := i + 1;
+)

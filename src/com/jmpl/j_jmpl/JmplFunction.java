@@ -32,7 +32,15 @@ class JmplFunction implements JmplCallable {
         }
 
         // Execute the body - its executing as a block because I don't want to make interpreter.environment package private
-        interpreter.executeBlock(Arrays.asList(declaration.body), environment);
+        try {
+            interpreter.executeBlock(Arrays.asList(declaration.body), environment);
+
+            // TODO: return the final statment line
+        } catch(Return returnValue) {
+            // Interpret the statment until it catches a return statement, then return the value
+            return returnValue.value;
+        }
+
         return null;
     }
 

@@ -43,6 +43,7 @@ class Scanner {
         keywords.put("Sum",    TokenType.SUMMATION); // Alternative to '∑'
         keywords.put("out",    TokenType.OUT);
         keywords.put("func",   TokenType.FUNCTION);
+        keywords.put("return", TokenType.RETURN);
         keywords.put("in",     TokenType.IN); // Alternative to '∈'
     }
 

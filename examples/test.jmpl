@@ -1,11 +1,5 @@
-func fib(n) = (
-    if n <= 1 then return n;
+let n = 5;
 
-    return fib(n - 2) + fib(n - 1);
-)
+func f(x) = x * x * x;
 
-let i = 0;
-while i < 20 do (
-    out "The fib of " + i + " is " + fib(i);
-    i := i + 1;
-)
+out f(n);

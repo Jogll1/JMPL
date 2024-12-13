@@ -363,7 +363,7 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
      * @param expr input expression
      * @return     an {@link Object} of the expression
      */
-    private Object evaluate(Expr expr) {
+    Object evaluate(Expr expr) {
         return expr.accept(this);
     }
 
@@ -382,20 +382,35 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
      * @param statements  the list of statements in the block
      * @param environment the environment the block stores variables in
      */
-    void executeBlock(List<Stmt> statements, Environment environment) {
+    Object executeBlock(List<Stmt> statements, Environment environment) {
         Environment previous = this.environment;
 
         try {
             // Execute all statements in the block in the new environment
             this.environment = environment;
 
-            for(Stmt statement : statements) {
+            for (int i = 0; i < statements.size(); i++) {
+                Stmt statement = statements.get(i);
+
+                // If this is the last statement, implicitly return the last statement if it is an expression
+                // Recursively call if it's a block
+                if(i == statements.size() - 1) {
+                    if(statement instanceof Stmt.Block) {
+                        return executeBlock(((Stmt.Block)statement).statements, environment);
+                    } else if (statement instanceof Stmt.Expression) { 
+                        return evaluate(((Stmt.Expression)statement).expression);
+                    }
+                }
+                
+                // If not, execute the statement
                 execute(statement);
             }
         } finally {
             // Return to the old environment
             this.environment = previous;
         }
+
+        return null;
     }
 
     @Override

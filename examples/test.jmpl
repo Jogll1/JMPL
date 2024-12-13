@@ -1,5 +1,15 @@
-let n = 5;
+let n = 1;
 
-func f(x) = x * x * x;
+func f(x) = (
+    func g(y) = (
+        func h(z) = (
+            x + y + z;
+        )
 
-out f(n);
+        h(y);
+    )
+
+    g(x);
+)
+
+out f(5);

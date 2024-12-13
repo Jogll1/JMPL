@@ -11,7 +11,8 @@ import java.util.List;
  * <ul>
  * <li>Primary: true, false, null, literals, parentheses
  * <li>Function Call: f()
- * <li>Unary: ¬, - 
+ * <li>Unary: ¬, -
+ * <li>Exponent: ^
  * <li>Factor: /, *
  * <li>Term: -, +
  * <li>Comparison: >, >=, <, <=
@@ -335,7 +336,7 @@ class Parser {
             // Parse the right hand operand
             Expr right = and();
 
-            // Create new Binary operator syntax tree node
+            // Create new Logical operator syntax tree node
             expr = new Expr.Logical(expr, operator, right);
         }
 
@@ -438,9 +439,31 @@ class Parser {
      */
     private Expr factor() {
         // Parse the left hand operand
-        Expr expr = unary();
+        Expr expr = exponent();
     
         while (match(TokenType.SLASH, TokenType.ASTERISK)) {
+            Token operator = previous();
+
+            // Parse the right hand operand
+            Expr right = exponent();
+
+            // Create new Binary operator syntax tree node
+            expr = new Expr.Binary(expr, operator, right);
+        }
+    
+        return expr;
+    }
+
+    /**
+     * Checks if the current token is a exponent operation to be parsed.
+     * 
+     * @return a Binary expression abstract syntax tree node for factor operations
+     */
+    private Expr exponent() {
+        // Parse the left hand operand
+        Expr expr = unary();
+    
+        while (match(TokenType.CARET)) {
             Token operator = previous();
 
             // Parse the right hand operand

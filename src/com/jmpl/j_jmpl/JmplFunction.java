@@ -11,8 +11,11 @@ import java.util.List;
  */
 class JmplFunction implements JmplCallable {
     private final Stmt.Function declaration;
+    /** Closure environment that holds onto surrounding variables where the function is defined. */
+    private final Environment closure;
 
-    JmplFunction(Stmt.Function declaration) {
+    JmplFunction(Stmt.Function declaration, Environment closure) {
+        this.closure = closure;
         this.declaration = declaration;
     }
 
@@ -24,7 +27,7 @@ class JmplFunction implements JmplCallable {
     @Override 
     public Object call(Interpreter interpreter, List<Object> arguments) {
         // Define a scope for the function
-        Environment environment = new Environment(interpreter.globals);
+        Environment environment = new Environment(closure);
 
         // Add all parameters as variables to the function scope
         for (int i = 0; i < declaration.params.size(); i++) {
@@ -32,12 +35,15 @@ class JmplFunction implements JmplCallable {
         }
 
         // Execute the body - its executing as a block because I don't want to make interpreter.environment package private
+        Object value = null;
         try {
-            return interpreter.executeBlock(Arrays.asList(declaration.body), environment);
+            value = interpreter.executeBlock(Arrays.asList(declaration.body), environment);
         } catch(Return returnValue) {
             // Interpret the statment until it catches a return statement, then return the value
             return returnValue.value;
         }
+
+        return value;
     }
 
     @Override

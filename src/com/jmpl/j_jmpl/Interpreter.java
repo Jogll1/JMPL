@@ -1,7 +1,9 @@
 package com.jmpl.j_jmpl;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Interpreter class for j-jmpl. Uses the Visitor pattern. 
@@ -15,6 +17,8 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     final Environment globals = new Environment();
     /** The current environment the interpreter is in. */
     private Environment environment = globals;
+    /** Stores resolved distances in a side table. */
+    private final Map<Expr, Integer> locals = new HashMap<>();
 
     Interpreter() {
         // When the interpreter is instantiated, stuff native functions into the global scope
@@ -90,6 +94,9 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
                 checkNumberOperands(expr.operator, left, right);
                 return (double)left / (double)right;
+            case TokenType.CARET:
+                checkNumberOperands(expr.operator, left, right);
+                return Math.pow((double)left, (double)right);
             // Boolean
             case TokenType.NOT_EQUAL: return !isEqual(left, right);
             case TokenType.EQUAL_EQUAL: return isEqual(left, right);
@@ -246,7 +253,24 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
     @Override
     public Object visitVariableExpr(Expr.Variable expr) {
-        return environment.get(expr.name);
+        return lookUpVariable(expr.name, expr);
+    }
+
+    /**
+     * Get a variable from an environment at a certain distance.
+     * 
+     * @param name the token of the variable to look up
+     * @param expr the variable expression of the variable
+     * @return     the value of the variable
+     */
+    private Object lookUpVariable(Token name, Expr expr) {
+        Integer distance = locals.get(expr);
+
+        if(distance != null) {
+            return environment.getAt(distance, name.lexeme);
+        } else {
+            return globals.get(name);
+        }
     }
 
     /**
@@ -377,6 +401,16 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     }
 
     /**
+     * Resolves an expression. 
+     * 
+     * @param expr  the expression to be resolved
+     * @param depth the number of environments vetween the current and enclosing one
+     */
+    void resolve(Expr expr, int depth) {
+        locals.put(expr, depth);
+    }
+
+    /**
      * Execute each statement in a block in the correct environment.
      * 
      * @param statements  the list of statements in the block
@@ -391,25 +425,26 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
             for (int i = 0; i < statements.size(); i++) {
                 Stmt statement = statements.get(i);
+                
+                // If not, execute the statement
+                execute(statement);
 
                 // If this is the last statement, implicitly return the last statement if it is an expression
                 // Recursively call if it's a block
                 if(i == statements.size() - 1) {
                     if(statement instanceof Stmt.Block) {
-                        return executeBlock(((Stmt.Block)statement).statements, environment);
+                        return executeBlock(((Stmt.Block)statement).statements, new Environment(environment));
                     } else if (statement instanceof Stmt.Expression) { 
                         return evaluate(((Stmt.Expression)statement).expression);
                     }
                 }
-                
-                // If not, execute the statement
-                execute(statement);
             }
         } finally {
             // Return to the old environment
             this.environment = previous;
         }
 
+        System.out.println("Hit null");
         return null;
     }
 
@@ -421,7 +456,7 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
     @Override
     public Void visitFunctionStmt(Stmt.Function stmt) {
-        JmplFunction function = new JmplFunction(stmt);
+        JmplFunction function = new JmplFunction(stmt, environment);
 
         // Variables and functions are stored in the same place
         environment.define(stmt.name, function);
@@ -482,7 +517,14 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     @Override
     public Object visitAssignExpr(Expr.Assign expr) {
         Object value = evaluate(expr.value);
-        environment.assign(expr.name, value);
+        
+        Integer distance = locals.get(expr);
+        if(distance != null) {
+            environment.assignAt(distance, expr.name, value);
+        } else {
+            globals.assign(expr.name, value);
+        }
+
         return value;
     }
 

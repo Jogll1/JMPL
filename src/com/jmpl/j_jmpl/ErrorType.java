@@ -8,6 +8,7 @@ public enum ErrorType {
     PARAMETER,
     FUNCTION,
     IDENTIFIER,
+    RETURN,
     ZERO_DIVISION;
 
     private final String name;

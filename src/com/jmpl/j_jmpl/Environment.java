@@ -9,7 +9,7 @@ import java.util.Map;
  * @author Joel Luckett
  * @version 0.1
  */
-public class Environment {
+class Environment {
     /** This environment's enclosing environment (higher scope). */
     final Environment enclosing;
     /** Map to store all variables as name-value pairs. */
@@ -37,7 +37,7 @@ public class Environment {
         // If there is an enclosing scope, get the variable from that if it cannot be found here
         if(enclosing != null) return enclosing.get(name);
 
-        throw new RuntimeError(name, ErrorType.VARIABLE, "Undefined variable '" + name.lexeme + "'");
+        throw new RuntimeError(name, ErrorType.IDENTIFIER, "Undefined identifier '" + name.lexeme + "'");
     }
 
     /**
@@ -75,6 +75,44 @@ public class Environment {
         }
 
         throw new RuntimeError(name, ErrorType.IDENTIFIER, "Identifier '" + name.lexeme + "' already defined in this scope");
+    }
+
+    /**
+     * Find an enclosing environment.
+     * 
+     * @param distance the number of scopes between the current and the target scope
+     * @return         the target environment
+     */
+    Environment ancestor(int distance) {
+        Environment environment = this;
+
+        for (int i = 0; i < distance; i++) {
+            environment = environment.enclosing;
+        }
+
+        return environment;
+    }
+
+    /**
+     * Get a variable in an environment at a certain distance
+     * 
+     * @param distance the number of scopes between the current and the target
+     * @param name     the name of the variable to get
+     * @return         the value of the variable
+     */
+    Object getAt(int distance, String name) {
+        return ancestor(distance).values.get(name);
+    }
+
+    /**
+     * Assigns a value to a stored variable in a target scope.
+     * 
+     * @param distance the distance between the current scope and the variable target scope
+     * @param name     the token of the variable to assign to
+     * @param value    the value to be assigned to the variable
+     */
+    void assignAt(int distance, Token name, Object value) {
+        ancestor(distance).values.put(name.lexeme, value);
     }
 
     /**

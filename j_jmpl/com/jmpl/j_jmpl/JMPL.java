@@ -1,7 +1,7 @@
 // To run: cd to root of this repo and run:
 // java -cp ./bin com.jmpl.j_jmpl.JMPL <args>
 // To compile to build: cd to root of repo and run:
-// javac -d ./bin ./src/com/jmpl/j_jmpl/*.java
+// javac -d ./bin ./j_jmpl/com/jmpl/j_jmpl/*.java
 
 package com.jmpl.j_jmpl;
 

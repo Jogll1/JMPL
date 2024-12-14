@@ -1,15 +1,10 @@
-let n = 1;
-
-func f(x) = (
-    func g(y) = (
-        func h(z) = (
-            x + y + z;
-        )
-
-        h(y);
-    )
-
-    g(x);
+func fib(n) = (
+    if n < 2 then return n;
+    return fib(n - 2) + fib(n - 1);
 )
 
-out f(5);
+let before = clock();
+out fib(15);
+let after = clock();
+
+out after - before;

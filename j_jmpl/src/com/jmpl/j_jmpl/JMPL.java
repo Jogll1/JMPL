@@ -44,7 +44,7 @@ public class JMPL {
     public static void main(String[] args) throws IOException {
         if(args.length > 1) {
             // Argument error
-            System.out.println("Usage: JMPL [script]");
+            System.out.println("Usage: j_jmpl [path]");
             System.exit(64); // Command line usage error
         } else if(args.length == 1) {
             // Run a file

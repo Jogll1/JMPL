@@ -36,7 +36,7 @@ void writeChunk(Chunk* chunk, uint8_t byte, int line) {
     chunk->count++;
 }
 
-// Add a new constant value to the value array of the chunk
+// Add a new constant instruction to the value array of the chunk
 int addConstant(Chunk* chunk, Value value) {
     writeValueArray(&chunk->constants, value);
     return chunk->constants.count - 1;

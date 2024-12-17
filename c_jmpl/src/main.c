@@ -15,6 +15,7 @@
 // - constant long instruction (CH 14)
 // - Dynamically grow stack (CH 15)
 // - Remove repl line count
+// - Add error types
 
 static void repl() {
     char line[1024];

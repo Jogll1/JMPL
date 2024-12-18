@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <string.h>
-#include <wchar.h>
 
 #include "common.h"
 #include "scanner.h"
@@ -19,15 +18,15 @@ void initScanner(const char* source) {
     scanner.line = 1;
 }
 
-static bool isAlpha(int c) {
+static bool isAlpha(char c) {
     return (c >= 'a' && c <= 'z') ||
            (c >= 'A' && c <= 'Z') ||
-           (c >= 0x03b1 && c <= 0x03c9) || // α to ω
-           (c >= 0x0391 && c <= 0x03a9) || // Α to Ω
+           (c >= 0x03B1 && c <= 0x03C9) || // α to ω
+           (c >= 0x0391 && c <= 0x03A9) || // Α to Ω
            (c == '_');
 }
 
-static bool isDigit(int c) {
+static bool isDigit(char c) {
     return c >= '0' && c <= '9';
 }
 
@@ -45,7 +44,7 @@ static char peek() {
 }
 
 static char peekNext() {
-    if(!isAtEnd()) return '\0';
+    if(isAtEnd()) return '\0';
     return scanner.current[1];
 }
 
@@ -76,7 +75,7 @@ static Token errorToken(const char* message) {
 
 static void skipWhitespace() {
     for(;;) {
-        char c = peek();
+        int c = peek();
 
         switch(c) {
             case ' ':
@@ -126,8 +125,8 @@ static TokenType identifierType() {
         case 'f': 
             if(scanner.current - scanner.start > 1) {
                 switch(scanner.start[1]) {
-                    case 'a': return checkKeyword(1, 3, "lse", TOKEN_FALSE);
-                    case 'u': return checkKeyword(1, 2, "nc",  TOKEN_FUNCTION);
+                    case 'a': return checkKeyword(2, 3, "lse", TOKEN_FALSE);
+                    case 'u': return checkKeyword(2, 2, "nc",  TOKEN_FUNCTION);
                 }
             }
         case 'i': return checkKeyword(1, 1, "f",  TOKEN_IF);
@@ -135,14 +134,14 @@ static TokenType identifierType() {
         case 'n': 
             if(scanner.current - scanner.start > 1) {
                 switch(scanner.start[1]) {
-                    case 'o': return checkKeyword(1, 1, "t",   TOKEN_NOT);
-                    case 'u': return checkKeyword(1, 3, "ull", TOKEN_NULL);
+                    case 'o': return checkKeyword(2, 1, "t",   TOKEN_NOT);
+                    case 'u': return checkKeyword(2, 3, "ull", TOKEN_NULL);
                 }
             }
         case 'o': 
             if(scanner.current - scanner.start > 1) {
                 switch(scanner.start[1]) {
-                    case 'u': return checkKeyword(1, 1, "t", TOKEN_OUT);
+                    case 'u': return checkKeyword(2, 1, "t", TOKEN_OUT);
                     case 'r': return TOKEN_OR;
                 }
             }
@@ -150,8 +149,8 @@ static TokenType identifierType() {
         case 't': 
             if(scanner.current - scanner.start > 1) {
                 switch(scanner.start[1]) {
-                    case 'h': return checkKeyword(1, 2, "en", TOKEN_THEN);
-                    case 'r': return checkKeyword(1, 3, "ue", TOKEN_TRUE);
+                    case 'h': return checkKeyword(2, 2, "en", TOKEN_THEN);
+                    case 'r': return checkKeyword(2, 2, "ue", TOKEN_TRUE);
                 }
             }
         case 'w': return checkKeyword(1, 4, "hile", TOKEN_WHILE);
@@ -172,7 +171,7 @@ static Token number() {
 
     // Look for fractional part
     if(peek() == '.' && isDigit(peekNext())) {
-        // Consume '.'
+        // Consume the '.'
         advance();
 
         while(isDigit(peek())) advance();
@@ -231,7 +230,7 @@ Token scanToken() {
         case 0x2264: return makeToken(TOKEN_GREATER_EQUAL); break; // '≤'
         case 0x2265: return makeToken(TOKEN_LESS_EQUAL); break; // '≥'
         case 0x2192: return makeToken(TOKEN_MAPS_TO); break; // '→'
-        case 0x21d2: return makeToken(TOKEN_IMPLIES); break; // '⇒'
+        case 0x21D2: return makeToken(TOKEN_IMPLIES); break; // '⇒'
         case 0x2211: return makeToken(TOKEN_SUMMATION); break; // '∑'
         // Switch one or two character symbols
         case ':': 

@@ -79,14 +79,14 @@ static void advance() {
 
     for(;;) {
         parser.current = scanToken();
-
+        printf("parsed %.*s, %d\n", parser.current.length, parser.current.start, parser.current.type);
         if(parser.current.type != TOKEN_ERROR) break;
 
         errorAtCurrent(parser.current.start);
     }
 }
 
-static void consume(TokenType type,const char* message) {
+static void consume(TokenType type, const char* message) {
     if(parser.current.type == type) {
         advance();
         return;
@@ -152,6 +152,15 @@ static void binary() {
     }
 }
 
+static void literal() {
+    switch(parser.previous.type) {
+        case TOKEN_FALSE: emitByte(OP_FALSE); break;
+        case TOKEN_NULL:  emitByte(OP_NULL);  break;
+        case TOKEN_TRUE:  emitByte(OP_TRUE);  break;
+        default: return;
+    }
+}
+
 static void grouping() {
     expression();
     consume(TOKEN_RIGHT_PAREN, "Expected ')' after expression");
@@ -160,7 +169,7 @@ static void grouping() {
 static void number() {
     // Convert string to double
     double value = strtod(parser.previous.start, NULL);
-    emitConstant(value);
+    emitConstant(NUMBER_VAL(value));
 }
 
 static void unary() {
@@ -171,6 +180,7 @@ static void unary() {
 
     // Emit the operator instruction
     switch(operatorType) {
+        case TOKEN_NOT:   emitByte(OP_NOT);    break;
         case TOKEN_MINUS: emitByte(OP_NEGATE); break;
         default: return;
     }
@@ -199,7 +209,7 @@ ParseRule rules[] = {
     [TOKEN_EQUAL]         = {NULL,     NULL,   PREC_NONE},
     [TOKEN_EQUAL_EQUAL]   = {NULL,     NULL,   PREC_NONE},
     [TOKEN_ASSIGN]        = {NULL,     NULL,   PREC_NONE},
-    [TOKEN_NOT]           = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_NOT]           = {unary,    NULL,   PREC_NONE},
     [TOKEN_NOT_EQUAL]     = {NULL,     NULL,   PREC_NONE},
     [TOKEN_GREATER]       = {NULL,     NULL,   PREC_NONE},
     [TOKEN_GREATER_EQUAL] = {NULL,     NULL,   PREC_NONE},
@@ -213,10 +223,10 @@ ParseRule rules[] = {
     [TOKEN_AND]           = {NULL,     NULL,   PREC_NONE},
     [TOKEN_OR]            = {NULL,     NULL,   PREC_NONE},
     [TOKEN_XOR]           = {NULL,     NULL,   PREC_NONE},
-    [TOKEN_TRUE]          = {NULL,     NULL,   PREC_NONE},
-    [TOKEN_FALSE]         = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_TRUE]          = {literal,  NULL,   PREC_NONE},
+    [TOKEN_FALSE]         = {literal,  NULL,   PREC_NONE},
     [TOKEN_LET]           = {NULL,     NULL,   PREC_NONE},
-    [TOKEN_NULL]          = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_NULL]          = {literal,  NULL,   PREC_NONE},
     [TOKEN_IF]            = {NULL,     NULL,   PREC_NONE},
     [TOKEN_THEN]          = {NULL,     NULL,   PREC_NONE},
     [TOKEN_ELSE]          = {NULL,     NULL,   PREC_NONE},

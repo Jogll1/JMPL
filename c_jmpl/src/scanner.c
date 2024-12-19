@@ -200,6 +200,7 @@ Token scanToken() {
     if(isAtEnd()) return makeToken(TOKEN_EOF);
 
     int c = advance();
+    printf("%d %c\n", c, (char)c);
 
     if(isAlpha(c)) return identifier();
     if(isDigit(c)) return number();
@@ -239,7 +240,7 @@ Token scanToken() {
         case '=':
             return makeToken(match('=') ? TOKEN_EQUAL_EQUAL : TOKEN_EQUAL);
             break;
-        case 0x00AC: // '¬'
+        case 0x00AC: // '¬' C2AC in UTF-8
             return makeToken(match('=') ? TOKEN_NOT_EQUAL : TOKEN_NOT);
             break;
         case '>':

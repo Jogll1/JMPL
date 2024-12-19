@@ -14,7 +14,7 @@ static void resetStack() {
     vm.stackTop = vm.stack;
 }
 
-static void runtimeError(const char* format, ...) {
+static void runtimeError(const unsigned char* format, ...) {
     // Print the line number
     size_t instruction = vm.ip - vm.chunk->code - 1;
     int line = vm.chunk->lines[instruction];
@@ -141,7 +141,7 @@ static InterpretResult run() {
 #undef EXPONENT
 }
 
-InterpretResult interpret(const char* source) {
+InterpretResult interpret(const unsigned char* source) {
     Chunk chunk;
     initChunk(&chunk);
 

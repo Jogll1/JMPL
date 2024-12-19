@@ -48,7 +48,7 @@ static Chunk* currentChunk() {
     return compilingChunk;
 }
 
-static void errorAt(Token* token, const char* message) {
+static void errorAt(Token* token, const unsigned char* message) {
     if(parser.panicMode) return;
     parser.panicMode = true;
     
@@ -66,11 +66,11 @@ static void errorAt(Token* token, const char* message) {
     parser.hadError = true;
 }
 
-static void error(const char* message) {
+static void error(const unsigned char* message) {
     errorAt(&parser.previous, message);
 }
 
-static void errorAtCurrent(const char* message) {
+static void errorAtCurrent(const unsigned char* message) {
     errorAt(&parser.current, message);
 }
 
@@ -79,14 +79,14 @@ static void advance() {
 
     for(;;) {
         parser.current = scanToken();
-        printf("parsed %.*s, %d\n", parser.current.length, parser.current.start, parser.current.type);
+        // printf("parsed %.*s, %d\n", parser.current.length, parser.current.start, parser.current.type);
         if(parser.current.type != TOKEN_ERROR) break;
 
         errorAtCurrent(parser.current.start);
     }
 }
 
-static void consume(TokenType type, const char* message) {
+static void consume(TokenType type, const unsigned char* message) {
     if(parser.current.type == type) {
         advance();
         return;
@@ -271,7 +271,7 @@ static void expression() {
     parsePrecedence(PREC_ASSIGNMENT);
 }
 
-bool compile(const char* source, Chunk* chunk) {
+bool compile(const unsigned char* source, Chunk* chunk) {
     initScanner(source);
     compilingChunk = chunk;
 

@@ -16,8 +16,49 @@
 // - Dynamically grow stack (CH 15)
 // - Remove repl line count
 // - Add error types
+//
+// - format in compliance with the C style guide
+// - add documentation
+
+// /**
+//  * Read the next UTF-8 character of a file and adds it to buffer.
+//  * 
+//  * @param file   the file to read
+//  * @param buffer where the character is to be stored
+//  * @returns      the length of the character in bytes
+//  */
+// static int readUtf8Char(FILE* file, unsigned char* buffer) {
+//     unsigned char byte = fgetc(file);
+//     if(byte == EOF) return EOF;
+
+//     // Get number of bytes in character
+//     int byteCount = utf8ByteCount(byte);
+//     if(byteCount == -1) {
+//         fprintf(stderr, "Invalid UTF-8 start byte 0x%X\n", byte);
+//         return -1;
+//     }
+
+//     // Initialise byte array
+//     buffer[0] = byte;
+
+//     // Get the next bytes
+//     for(int i = 1; i < byteCount; i++) {
+//         int nextByte = fgetc(file);
+
+//         // Check if byte is invalid
+//         if(nextByte == EOF || (nextByte & 0xC0) != 0x80) {
+//             fprintf(stderr, "Invalid UTF-8 continuation byte 0x%X\n", byte);
+//         }
+
+//         buffer[i] = nextByte;
+//     }
+
+//     return byteCount;
+// }
 
 static void repl() {
+    // Unicode mathematical symbol operators and keywords will not work with the REPL
+
     char line[1024];
 
     for(;;) {
@@ -48,7 +89,7 @@ static char* readFile(const char* path) {
     rewind(file);
 
     // Allocate a string the size of the file
-    char* buffer = (char*)malloc(fileSize + 1);
+    unsigned char* buffer = (unsigned char*)malloc(fileSize + 1);
 
     if(buffer == NULL) {
         fprintf(stderr, "Not enough memory to read \"%s\".\n", path);
@@ -56,7 +97,7 @@ static char* readFile(const char* path) {
     }
 
     // Read the whole file
-    size_t bytesRead = fread(buffer, sizeof(char), fileSize, file);
+    size_t bytesRead = fread(buffer, sizeof(unsigned char), fileSize, file);
 
     if(bytesRead < fileSize) {
         fprintf(stderr, "Could not read file \"%s\".\n", path);
@@ -69,8 +110,8 @@ static char* readFile(const char* path) {
     return buffer;
 }
 
-static void runFile(const char* path) {
-    char* source = readFile(path);
+static void runFile(const unsigned char* path) {
+    unsigned char* source = readFile(path);
     InterpretResult result = interpret(source);
     free(source);
 

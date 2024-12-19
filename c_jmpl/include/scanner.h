@@ -37,12 +37,12 @@ typedef enum {
 
 typedef struct {
     TokenType type;
-    const char* start;
+    const unsigned char* start;
     int length;
     int line;
 } Token;
 
-void initScanner(const char* source);
+void initScanner(const unsigned char* source);
 Token scanToken();
 
 #endif

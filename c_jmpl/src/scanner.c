@@ -5,20 +5,20 @@
 #include "scanner.h"
 
 typedef struct {
-    const char* start;
-    const char* current;
+    const unsigned char* start;
+    const unsigned char* current;
     int line;
 } Scanner;
 
 Scanner scanner;
 
-void initScanner(const char* source) {
+void initScanner(const unsigned char* source) {
     scanner.start = source;
     scanner.current = source;
     scanner.line = 1;
 }
 
-static bool isAlpha(char c) {
+static bool isAlpha(unsigned char c) {
     return (c >= 'a' && c <= 'z') ||
            (c >= 'A' && c <= 'Z') ||
            (c >= 0x03B1 && c <= 0x03C9) || // α to ω
@@ -26,7 +26,7 @@ static bool isAlpha(char c) {
            (c == '_');
 }
 
-static bool isDigit(char c) {
+static bool isDigit(unsigned char c) {
     return c >= '0' && c <= '9';
 }
 
@@ -48,7 +48,7 @@ static char peekNext() {
     return scanner.current[1];
 }
 
-static bool match(char expected) {
+static bool match(unsigned char expected) {
     if(isAtEnd()) return false;
     if(*scanner.current != expected) return false;
 
@@ -65,7 +65,7 @@ static Token makeToken(TokenType type) {
     return token;
 }
 
-static Token errorToken(const char* message) {
+static Token errorToken(const unsigned char* message) {
     Token token;
     token.type = TOKEN_EOF;
     token.start = message;
@@ -108,7 +108,7 @@ static void skipWhitespace() {
     }
 }
 
-static TokenType checkKeyword(int start, int length, const char* rest, TokenType type) {
+static TokenType checkKeyword(int start, int length, const unsigned char* rest, TokenType type) {
     if(scanner.current - scanner.start == start + length && memcmp(scanner.start + start, rest, length) == 0) {
         return type;
     }
@@ -200,7 +200,7 @@ Token scanToken() {
     if(isAtEnd()) return makeToken(TOKEN_EOF);
 
     int c = advance();
-    printf("%d %c\n", c, (char)c);
+    // printf("%d %c\n", c, (char)c);
 
     if(isAlpha(c)) return identifier();
     if(isDigit(c)) return number();

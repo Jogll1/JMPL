@@ -18,15 +18,36 @@ void initScanner(const unsigned char* source) {
     scanner.line = 1;
 }
 
-static bool isAlpha(unsigned char c) {
+/**
+ * Determine if a character is a UTF-8 and how many bytes it contains
+ * 
+ * @param byte the first byte of the character
+ * @returns    whether the character is a UTF-8 character
+ * 
+ */
+static int utf8ByteCount(unsigned char byte) {
+    if(byte < 0x80) {
+        return 1; // ASCII
+    } else if((byte & 0xE0) == 0xC0) {
+        return 2;
+    } else if((byte & 0xF0) == 0xE0) {
+        return 3;
+    } else if((byte & 0xF8) == 0xF0) {
+        return 4;
+    } else {
+        return -1; // Invalid
+    }
+}
+
+static bool isAlpha(unsigned int c) {
     return (c >= 'a' && c <= 'z') ||
            (c >= 'A' && c <= 'Z') ||
-           (c >= 0x03B1 && c <= 0x03C9) || // α to ω
-           (c >= 0x0391 && c <= 0x03A9) || // Α to Ω
+           (c >= 0xCEB1 && c <= 0xCF89) || // α (U+03B1, UTF-8: 0xCEB1) to ω (U+03C9, UTF-8: 0xCF89)
+           (c >= 0xCE91 && c <= 0xCEA9) || // Α (U+0391, UTF-8: 0xCE91) to Ω (U+03A9, UTF-8: 0xCEA9)
            (c == '_');
 }
 
-static bool isDigit(unsigned char c) {
+static bool isDigit(unsigned int c) {
     return c >= '0' && c <= '9';
 }
 
@@ -36,7 +57,21 @@ static bool isAtEnd() {
 
 static int advance() {
     scanner.current++;
-    return (int)scanner.current[-1];
+
+    // Get the length of the character's byte sequence
+    int byteLength = utf8ByteCount(scanner.current[-1]);
+
+    // Initialise c as current byte
+    int c = (int)scanner.current[-1];
+    
+    // Loop through the rest of the bytes if needed, increment current, and add to result
+    for (int i = 0; i < byteLength - 1; i++)
+    {
+        scanner.current++;
+        c = (c << 8) | (int)scanner.current[-1];
+    }
+
+    return c;
 }
 
 static char peek() {
@@ -75,7 +110,7 @@ static Token errorToken(const unsigned char* message) {
 
 static void skipWhitespace() {
     for(;;) {
-        int c = peek();
+        unsigned int c = peek();
 
         switch(c) {
             case ' ':
@@ -108,7 +143,7 @@ static void skipWhitespace() {
     }
 }
 
-static TokenType checkKeyword(int start, int length, const unsigned char* rest, TokenType type) {
+static TokenType checkKeyword(unsigned int start, int length, const unsigned char* rest, TokenType type) {
     if(scanner.current - scanner.start == start + length && memcmp(scanner.start + start, rest, length) == 0) {
         return type;
     }
@@ -199,7 +234,7 @@ Token scanToken() {
 
     if(isAtEnd()) return makeToken(TOKEN_EOF);
 
-    int c = advance();
+    unsigned int c = advance();
     // printf("%d %c\n", c, (char)c);
 
     if(isAlpha(c)) return identifier();
@@ -223,16 +258,16 @@ Token scanToken() {
         case '%': return makeToken(TOKEN_PERCENT); break;
         case ';': return makeToken(TOKEN_SEMICOLON); break;
         case '|': return makeToken(TOKEN_PIPE); break;
-        case 0x2208: return makeToken(TOKEN_IN); break; // '∈'
-        case 0x2227: return makeToken(TOKEN_AND); break; // '∧'
-        case 0x2228: return makeToken(TOKEN_OR); break; // '∨'
+        case 0xE28888: return makeToken(TOKEN_IN); break; // '∈' U+2208, UTF-8: 0xE28888
+        case 0xE288A7: return makeToken(TOKEN_AND); break; // '∧' U+2227, UTF-8: 0xE288A7
+        case 0xE288A8: return makeToken(TOKEN_OR); break; // '∨' U+2228, UTF-8: 0xE288A8
         case '#': return makeToken(TOKEN_HASHTAG); break;
-        case 0x2260: return makeToken(TOKEN_NOT_EQUAL); break; // '≠'
-        case 0x2264: return makeToken(TOKEN_GREATER_EQUAL); break; // '≤'
-        case 0x2265: return makeToken(TOKEN_LESS_EQUAL); break; // '≥'
-        case 0x2192: return makeToken(TOKEN_MAPS_TO); break; // '→'
-        case 0x21D2: return makeToken(TOKEN_IMPLIES); break; // '⇒'
-        case 0x2211: return makeToken(TOKEN_SUMMATION); break; // '∑'
+        case 0xE289A0: return makeToken(TOKEN_NOT_EQUAL); break; // '≠' U+2260, UTF-8: 0xE289A0
+        case 0xE289A4: return makeToken(TOKEN_GREATER_EQUAL); break; // '≤' U+2264, UTF-8: 0xE289A4
+        case 0xE289A5: return makeToken(TOKEN_LESS_EQUAL); break; // '≥' U+2265, UTF-8: 0xE289A5
+        case 0xE28692: return makeToken(TOKEN_MAPS_TO); break; // '→' U+2192, UTF-8: 0xE28692
+        case 0xE28792: return makeToken(TOKEN_IMPLIES); break; // '⇒' U+21D2, UTF-8: 0xE28792
+        case 0xE28891: return makeToken(TOKEN_SUMMATION); break; // '∑' U+2211, UTF-8: 0xE28891
         // Switch one or two character symbols
         case ':': 
             return makeToken(match('=') ? TOKEN_ASSIGN : TOKEN_COLON);
@@ -240,7 +275,7 @@ Token scanToken() {
         case '=':
             return makeToken(match('=') ? TOKEN_EQUAL_EQUAL : TOKEN_EQUAL);
             break;
-        case 0x00AC: // '¬' C2AC in UTF-8
+        case 0xC2AC: // '¬' U+00AC, UTF-8: 0xC2AC
             return makeToken(match('=') ? TOKEN_NOT_EQUAL : TOKEN_NOT);
             break;
         case '>':

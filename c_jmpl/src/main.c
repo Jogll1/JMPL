@@ -57,8 +57,6 @@
 // }
 
 static void repl() {
-    // Unicode mathematical symbol operators and keywords will not work with the REPL
-
     char line[1024];
 
     for(;;) {
@@ -124,6 +122,7 @@ int main(int argc, const char* argv[]) {
 
     if(argc == 1) {
         // If no file argument, run the REPL
+        printf("Note: if using windows, terminal must be using code page 65001.\n");
         repl();
     } else if(argc == 2) {
         // If there's a file argument, run the file

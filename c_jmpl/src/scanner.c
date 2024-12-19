@@ -19,13 +19,12 @@ void initScanner(const unsigned char* source) {
 }
 
 /**
- * Determine if a character is a UTF-8 and how many bytes it contains
+ * Determine the length of a character in bytes that is encoded with UTF-8.
  * 
  * @param byte the first byte of the character
- * @returns    whether the character is a UTF-8 character
- * 
+ * @returns    how long the character's byte sequence is
  */
-static int utf8ByteCount(unsigned char byte) {
+static int getCharByteCount(unsigned char byte) {
     if(byte < 0x80) {
         return 1; // ASCII
     } else if((byte & 0xE0) == 0xC0) {
@@ -59,7 +58,7 @@ static int advance() {
     scanner.current++;
 
     // Get the length of the character's byte sequence
-    int byteLength = utf8ByteCount(scanner.current[-1]);
+    int byteLength = getCharByteCount(scanner.current[-1]);
 
     // Initialise c as current byte
     int c = (int)scanner.current[-1];
@@ -263,8 +262,8 @@ Token scanToken() {
         case 0xE288A8: return makeToken(TOKEN_OR); break; // '∨' U+2228, UTF-8: 0xE288A8
         case '#': return makeToken(TOKEN_HASHTAG); break;
         case 0xE289A0: return makeToken(TOKEN_NOT_EQUAL); break; // '≠' U+2260, UTF-8: 0xE289A0
-        case 0xE289A4: return makeToken(TOKEN_GREATER_EQUAL); break; // '≤' U+2264, UTF-8: 0xE289A4
-        case 0xE289A5: return makeToken(TOKEN_LESS_EQUAL); break; // '≥' U+2265, UTF-8: 0xE289A5
+        case 0xE289A4: return makeToken(TOKEN_LESS_EQUAL); break; // '≤' U+2264, UTF-8: 0xE289A4
+        case 0xE289A5: return makeToken(TOKEN_GREATER_EQUAL); break; // '≥' U+2265, UTF-8: 0xE289A5
         case 0xE28692: return makeToken(TOKEN_MAPS_TO); break; // '→' U+2192, UTF-8: 0xE28692
         case 0xE28792: return makeToken(TOKEN_IMPLIES); break; // '⇒' U+21D2, UTF-8: 0xE28792
         case 0xE28891: return makeToken(TOKEN_SUMMATION); break; // '∑' U+2211, UTF-8: 0xE28891

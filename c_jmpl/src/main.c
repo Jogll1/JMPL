@@ -20,46 +20,10 @@
 // - format in compliance with the C style guide
 // - add documentation
 
-// /**
-//  * Read the next UTF-8 character of a file and adds it to buffer.
-//  * 
-//  * @param file   the file to read
-//  * @param buffer where the character is to be stored
-//  * @returns      the length of the character in bytes
-//  */
-// static int readUtf8Char(FILE* file, unsigned char* buffer) {
-//     unsigned char byte = fgetc(file);
-//     if(byte == EOF) return EOF;
-
-//     // Get number of bytes in character
-//     int byteCount = utf8ByteCount(byte);
-//     if(byteCount == -1) {
-//         fprintf(stderr, "Invalid UTF-8 start byte 0x%X\n", byte);
-//         return -1;
-//     }
-
-//     // Initialise byte array
-//     buffer[0] = byte;
-
-//     // Get the next bytes
-//     for(int i = 1; i < byteCount; i++) {
-//         int nextByte = fgetc(file);
-
-//         // Check if byte is invalid
-//         if(nextByte == EOF || (nextByte & 0xC0) != 0x80) {
-//             fprintf(stderr, "Invalid UTF-8 continuation byte 0x%X\n", byte);
-//         }
-
-//         buffer[i] = nextByte;
-//     }
-
-//     return byteCount;
-// }
-
 static void repl() {
     char line[1024];
 
-    for(;;) {
+    while(true) {
         printf("> ");
 
         if(!fgets(line, sizeof(line), stdin)) {
@@ -122,7 +86,7 @@ int main(int argc, const char* argv[]) {
 
     if(argc == 1) {
         // If no file argument, run the REPL
-        printf("Note: if using windows, terminal must be using code page 65001.\n");
+        printf("Note: if using windows, terminal must be using code page 65001 to use mathematical symbols.\n");
         repl();
     } else if(argc == 2) {
         // If there's a file argument, run the file

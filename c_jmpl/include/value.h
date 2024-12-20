@@ -46,11 +46,11 @@ typedef struct {
     do { \
         if((value) == (int)(value)) { \
             int size = snprintf(NULL, 0, "%d", (int)(value)) + 1; \
-            *(resultPtr) = (unsigned char *)malloc(size); \
+            *(resultPtr) = (unsigned char*)malloc(size); \
             snprintf(*(resultPtr), size, "%d", (int)(value)); \
         } else { \
             int size = snprintf(NULL, 0, "%g", (value)) + 1; \
-            *(resultPtr) = (unsigned char *)malloc(size); \
+            *(resultPtr) = (unsigned char*)malloc(size); \
             snprintf(*(resultPtr), size, "%g", (value)); \
         } \
     } while(false)

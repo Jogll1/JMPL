@@ -3,10 +3,14 @@
 
 #include "common.h"
 
+typedef struct Obj Obj;
+typedef struct ObjString ObjString;
+
 typedef enum {
     VAL_BOOL,
     VAL_NULL,
-    VAL_NUMBER
+    VAL_NUMBER,
+    VAL_OBJ
 } ValueType;
 
 typedef struct {
@@ -14,6 +18,7 @@ typedef struct {
     union {
         bool boolean;
         double number;
+        Obj* obj;
     } as;
 } Value;
 
@@ -21,8 +26,10 @@ typedef struct {
 #define IS_BOOL(value)    ((value).type == VAL_BOOL)
 #define IS_NULL(value)    ((value).type == VAL_NULL)
 #define IS_NUMBER(value)  ((value).type == VAL_NUMBER)
+#define IS_OBJ(value)     ((value).type == VAL_OBJ)
 
 // JMPL Value to C value
+#define AS_OBJ(value)     ((value).as.obj)
 #define AS_BOOL(value)    ((value).as.boolean)
 #define AS_NUMBER(value)  ((value).as.number)
 
@@ -30,6 +37,23 @@ typedef struct {
 #define BOOL_VAL(value)   ((Value){VAL_BOOL, {.boolean = value}})
 #define NULL_VAL          ((Value){VAL_NULL, {.number = 0}})
 #define NUMBER_VAL(value) ((Value){VAL_NUMBER, {.number = value}})
+#define OBJ_VAL(object)   ((Value){VAL_OBJ, {.obj = (Obj*)object}})
+
+// Convert values to strings
+#define BOOL_TO_STRING(value) ((value) ? "true" : "false");
+#define NULL_TO_STRING ("null")
+#define NUMBER_TO_STRING(value, resultPtr) \
+    do { \
+        if((value) == (int)(value)) { \
+            int size = snprintf(NULL, 0, "%d", (int)(value)) + 1; \
+            *(resultPtr) = (unsigned char *)malloc(size); \
+            snprintf(*(resultPtr), size, "%d", (int)(value)); \
+        } else { \
+            int size = snprintf(NULL, 0, "%g", (value)) + 1; \
+            *(resultPtr) = (unsigned char *)malloc(size); \
+            snprintf(*(resultPtr), size, "%g", (value)); \
+        } \
+    } while(false)
 
 typedef struct {
     int capacity;

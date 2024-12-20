@@ -1,10 +1,13 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <math.h>
+#include <string.h>
 
 #include "common.h"
 #include "compiler.h"
 #include "vm.h"
+#include "object.h"
+#include "memory.h"
 #include "debug.h"
 
 // ToDo: swap this for a pointer (CH 15)
@@ -33,10 +36,11 @@ static void runtimeError(const unsigned char* format, ...) {
 
 void initVM() {
     resetStack();
+    vm.objects = NULL;
 }
 
 void freeVM() {
-
+    freeObjects();
 }
 
 void push(Value value) {
@@ -49,20 +53,42 @@ Value pop() {
     return *vm.stackTop;
 }
 
-/*
-    Returns value from the stack but doesn't pop it.
-    @param distance how far down from the top of the stack to look, zero being the top
-*/
+/**
+ * Returns value from the stack but doesn't pop it.
+ *
+ * @param distance how far down from the top of the stack to look, zero being the top
+ * @return         the value at that distance on the stack
+ */
 static Value peek(int distance) {
     return vm.stackTop[-1 - distance];
 }
 
-// ToDo: add empty string
 static bool isFalse(Value value) {
     // Return false if null, false, 0, or empty string
     return IS_NULL(value) || 
            (IS_NUMBER(value) && AS_NUMBER(value) == 0) || 
-           (IS_BOOL(value) && !AS_BOOL(value));
+           (IS_BOOL(value) && !AS_BOOL(value)) ||
+           (IS_STRING(value) && AS_CSTRING(value)[0] == '\0');
+}
+
+static void concatenate() {
+    // Concatenate if either a or b is a string
+    Value b = pop();
+    Value a = pop();
+
+    ObjString* aString = valueToString(a);
+    ObjString* bString = valueToString(b);
+
+
+    // Create new string concatenation
+    int length = aString->length + bString->length;
+    unsigned char* chars = ALLOCATE(char, length + 1);
+    memcpy(chars, aString->chars, aString->length);
+    memcpy(chars + aString->length, bString->chars, bString->length);
+    chars[length] = '\0';
+
+    ObjString* result = takeString(chars, length);
+    push(OBJ_VAL(result));
 }
 
 static InterpretResult run() {
@@ -78,7 +104,7 @@ static InterpretResult run() {
         double b = AS_NUMBER(pop()); \
         double a = AS_NUMBER(pop()); \
         push(valueType(a op b)); \
-    } while (false);
+    } while (false)
 #define EXPONENT(valueType) \
     do { \
         if(!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) { \
@@ -88,7 +114,7 @@ static InterpretResult run() {
         double b = AS_NUMBER(pop()); \
         double a = AS_NUMBER(pop()); \
         push(valueType(pow(a, b))); \
-    } while (false);
+    } while (false)
 // ----------
 
     for(;;) {
@@ -129,7 +155,20 @@ static InterpretResult run() {
             case OP_GREATER_EQUAL: BINARY_OP(BOOL_VAL, >=); break;
             case OP_LESS:          BINARY_OP(BOOL_VAL, <); break;
             case OP_LESS_EQUAL:    BINARY_OP(BOOL_VAL, <=); break;
-            case OP_ADD:           BINARY_OP(NUMBER_VAL, +); break;
+            case OP_ADD: {
+                if(IS_STRING(peek(0)) || IS_STRING(peek(1))) {
+                    // Concatenate if at least one operand is a string
+                    concatenate();
+                } else if(IS_NUMBER(peek(0)) && IS_NUMBER(peek(1))) {
+                    double b = AS_NUMBER(pop());
+                    double a = AS_NUMBER(pop());
+                    push(NUMBER_VAL(a + b));
+                } else {
+                    runtimeError("Invalid operand type(s)");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                break;
+            }
             case OP_SUBTRACT:      BINARY_OP(NUMBER_VAL, -); break;
             case OP_MULTIPLY:      BINARY_OP(NUMBER_VAL, *); break;
             case OP_DIVIDE:        BINARY_OP(NUMBER_VAL, /); break;

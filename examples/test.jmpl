@@ -1,4 +1,8 @@
-let p = true;
-let q = false;
+let a = "before";
+out a;
 
-out "" + p + q;
+a := "after";
+out a;
+
+out a := "arg";
+out a;

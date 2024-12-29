@@ -7,14 +7,16 @@
 #include "debug.h"
 #include "vm.h"
 
-//gcc -I.\c_jmpl\include -o .\build\c_jmpl\main .\c_jmpl\src\*.c
-//.\build\c_jmpl\main.exe
+#define CURRENT_VERSION "v0-0-5"
+
+//gcc -I.\c_jmpl\include -o .\build\c_jmpl\v0-0-5 .\c_jmpl\src\*.c
+//.\build\c_jmpl\v0-0-5.exe
 
 // ToDo:
 // - RLE for line information in writeChunk (CH 14)
-// - constant long instruction (CH 14)
+// - Constant long instruction (CH 14)
 // - Dynamically grow stack (CH 15)
-// - Remove repl line count
+// - Remove repl line count?
 // - Add error types
 //
 // - format in compliance with the C style guide
@@ -86,7 +88,7 @@ int main(int argc, const char* argv[]) {
 
     if(argc == 1) {
         // If no file argument, run the REPL
-        printf("Note: if using windows, terminal must be using code page 65001 to use mathematical symbols.\n");
+        printf("Note: if using Windows, terminal must be using code page 65001 to use mathematical symbols.\n");
         repl();
     } else if(argc == 2) {
         // If there's a file argument, run the file

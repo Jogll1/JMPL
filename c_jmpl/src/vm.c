@@ -37,9 +37,13 @@ static void runtimeError(const unsigned char* format, ...) {
 void initVM() {
     resetStack();
     vm.objects = NULL;
+    initTable(&vm.globals);
+    initTable(&vm.strings);
 }
 
 void freeVM() {
+    freeTable(&vm.globals);
+    freeTable(&vm.strings);
     freeObjects();
 }
 
@@ -79,7 +83,6 @@ static void concatenate() {
     ObjString* aString = valueToString(a);
     ObjString* bString = valueToString(b);
 
-
     // Create new string concatenation
     int length = aString->length + bString->length;
     unsigned char* chars = ALLOCATE(char, length + 1);
@@ -94,6 +97,7 @@ static void concatenate() {
 static InterpretResult run() {
 #define READ_BYTE() (*vm.ip++)
 #define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
+#define READ_STRING() AS_STRING(READ_CONSTANT())
 // -- Ugly --
 #define BINARY_OP(valueType, op) \
     do { \
@@ -136,9 +140,28 @@ static InterpretResult run() {
                 Value constant = READ_CONSTANT();
                 push(constant);
                 break;
-            case OP_NULL:  push(NULL_VAL); break;
-            case OP_TRUE:  push(BOOL_VAL(true)); break;
+            case OP_NULL: push(NULL_VAL); break;
+            case OP_TRUE: push(BOOL_VAL(true)); break;
             case OP_FALSE: push(BOOL_VAL(false)); break;
+            case OP_POP: pop(); break;
+            case OP_GET_GLOBAL: {
+                ObjString* name = READ_STRING();
+                Value value;
+                
+                if(!tableGet(&vm.globals, name, &value)) {
+                    runtimeError("Undefined variable '%s'", name->chars);
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                
+                push(value);
+                break;
+            }
+            case OP_DEFINE_GLOBAL: {
+                ObjString* name = READ_STRING();
+                tableSet(&vm.globals, name, peek(0));
+                pop();
+                break;
+            }
             case OP_EQUAL: {
                 Value b = pop();
                 Value a = pop();
@@ -151,10 +174,10 @@ static InterpretResult run() {
                 push(BOOL_VAL(!valuesEqual(a, b)));
                 break;
             }
-            case OP_GREATER:       BINARY_OP(BOOL_VAL, >); break;
+            case OP_GREATER: BINARY_OP(BOOL_VAL, >); break;
             case OP_GREATER_EQUAL: BINARY_OP(BOOL_VAL, >=); break;
-            case OP_LESS:          BINARY_OP(BOOL_VAL, <); break;
-            case OP_LESS_EQUAL:    BINARY_OP(BOOL_VAL, <=); break;
+            case OP_LESS: BINARY_OP(BOOL_VAL, <); break;
+            case OP_LESS_EQUAL: BINARY_OP(BOOL_VAL, <=); break;
             case OP_ADD: {
                 if(IS_STRING(peek(0)) || IS_STRING(peek(1))) {
                     // Concatenate if at least one operand is a string
@@ -169,10 +192,10 @@ static InterpretResult run() {
                 }
                 break;
             }
-            case OP_SUBTRACT:      BINARY_OP(NUMBER_VAL, -); break;
-            case OP_MULTIPLY:      BINARY_OP(NUMBER_VAL, *); break;
-            case OP_DIVIDE:        BINARY_OP(NUMBER_VAL, /); break;
-            case OP_EXPONENT:      EXPONENT(NUMBER_VAL); break;
+            case OP_SUBTRACT: BINARY_OP(NUMBER_VAL, -); break;
+            case OP_MULTIPLY: BINARY_OP(NUMBER_VAL, *); break;
+            case OP_DIVIDE: BINARY_OP(NUMBER_VAL, /); break;
+            case OP_EXPONENT: EXPONENT(NUMBER_VAL); break;
             case OP_NOT:      
                 push(BOOL_VAL(isFalse(pop()))); 
                 break;
@@ -183,14 +206,18 @@ static InterpretResult run() {
                 }
                 push(NUMBER_VAL(-AS_NUMBER(pop())));
                 break;
-            case OP_RETURN:
+            case OP_OUT:
                 printValue(pop());
                 printf("\n");
+                break;
+            case OP_RETURN:
+                // Exit interpreter
                 return INTERPRET_OK;
         }
     }
 
 #undef READ_BYTE
+#undef READ_STRING
 #undef READ_CONSTANT
 #undef BINARY_OP
 #undef EXPONENT

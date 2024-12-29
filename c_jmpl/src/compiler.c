@@ -156,6 +156,10 @@ static void declaration();
 static ParseRule* getRule(TokenType type);
 static void parsePrecedence(Precedence precendence);
 
+static uint8_t identifierConstant(Token* name) {
+    return makeConstant(OBJ_VAL(copyString(name->start, name->length)));
+}
+
 static void binary() {
     TokenType operatorType = parser.previous.type;
     ParseRule* rule = getRule(operatorType);
@@ -302,11 +306,7 @@ static void parsePrecedence(Precedence precendence) {
     }
 }
 
-static uint8_t identifierConstant(Token* name) {
-    return makeConstant(OBJ_VAL(copyString(name->start, name->length)));
-}
-
-static parseVariable(const unsigned char* errorMessage) {
+static uint8_t parseVariable(const unsigned char* errorMessage) {
     consume(TOKEN_IDENTIFIER, errorMessage);
     return identifierConstant(&parser.previous);
 }

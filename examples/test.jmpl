@@ -1,1 +1,4 @@
-1 ∧ 2
+let p = true;
+let q = false;
+
+out "" + p + q;

@@ -7,10 +7,10 @@
 #include "debug.h"
 #include "vm.h"
 
-#define CURRENT_VERSION "v0-0-5"
+#define CURRENT_VERSION "v0.0.5"
 
-//gcc -I.\c_jmpl\include -o .\build\c_jmpl\v0-0-5 .\c_jmpl\src\*.c
-//.\build\c_jmpl\v0-0-5.exe
+// gcc -I.\c_jmpl\include -o .\build\c_jmpl\v0-0-5 .\c_jmpl\src\*.c
+// .\build\c_jmpl\v0-0-5.exe
 
 // ToDo:
 // - RLE for line information in writeChunk (CH 14)
@@ -88,6 +88,7 @@ int main(int argc, const char* argv[]) {
 
     if(argc == 1) {
         // If no file argument, run the REPL
+        printf("Welcome to the JMPL %s REPL.\n", CURRENT_VERSION);
         printf("Note: if using Windows, terminal must be using code page 65001 to use mathematical symbols.\n");
         repl();
     } else if(argc == 2) {

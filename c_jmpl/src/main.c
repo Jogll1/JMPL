@@ -16,8 +16,9 @@
 // - RLE for line information in writeChunk (CH 14)
 // - Constant long instruction (CH 14)
 // - Dynamically grow stack (CH 15)
-// - Remove repl line count?
+// - Remove repl line count
 // - Add error types
+// - Optimise storing global variable names as constants (CH 21)
 //
 // - format in compliance with the C style guide
 // - add documentation

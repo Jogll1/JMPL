@@ -42,7 +42,20 @@ typedef struct {
     Precedence precedence;
 } ParseRule;
 
+typedef struct {
+    Token name;
+    int depth;
+} Local;
+
+typedef struct {
+    Local locals[UINT8_COUNT];
+    int localCount;
+    int scopeDepth;
+} Compiler;
+
+// Note: Remove globals eventually
 Parser parser;
+Compiler* current = NULL;
 Chunk* compilingChunk;
 
 static Chunk* currentChunk() {
@@ -139,6 +152,12 @@ static void emitConstant(Value value) {
     emitBytes(OP_CONSTANT, makeConstant(value));
 }
 
+static void initCompiler(Compiler* compiler) {
+    compiler->localCount = 0;
+    compiler->scopeDepth = 0;
+    current = compiler;
+}
+
 static void endCompiler() {
     emitReturn();
 
@@ -147,6 +166,14 @@ static void endCompiler() {
         disassembleChunk(currentChunk(), "code");
     }
 #endif
+}
+
+static void beginScope() {
+    current->scopeDepth++;
+}
+
+static void endScope() {
+    current->scopeDepth--;
 }
 
 // Function declarations 
@@ -335,6 +362,14 @@ static void expression() {
     parsePrecedence(PREC_ASSIGNMENT);
 }
 
+static void block() {
+    while(!check(TOKEN_RIGHT_PAREN) && !check(TOKEN_EOF)) {
+        declaration();
+    }
+
+    consume(TOKEN_RIGHT_PAREN, "Expected '}' after block");
+}
+
 static void letDeclaration() {
     uint8_t global = parseVariable("Expected variable name");
 
@@ -395,6 +430,11 @@ static void declaration() {
 static void statement() {
     if(match(TOKEN_OUT)) {
         outStatement();
+    } else if(match(TOKEN_LEFT_PAREN)) {
+        // HMM - make sure groupings don't go in a seperate scope
+        beginScope();
+        block();
+        endScope();
     } else {
         expressionStatement();
     }
@@ -402,6 +442,8 @@ static void statement() {
 
 bool compile(const unsigned char* source, Chunk* chunk) {
     initScanner(source);
+    Compiler compiler;
+    initCompiler(&compiler);
     compilingChunk = chunk;
 
     parser.hadError = false;

@@ -1,8 +1,8 @@
-let a = "before";
-out a;
+let x = 1;
 
-a := "after";
-out a;
+(
+    x := (2^3 + 1) * 2;
+    out x;
+)
 
-out a := "arg";
-out a;
+out x;

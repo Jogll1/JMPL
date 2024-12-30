@@ -121,7 +121,7 @@ static InterpretResult run() {
     } while (false)
 // ----------
 
-    for(;;) {
+    while(true) {
 #ifdef DEBUG_TRACE_EXECUTION
         printf("          ");
         for (Value* slot = vm.stack; slot < vm.stackTop; slot++) {
@@ -147,12 +147,10 @@ static InterpretResult run() {
             case OP_GET_GLOBAL: {
                 ObjString* name = READ_STRING();
                 Value value;
-
                 if(!tableGet(&vm.globals, name, &value)) {
                     runtimeError("Undefined variable '%s'", name->chars);
                     return INTERPRET_RUNTIME_ERROR;
                 }
-                
                 push(value);
                 break;
             }
@@ -164,13 +162,11 @@ static InterpretResult run() {
             }
             case OP_SET_GLOBAL: {
                 ObjString* name = READ_STRING();
-
                 if(tableSet(&vm.globals, name, peek(0))) {
                     tableDelete(&vm.globals, name);
                     runtimeError("Undefined variable '%s'", name->chars);
                     return INTERPRET_RUNTIME_ERROR;
                 }
-
                 break;
             }
             case OP_EQUAL: {
@@ -205,7 +201,20 @@ static InterpretResult run() {
             }
             case OP_SUBTRACT: BINARY_OP(NUMBER_VAL, -); break;
             case OP_MULTIPLY: BINARY_OP(NUMBER_VAL, *); break;
-            case OP_DIVIDE: BINARY_OP(NUMBER_VAL, /); break;
+            case OP_DIVIDE: {
+                if(!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
+                    runtimeError("Operands must be numbers");
+                    return INTERPRET_RUNTIME_ERROR;
+                } else if (IS_NUMBER(peek(0)) && AS_NUMBER(peek(0)) == 0) {
+                    // Return error if divisor is 0
+                    runtimeError("Division by 0");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                double b = AS_NUMBER(pop());
+                double a = AS_NUMBER(pop());
+                push(NUMBER_VAL(a / b));
+                break;
+            }
             case OP_EXPONENT: EXPONENT(NUMBER_VAL); break;
             case OP_NOT:      
                 push(BOOL_VAL(isFalse(pop()))); 

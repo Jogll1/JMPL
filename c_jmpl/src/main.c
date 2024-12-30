@@ -19,6 +19,7 @@
 // - Remove repl line count
 // - Add error types
 // - Optimise storing global variable names as constants (CH 21)
+// - POPN instruction that pops n amount of times (CH 22)
 //
 // - format in compliance with the C style guide
 // - add documentation

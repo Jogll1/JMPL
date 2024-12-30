@@ -98,6 +98,7 @@ static InterpretResult run() {
 #define READ_BYTE() (*vm.ip++)
 #define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
 #define READ_STRING() AS_STRING(READ_CONSTANT())
+#define READ_SHORT() (vm.ip += 2, (uint16_t)((vm.ip[-2] << 8) | vm.ip[-1]))
 // -- Ugly --
 #define BINARY_OP(valueType, op) \
     do { \
@@ -136,10 +137,11 @@ static InterpretResult run() {
 
         uint8_t instruction;
         switch(instruction = READ_BYTE()) {
-            case OP_CONSTANT:
+            case OP_CONSTANT: {
                 Value constant = READ_CONSTANT();
                 push(constant);
                 break;
+            }
             case OP_NULL: push(NULL_VAL); break;
             case OP_TRUE: push(BOOL_VAL(true)); break;
             case OP_FALSE: push(BOOL_VAL(false)); break;
@@ -226,20 +228,33 @@ static InterpretResult run() {
                 break;
             }
             case OP_EXPONENT: EXPONENT(NUMBER_VAL); break;
-            case OP_NOT:      
+            case OP_NOT: {   
                 push(BOOL_VAL(isFalse(pop()))); 
                 break;
-            case OP_NEGATE:   
+            }
+            case OP_NEGATE: {
                 if(!IS_NUMBER(peek(0))) {
                     runtimeError("Operand must be a number");
                     return INTERPRET_RUNTIME_ERROR;
                 }
                 push(NUMBER_VAL(-AS_NUMBER(pop())));
                 break;
-            case OP_OUT:
+            }
+            case OP_OUT: {
                 printValue(pop());
                 printf("\n");
                 break;
+            }
+            case OP_JUMP: {
+                uint16_t offset = READ_SHORT();
+                vm.ip += offset;
+                break;
+            }
+            case OP_JUMP_IF_FALSE: {
+                uint16_t offset = READ_SHORT();
+                if(isFalse(peek(0))) vm.ip += offset;
+                break;
+            }
             case OP_RETURN:
                 // Exit interpreter
                 return INTERPRET_OK;
@@ -249,6 +264,7 @@ static InterpretResult run() {
 #undef READ_BYTE
 #undef READ_STRING
 #undef READ_CONSTANT
+#undef READ_SHORT
 #undef BINARY_OP
 #undef EXPONENT
 }

@@ -134,6 +134,16 @@ static void emitBytes(uint8_t byte1, uint8_t byte2) {
     emitByte(byte2);
 }
 
+static int emitJump(uint8_t instruction) {
+    emitByte(instruction);
+
+    // Jump over offset
+    emitByte(0xFF);
+    emitByte(0xFF);
+
+    return currentChunk()->count - 2;
+}
+
 static void emitReturn() {
     emitByte(OP_RETURN);
 }
@@ -151,6 +161,18 @@ static uint8_t makeConstant(Value value) {
 
 static void emitConstant(Value value) {
     emitBytes(OP_CONSTANT, makeConstant(value));
+}
+
+static void patchJump(int offset) {
+    // -2 to adjust for the bytecode for the jump offset itself
+    int jump = currentChunk()->count - offset - 2;
+
+    if(jump > UINT16_MAX) {
+        error("Too much code to jump over");
+    }
+
+    currentChunk()->code[offset] = (jump >> 8) & 0xFF;
+    currentChunk()->code[offset + 1] = jump & 0xFF;
 }
 
 static void initCompiler(Compiler* compiler) {
@@ -471,6 +493,23 @@ static void expressionStatement() {
     emitByte(OP_POP);
 }
 
+static void ifStatement() {
+    expression();
+    consume(TOKEN_THEN, "Expected 'then' after condidition");
+
+    int thenJump = emitJump(OP_JUMP_IF_FALSE);
+    emitByte(OP_POP);
+    statement();
+
+    int elseJump = emitJump(OP_JUMP);
+
+    patchJump(thenJump);
+    emitByte(OP_POP);
+
+    if(match(TOKEN_ELSE)) statement();
+    patchJump(elseJump);
+}
+
 static void outStatement() {
     expression();
     consumeSemicolon();
@@ -510,6 +549,8 @@ static void declaration() {
 static void statement() {
     if(match(TOKEN_OUT)) {
         outStatement();
+    } else if(match(TOKEN_IF)) {
+        ifStatement();
     } else if(match(TOKEN_LEFT_PAREN)) {
         beginScope();
         block();

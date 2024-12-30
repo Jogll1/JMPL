@@ -1,8 +1,3 @@
-let x = 5;
+let x = 6;
 
-(
-    x := (14 - 1);
-    out x;
-)
-
-out x;
+if true ∧ ¬false then out "Yep";

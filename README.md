@@ -2,6 +2,8 @@
 
 This repository contains the JMPL interpreter and documentation.
 
+Files that contain non-ASCII character should be encoded in UTF-8. If using a Windows terminal, the code page should be changed to `65001` to properly display any Unicode character that may be outputted.
+
 ## Running the Interpreter
 Currently, to run the interpreter cd to root of the repo and run the commands:\
 `javac -d ./bin ./src/com/jmpl/j_jmpl/*.java` to compile to `bin` then,\

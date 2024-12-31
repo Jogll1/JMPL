@@ -3,6 +3,6 @@
 
 #include "vm.h"
 
-bool compile(const unsigned char* source, Chunk* chunk);
+ObjFunction* compile(const unsigned char* source);
 
 #endif

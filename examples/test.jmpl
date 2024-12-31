@@ -1,6 +1,9 @@
-let x = 1;
+// Test
+let a = 1;
+let b = 7;
 
-while x < 10 do (
-    out x;
-    x := x + 1;
+while a < b do (
+    a := a + a;
 )
+
+out a;

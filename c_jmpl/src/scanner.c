@@ -125,13 +125,17 @@ static void skipWhitespace() {
                 if(peekNext() == '/') {
                     // If it is a comment, keep consuming until end of the line
                     while (peek() != '\n' && !isAtEnd()) advance();
-                } else if(peekNext() == '*') {
+                } else if(peekNext() =='*') {
+                    advance();
+                    advance();
                     // If it is a multi-line comment, keep consuming until closed off
-                    while ((peek() != '*' || peekNext() != '/') && !isAtEnd()) {
+                    while (peek() != '*' && peekNext() != '/' && !isAtEnd()) {
                         // Increment line counter manually when scanning multi-line comments
                         if(peek() == '\n') scanner.line++;
                         advance();
                     }
+                    advance();
+                    advance();
                 } else {
                     return;
                 }
@@ -252,7 +256,7 @@ Token scanToken() {
         case '-': return makeToken(TOKEN_MINUS); break;
         case '+': return makeToken(TOKEN_PLUS); break;
         case '/': return makeToken(TOKEN_SLASH); break;
-        case '*': return makeToken(TOKEN_ASTERISK); break;
+        case '*': printf("OH\n"); return makeToken(TOKEN_ASTERISK); break;
         case '^': return makeToken(TOKEN_CARET); break;
         case '%': return makeToken(TOKEN_PERCENT); break;
         case ';': return makeToken(TOKEN_SEMICOLON); break;

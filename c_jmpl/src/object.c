@@ -21,6 +21,14 @@ static Obj* allocateObject(size_t size, ObjType type) {
     return object;
 }
 
+ObjFunction* newFunction() {
+    ObjFunction* function = ALLOCATE_OBJ(ObjFunction, OBJ_FUNCTION);
+    function->arity = 0;
+    function->name = NULL;
+    initChunk(&function->chunk);
+    return function;
+}
+
 static ObjString* allocateString(unsigned char* chars, int length, uint32_t hash) {
     ObjString* string = ALLOCATE_OBJ(ObjString, OBJ_STRING);
     string->length = length;
@@ -74,6 +82,14 @@ ObjString* copyString(const unsigned char* chars, int length) {
     return allocateString(heapChars, length, hash);
 }
 
+static void printFunction(ObjFunction* function) {
+    if(function->name == NULL) {
+        printf("<script>");
+    } else {
+        printf("<fn %s", function->name->chars);
+    }
+}
+
 /**
  * Converts a value to an ObjString.
  * 
@@ -83,6 +99,11 @@ ObjString* copyString(const unsigned char* chars, int length) {
 ObjString* valueToString(Value value) {
     if(IS_STRING(value)) {
         return AS_STRING(value);
+    }
+
+    if(IS_FUNCTION(value)) {
+        unsigned char* str = AS_FUNCTION(value)->name->chars;
+        return AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
     }
 
     unsigned char* str;
@@ -100,12 +121,15 @@ ObjString* valueToString(Value value) {
     }
 
     ObjString* result = AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
-    // free(str);
+
     return result;
 }
 
 void printObject(Value value) {
     switch(OBJ_TYPE(value)) {
+        case OBJ_FUNCTION:
+            printFunction(AS_FUNCTION(value));
+            break;
         case OBJ_STRING:
             printf("%s", AS_CSTRING(value));
             break;

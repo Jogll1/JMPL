@@ -100,7 +100,7 @@ static void errorAtCurrent(const unsigned char* message) {
 static void advance() {
     parser.previous = parser.current;
 
-    for(;;) {
+    while(true) {
         parser.current = scanToken();
         // printf("parsed %.*s, %d\n", parser.current.length, parser.current.start, parser.current.type);
         if(parser.current.type != TOKEN_ERROR) break;
@@ -163,6 +163,7 @@ static int emitJump(uint8_t instruction) {
 }
 
 static void emitReturn() {
+    emitByte(OP_NULL); // Implicitly return null if function returns nothing
     emitByte(OP_RETURN);
 }
 
@@ -301,6 +302,45 @@ static void declareVariable() {
     addLocal(*name);
 }
 
+static uint8_t parseVariable(const unsigned char* errorMessage) {
+    consume(TOKEN_IDENTIFIER, errorMessage);
+
+    declareVariable();
+    if(current->scopeDepth > 0) return 0;
+
+    return identifierConstant(&parser.previous);
+}
+
+static void markInitialised() {
+    if(current->scopeDepth == 0) return;
+    current->locals[current->localCount - 1].depth = current->scopeDepth;
+}
+
+static void defineVariable(uint8_t global) {
+    if(current->scopeDepth > 0) {
+        markInitialised();
+        return;
+    }
+
+    emitBytes(OP_DEFINE_GLOBAL, global);
+}
+
+static uint8_t argumentList() {
+    uint8_t argCount = 0;
+    if(!check(TOKEN_RIGHT_PAREN)) {
+        do {
+            expression();
+            if(argCount == 255) {
+                error("Can't have more than 255 arguments");
+            }
+            argCount++;
+        } while(match(TOKEN_COMMA));
+    }
+
+    consume(TOKEN_RIGHT_PAREN, "Expected ')' after arguments");
+    return argCount;
+}
+
 static void binary(bool canAssign) {
     TokenType operatorType = parser.previous.type;
     ParseRule* rule = getRule(operatorType);
@@ -320,6 +360,11 @@ static void binary(bool canAssign) {
         case TOKEN_CARET:         emitByte(OP_EXPONENT);      break;
         default: return;
     }
+}
+
+static void call(bool canAssign) {
+    uint8_t argCount = argumentList();
+    emitBytes(OP_CALL, argCount);
 }
 
 static void literal(bool canAssign) {
@@ -410,7 +455,7 @@ static void unary(bool canAssign) {
 ParseRule rules[] = {
     // Rules for parsing expressions
     // Token name            prefix    infix   precedence
-    [TOKEN_LEFT_PAREN]    = {grouping, NULL,   PREC_NONE},
+    [TOKEN_LEFT_PAREN]    = {grouping, call,   PREC_CALL},
     [TOKEN_RIGHT_PAREN]   = {NULL,     NULL,   PREC_NONE},
     [TOKEN_LEFT_BRACE]    = {NULL,     NULL,   PREC_NONE}, 
     [TOKEN_RIGHT_BRACE]   = {NULL,     NULL,   PREC_NONE},
@@ -489,29 +534,6 @@ static void parsePrecedence(Precedence precendence) {
     }
 }
 
-static uint8_t parseVariable(const unsigned char* errorMessage) {
-    consume(TOKEN_IDENTIFIER, errorMessage);
-
-    declareVariable();
-    if(current->scopeDepth > 0) return 0;
-
-    return identifierConstant(&parser.previous);
-}
-
-static void markInitialised() {
-    if(current->scopeDepth == 0) return;
-    current->locals[current->localCount - 1].depth = current->scopeDepth;
-}
-
-static void defineVariable(uint8_t global) {
-    if(current->scopeDepth > 0) {
-        markInitialised();
-        return;
-    }
-
-    emitBytes(OP_DEFINE_GLOBAL, global);
-}
-
 static ParseRule* getRule(TokenType type) {
     return &rules[type];
 }
@@ -585,7 +607,7 @@ static void expressionStatement() {
 
 static void ifStatement() {
     expression();
-    consume(TOKEN_THEN, "Expected 'then' after condidition");
+    consume(TOKEN_THEN, "Expected 'then' after condition");
 
     int thenJump = emitJump(OP_JUMP_IF_FALSE);
     emitByte(OP_POP);
@@ -604,6 +626,20 @@ static void outStatement() {
     expression();
     consumeSemicolon();
     emitByte(OP_OUT);
+}
+
+static void returnStatement() {
+    if(current->type == TYPE_SCRIPT) {
+        error("Can't return from top-level code");
+    }
+
+    if(match(TOKEN_SEMICOLON)) {
+        emitReturn();
+    } else {
+        expression();
+        consumeSemicolon();
+        emitByte(OP_RETURN);
+    }
 }
 
 static void whileStatement() {
@@ -657,6 +693,8 @@ static void statement() {
         outStatement();
     } else if(match(TOKEN_IF)) {
         ifStatement();
+    } else if(match(TOKEN_RETURN)) {
+        returnStatement();
     } else if(match(TOKEN_WHILE)) {
         whileStatement();
     } else if(match(TOKEN_LEFT_PAREN)) {

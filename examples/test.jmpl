@@ -1,3 +1,9 @@
-func test() = out "Hello";
+func fib(n) = (
+    if n < 2 then return n;
 
-out "Function is called " + test;
+    return fib(n - 2) + fib(n - 1);
+)
+
+let start = clock();
+out "" + fib(35);
+out "Time = " + (clock() - start);

@@ -86,7 +86,7 @@ static void printFunction(ObjFunction* function) {
     if(function->name == NULL) {
         printf("<script>");
     } else {
-        printf("<fn %s", function->name->chars);
+        printf("<fn %s>", function->name->chars);
     }
 }
 

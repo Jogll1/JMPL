@@ -1,9 +1,3 @@
-// Test
-let a = 1;
-let b = 7;
+func test() = out "Hello";
 
-while a < b do (
-    a := a + a;
-)
-
-out a;
+out "Function is called " + test;

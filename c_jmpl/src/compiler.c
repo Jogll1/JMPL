@@ -53,7 +53,8 @@ typedef enum {
     TYPE_SCRIPT
 } FunctionType;
 
-typedef struct {
+typedef struct Compiler {
+    struct Compiler* enclosing;
     ObjFunction* function;
     FunctionType type;
 
@@ -193,12 +194,17 @@ static void patchJump(int offset) {
 }
 
 static void initCompiler(Compiler* compiler, FunctionType type) {
+    compiler->enclosing = current;
     compiler->function = NULL;
     compiler->type = type;
     compiler->localCount = 0;
     compiler->scopeDepth = 0;
     compiler->function = newFunction();
     current = compiler;
+
+    if(type != TYPE_SCRIPT) {
+        current->function->name = copyString(parser.previous.start, parser.previous.length);
+    }
 
     Local* local = &current->locals[current->localCount++];
     local->depth = 0;
@@ -216,6 +222,7 @@ static ObjFunction* endCompiler() {
     }
 #endif
 
+    current = current->enclosing;
     return function;
 }
 
@@ -492,6 +499,7 @@ static uint8_t parseVariable(const unsigned char* errorMessage) {
 }
 
 static void markInitialised() {
+    if(current->scopeDepth == 0) return;
     current->locals[current->localCount - 1].depth = current->scopeDepth;
 }
 
@@ -518,6 +526,40 @@ static void block() {
     }
 
     consume(TOKEN_RIGHT_PAREN, "Expected '}' after block");
+}
+
+static void function(FunctionType type) {
+    Compiler compiler;
+    initCompiler(&compiler, type);
+    beginScope();
+
+    consume(TOKEN_LEFT_PAREN, "Expected '(' after function name");
+
+    if(!check(TOKEN_RIGHT_PAREN)) {
+        do {
+            current->function->arity++;
+            if(current->function->arity > 255) {
+                errorAtCurrent("Can't have more than 255 parameters");
+            }
+
+            uint8_t constant = parseVariable("Expected parameter name");
+            defineVariable(constant);
+        } while(match(TOKEN_COMMA));
+    }
+
+    consume(TOKEN_RIGHT_PAREN, "Expected ')' after function parameters");
+    consume(TOKEN_EQUAL, "Expected '=' after function signature");
+    statement();
+
+    ObjFunction* function = endCompiler();
+    emitBytes(OP_CONSTANT, makeConstant(OBJ_VAL(function)));
+}
+
+static void functionDeclaration() {
+    uint8_t global = parseVariable("Expected function name");
+    markInitialised();
+    function(TYPE_FUNCTION);
+    defineVariable(global);
 }
 
 static void letDeclaration() {
@@ -599,7 +641,9 @@ static void synchronise() {
 }
 
 static void declaration() {
-    if(match(TOKEN_LET)) {
+    if(match(TOKEN_FUNCTION)) {
+        functionDeclaration();
+    } else if(match(TOKEN_LET)) {
         letDeclaration();
     } else {
         statement();

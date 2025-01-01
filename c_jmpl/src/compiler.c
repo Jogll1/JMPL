@@ -66,6 +66,7 @@ typedef struct Compiler {
 // Note: Remove globals eventually
 Parser parser;
 Compiler* current = NULL;
+bool expressionStatementToPop = false; // Flag to show when an expression statement needs to be popped
 
 static Chunk* currentChunk() {
     return &current->function->chunk;
@@ -242,8 +243,8 @@ static void endScope() {
 
 // Function declarations 
 static void expression();
-static void statement();
-static void declaration();
+static void statement(bool inFunction);
+static void declaration(bool inFunction);
 static ParseRule* getRule(TokenType type);
 static void parsePrecedence(Precedence precendence);
 
@@ -542,12 +543,26 @@ static void expression() {
     parsePrecedence(PREC_ASSIGNMENT);
 }
 
-static void block() {
-    while(!check(TOKEN_RIGHT_PAREN) && !check(TOKEN_EOF)) {
-        declaration();
+/**
+ * Check whether to reset expressionStatementToPop. This is used for implicit returning in functions by not popping
+ * an expression statement until another statement is made.
+ * 
+ * @param inFunction check if this code is being executed in a function
+ */
+static void resetCurrentExpression(bool inFunction) {
+    if(inFunction && expressionStatementToPop) {
+        emitByte(OP_POP);
+
+        expressionStatementToPop = false;
+    }
+}
+
+static void block(bool inFunction) {
+    while(!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
+        declaration(inFunction);
     }
 
-    consume(TOKEN_RIGHT_PAREN, "Expected '}' after block");
+    consume(TOKEN_RIGHT_BRACE, "Expected '}' after block");
 }
 
 static void function(FunctionType type) {
@@ -571,7 +586,14 @@ static void function(FunctionType type) {
 
     consume(TOKEN_RIGHT_PAREN, "Expected ')' after function parameters");
     consume(TOKEN_EQUAL, "Expected '=' after function signature");
-    statement();
+
+    // Compile the body
+    statement(true);
+    // Check if need to implicit return
+    if(expressionStatementToPop) {
+        emitByte(OP_RETURN);
+    }
+    expressionStatementToPop = false;
 
     ObjFunction* function = endCompiler();
     emitBytes(OP_CONSTANT, makeConstant(OBJ_VAL(function)));
@@ -599,10 +621,17 @@ static void letDeclaration() {
     defineVariable(global);
 }
 
-static void expressionStatement() {
+static void expressionStatement(bool inFunction) {
     expression();
     consumeSemicolon();
     emitByte(OP_POP);
+    // if(!inFunction) {
+    //     emitByte(OP_POP);
+    //     expressionStatementToPop = false;
+    // } else {
+    //     // Set flag to pop this value later
+    //     expressionStatementToPop = true;
+    // }
 }
 
 static void ifStatement() {
@@ -611,14 +640,14 @@ static void ifStatement() {
 
     int thenJump = emitJump(OP_JUMP_IF_FALSE);
     emitByte(OP_POP);
-    statement();
+    statement(false);
 
     int elseJump = emitJump(OP_JUMP);
 
     patchJump(thenJump);
     emitByte(OP_POP);
 
-    if(match(TOKEN_ELSE)) statement();
+    if(match(TOKEN_ELSE)) statement(false);
     patchJump(elseJump);
 }
 
@@ -649,7 +678,7 @@ static void whileStatement() {
 
     int exitJump = emitJump(OP_JUMP_IF_FALSE);
     emitByte(OP_POP);
-    statement();
+    statement(false);
     emitLoop(loopStart);
 
     patchJump(exitJump);
@@ -676,19 +705,19 @@ static void synchronise() {
     advance();
 }
 
-static void declaration() {
+static void declaration(bool inFunction) {
     if(match(TOKEN_FUNCTION)) {
         functionDeclaration();
     } else if(match(TOKEN_LET)) {
         letDeclaration();
     } else {
-        statement();
+        statement(inFunction);
     }
 
     if(parser.panicMode) synchronise();
 }
 
-static void statement() {
+static void statement(bool inFunction) {
     if(match(TOKEN_OUT)) {
         outStatement();
     } else if(match(TOKEN_IF)) {
@@ -697,12 +726,17 @@ static void statement() {
         returnStatement();
     } else if(match(TOKEN_WHILE)) {
         whileStatement();
-    } else if(match(TOKEN_LEFT_PAREN)) {
+    } else if(match(TOKEN_LEFT_BRACE)) {
         beginScope();
-        block();
+        block(inFunction);
         endScope();
     } else {
-        expressionStatement();
+        if(inFunction && expressionStatementToPop) {
+            emitByte(OP_POP);
+            expressionStatementToPop = false;
+        }
+
+        expressionStatement(inFunction);
     }
 }
 
@@ -718,7 +752,7 @@ ObjFunction* compile(const unsigned char* source) {
     
     // Consume statements
     while(!match(TOKEN_EOF)) {
-        declaration();
+        declaration(false);
     }
 
     ObjFunction* function = endCompiler();

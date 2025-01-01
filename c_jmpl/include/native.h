@@ -5,7 +5,9 @@
 #include "value.h"
 
 // Native functions
-
+/**
+ * Returns how long the program has elapsed in seconds.
+ */
 Value clockNative(int argCount, Value* args);
 
 #endif

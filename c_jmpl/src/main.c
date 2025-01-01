@@ -22,6 +22,7 @@
 // - POPN instruction that pops n amount of times (CH 22)
 // - Constant variables, compiler error if try to reassign them (CH 22)
 // - Remove local variable limit (CH 22), maybe dynamic arrays
+// - Report runtime errors from native functions (CH 24)
 //
 // - format in compliance with the C style guide
 // - add documentation

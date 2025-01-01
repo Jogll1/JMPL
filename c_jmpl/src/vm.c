@@ -50,11 +50,12 @@ static void runtimeError(const unsigned char* format, ...) {
  * Adds a native function.
  * 
  * @param name     the name of the function in JMPL
+ * @param arity    how many parameters it should have
  * @param function the C function that is called
  */
-static void defineNative(const unsigned char* name, NativeFn function) {
+static void defineNative(const unsigned char* name, int arity, NativeFn function) {
     push(OBJ_VAL(copyString(name, (int)strlen(name))));
-    push(OBJ_VAL(newNative(function)));
+    push(OBJ_VAL(newNative(function, arity)));
     tableSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
     pop();
     pop();
@@ -67,7 +68,7 @@ void initVM() {
     initTable(&vm.strings);
 
     // Add native functions
-    defineNative("clock", clockNative);
+    defineNative("clock", 0, clockNative);
 }
 
 void freeVM() {
@@ -119,12 +120,20 @@ static bool callValue(Value callee, int argCount) {
         switch (OBJ_TYPE(callee)) {
             case OBJ_FUNCTION:
                 return call(AS_FUNCTION(callee), argCount);
-            case OBJ_NATIVE:
-                NativeFn native = AS_NATIVE(callee);
+            case OBJ_NATIVE: {
+                ObjNative* objNative = AS_NATIVE(callee);
+
+                if(argCount != objNative->arity) {
+                    runtimeError("Expected %d arguments but got %d", objNative->arity, argCount);
+                    return false;
+                }
+
+                NativeFn native = objNative->function;
                 Value result = native(argCount, vm.stackTop - argCount);
                 vm.stackTop -= argCount + 1;
                 push(result);
                 return true;
+            }
             default:
                 break;
         }

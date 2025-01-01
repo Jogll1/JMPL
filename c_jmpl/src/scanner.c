@@ -256,7 +256,7 @@ Token scanToken() {
         case '-': return makeToken(TOKEN_MINUS); break;
         case '+': return makeToken(TOKEN_PLUS); break;
         case '/': return makeToken(TOKEN_SLASH); break;
-        case '*': printf("OH\n"); return makeToken(TOKEN_ASTERISK); break;
+        case '*': return makeToken(TOKEN_ASTERISK); break;
         case '^': return makeToken(TOKEN_CARET); break;
         case '%': return makeToken(TOKEN_PERCENT); break;
         case ';': return makeToken(TOKEN_SEMICOLON); break;

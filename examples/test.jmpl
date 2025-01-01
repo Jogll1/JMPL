@@ -1,10 +1,15 @@
-func fib(n) = (
-    if n < 2 then return n;
-    return fib(n - 2) + fib(n - 1);
-)
+// func fib(n) = (
+//     if n < 2 then return n;
 
-let before = clock();
-out fib(10);
-let after = clock();
+//     return fib(n - 2) + fib(n - 1);
+// )
 
-out after - before;
+// let start = clock();
+// out "" + fib(34);
+// out "Time: " + (clock() - start);
+
+func test(x) = {
+    return x + x;
+}
+
+// out test(7);

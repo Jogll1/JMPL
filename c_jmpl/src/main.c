@@ -23,6 +23,7 @@
 // - Constant variables, compiler error if try to reassign them (CH 22)
 // - Remove local variable limit (CH 22), maybe dynamic arrays
 // - Report runtime errors from native functions (CH 24)
+// - Fix compiler errors not finishing program.
 //
 // - format in compliance with the C style guide
 // - add documentation

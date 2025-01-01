@@ -38,6 +38,15 @@ static int jumpInstruction(const char* name, int sign, Chunk* chunk, int offset)
     return offset + 3;
 }
 
+static int closureInstruction(const char* name, Chunk* chunk, int offset) {
+    offset++;
+    uint8_t constant = chunk->code[offset++];
+    printf("%-16s %4d ", name, constant);
+    printValue(chunk->constants.values[constant]);
+    printf("\n");
+    return offset;
+}
+
 int disassembleInstruction(Chunk* chunk, int offset) {
     printf("%04d ", offset);
 
@@ -80,6 +89,7 @@ int disassembleInstruction(Chunk* chunk, int offset) {
         case OP_JUMP_IF_FALSE: return jumpInstruction("OP_JUMP_IF_FALSE", 1, chunk, offset);
         case OP_LOOP:          return jumpInstruction("OP_LOOP", -1, chunk, offset);
         case OP_CALL:          return byteInstruction("OP_CALL", chunk, offset);
+        case OP_CLOSURE:       return closureInstruction("OP_CLOSURE", chunk, offset);
         case OP_RETURN:        return simpleInstruction("OP_RETURN", offset);
         default:
             printf("Unknown opcode %d\n", instruction);

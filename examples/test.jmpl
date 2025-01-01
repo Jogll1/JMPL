@@ -1,15 +1,5 @@
-// func fib(n) = (
-//     if n < 2 then return n;
-
-//     return fib(n - 2) + fib(n - 1);
-// )
-
-// let start = clock();
-// out "" + fib(34);
-// out "Time: " + (clock() - start);
-
-func test(x) = {
-    return x + x;
+func sum(a, b) = {
+    return a + b;
 }
 
-// out test(7);
+out sum(1, 2);

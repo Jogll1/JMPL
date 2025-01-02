@@ -1,15 +1,16 @@
 #include <stdio.h>
 
 #include "debug.h"
+#include "object.h"
 #include "value.h"
 
 // Disassemble each instruction of bytecode
 void disassembleChunk(Chunk* chunk, const char* name) {
     printf("== %s ==\n", name);
 
-    // for (int offset = 0; offset < chunk->count;) {
-    //     offset = disassembleInstruction(chunk, offset);
-    // }
+    for (int offset = 0; offset < chunk->count;) {
+        offset = disassembleInstruction(chunk, offset);
+    }
 }
 
 static int constantInstruction(const char* name, Chunk* chunk, int offset) {
@@ -44,6 +45,15 @@ static int closureInstruction(const char* name, Chunk* chunk, int offset) {
     printf("%-16s %4d ", name, constant);
     printValue(chunk->constants.values[constant]);
     printf("\n");
+
+    ObjFunction* function = AS_FUNCTION(chunk->constants.values[constant]);
+    for (int j = 0; j < function->upvalueCount; j++) {
+        int isLocal = chunk->code[offset++];
+        int index = chunk->code[offset++];
+        printf("%04d      |                   %s %d\n", offset - 2, isLocal ? "local" : "upvalue", index);
+    }
+    
+
     return offset;
 }
 
@@ -71,6 +81,8 @@ int disassembleInstruction(Chunk* chunk, int offset) {
         case OP_GET_GLOBAL:    return constantInstruction("OP_GET_GLOBAL", chunk, offset);
         case OP_DEFINE_GLOBAL: return constantInstruction("OP_DEFINE_GLOBAL", chunk, offset);
         case OP_SET_GLOBAL:    return constantInstruction("OP_SET_GLOBAL", chunk, offset);
+        case OP_GET_UPVALUE:   return byteInstruction("OP_GET_UPVALUE", chunk, offset);
+        case OP_SET_UPVALUE:   return byteInstruction("OP_SET_UPVALUE", chunk, offset);
         case OP_EQUAL:         return simpleInstruction("OP_EQUAL", offset);
         case OP_NOT_EQUAL:     return simpleInstruction("OP_NOT_EQUAL", offset);
         case OP_GREATER:       return simpleInstruction("OP_GREATER", offset);
@@ -90,6 +102,7 @@ int disassembleInstruction(Chunk* chunk, int offset) {
         case OP_LOOP:          return jumpInstruction("OP_LOOP", -1, chunk, offset);
         case OP_CALL:          return byteInstruction("OP_CALL", chunk, offset);
         case OP_CLOSURE:       return closureInstruction("OP_CLOSURE", chunk, offset);
+        case OP_CLOSE_UPVALUE: return simpleInstruction("OP_CLOSE_UPVALUE", offset);
         case OP_RETURN:        return simpleInstruction("OP_RETURN", offset);
         default:
             printf("Unknown opcode %d\n", instruction);

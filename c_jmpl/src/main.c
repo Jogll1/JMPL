@@ -24,6 +24,7 @@
 // - Remove local variable limit (CH 22), maybe dynamic arrays
 // - Report runtime errors from native functions (CH 24)
 // - Fix compiler errors not finishing program.
+// - Only wrap closures over functions that need them (CH 25)
 //
 // - format in compliance with the C style guide
 // - add documentation

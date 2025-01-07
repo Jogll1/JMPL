@@ -24,6 +24,9 @@ typedef struct {
     Table globals;
     Table strings; // Table for string interning
     ObjUpvalue* openUpvalues;
+
+    size_t bytesAllocated;
+    size_t nextGC;
     Obj* objects;
 
     int greyCount;

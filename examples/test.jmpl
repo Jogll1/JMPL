@@ -1,9 +1,5 @@
-func sum(a, b) = {
-    func test(x) = {
-        return x^2;
-    }
+func f(a, b) = return 2 * a + b;
 
-    return test(a) + b;
-}
+func g(x) = return f(x, 2 * x);
 
-out sum(4, 2);
+out g(f(4, 2));

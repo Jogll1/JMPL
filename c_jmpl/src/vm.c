@@ -22,7 +22,7 @@ static void resetStack() {
 
 static void runtimeError(const unsigned char* format, ...) {
     // Print the stack trace
-    for (int i = 0; i < vm.frameCount; i++) {
+    for(int i = 0; i < vm.frameCount; i++) {
         CallFrame* frame = &vm.frames[i];
         ObjFunction* function = frame->closure->function;
         size_t instruction = frame->ip - function->chunk.code - 1;
@@ -66,6 +66,8 @@ static void defineNative(const unsigned char* name, int arity, NativeFn function
 void initVM() {
     resetStack();
     vm.objects = NULL;
+    vm.bytesAllocated = 0;
+    vm.nextGC = 1024 * 1024;
 
     vm.greyCount = 0;
     vm.greyCapacity = 0;
@@ -193,8 +195,8 @@ static bool isFalse(Value value) {
 
 static void concatenate() {
     // Concatenate if either a or b is a string
-    Value b = pop();
-    Value a = pop();
+    Value b = peek(0);
+    Value a = peek(1);
 
     ObjString* aString = valueToString(a);
     ObjString* bString = valueToString(b);
@@ -207,6 +209,8 @@ static void concatenate() {
     chars[length] = '\0';
 
     ObjString* result = takeString(chars, length);
+    pop();
+    pop();
     push(OBJ_VAL(result));
 }
 
@@ -243,7 +247,7 @@ static InterpretResult run() {
     while(true) {
 #ifdef DEBUG_TRACE_EXECUTION
         printf("          ");
-        for (Value* slot = vm.stack; slot < vm.stackTop; slot++) {
+        for(Value* slot = vm.stack; slot < vm.stackTop; slot++) {
             printf("[ ");
             printValue(*slot);
             printf(" ]");

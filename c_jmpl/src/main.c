@@ -10,6 +10,7 @@
 #define CURRENT_VERSION "v0.0.5"
 
 // gcc -I.\c_jmpl\include -o .\build\c_jmpl\v0-0-5 .\c_jmpl\src\*.c
+// .\build\c_jmpl\v0-0-5.exe .\examples\test.jmpl
 // .\build\c_jmpl\v0-0-5.exe
 
 // ToDo:
@@ -25,6 +26,7 @@
 // - Report runtime errors from native functions (CH 24)
 // - Fix compiler errors not finishing program.
 // - Only wrap closures over functions that need them (CH 25)
+// - Stress test GC to try and find bugs (CH 26)
 //
 // - implicit returns
 // - summation function
@@ -98,7 +100,7 @@ int main(int argc, const char* argv[]) {
     if(argc == 1) {
         // If no file argument, run the REPL
         printf("Welcome to the JMPL %s REPL.\n", CURRENT_VERSION);
-        printf("Note: if using Windows, terminal must be using code page 65001 to use mathematical symbols.\n");
+        printf("Note: if using Windows, terminal must be using code page 65001 to properly display mathematical symbols.\n");
         repl();
     } else if(argc == 2) {
         // If there's a file argument, run the file

@@ -66,6 +66,11 @@ static void defineNative(const unsigned char* name, int arity, NativeFn function
 void initVM() {
     resetStack();
     vm.objects = NULL;
+
+    vm.greyCount = 0;
+    vm.greyCapacity = 0;
+    vm.greyStack = NULL;
+
     initTable(&vm.globals);
     initTable(&vm.strings);
 

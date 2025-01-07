@@ -26,7 +26,9 @@
 // - Fix compiler errors not finishing program.
 // - Only wrap closures over functions that need them (CH 25)
 //
-// - format in compliance with the C style guide
+// - implicit returns
+// - summation function
+//
 // - add documentation
 
 static void repl() {

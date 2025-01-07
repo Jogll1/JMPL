@@ -25,6 +25,10 @@ typedef struct {
     Table strings; // Table for string interning
     ObjUpvalue* openUpvalues;
     Obj* objects;
+
+    int greyCount;
+    int greyCapacity;
+    Obj** greyStack;
 } VM;
 
 typedef enum {

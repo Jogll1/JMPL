@@ -32,6 +32,7 @@
 // - summation function
 //
 // - add documentation
+// - format to code to style guide
 
 static void repl() {
     char line[1024];

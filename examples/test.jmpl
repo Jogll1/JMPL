@@ -1,5 +1,8 @@
-func f(a, b) = return 2 * a + b;
+func f(a, b) = a + b;
 
-func g(x) = return f(x, 2 * x);
+func g(x) = x^2;
 
-out g(f(4, 2));
+out f(1, 2);
+out g(2);
+
+let x = 5;

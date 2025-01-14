@@ -7,13 +7,13 @@ let p = true;
 let n = 0;
 
 // Control
-while p do (
+while p do {
     out n;
 
     n := n + 1;
 
     if n == 10 then p := false;
-)
+}
 
 // Strings
 let name = "Joel";

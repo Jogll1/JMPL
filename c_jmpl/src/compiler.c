@@ -69,6 +69,8 @@ typedef struct Compiler {
     Upvalue upvalues[UINT8_COUNT];
     int localCount;
     int scopeDepth;
+
+    bool implicitReturn;
 } Compiler;
 
 // Note: Remove globals eventually
@@ -172,7 +174,9 @@ static int emitJump(uint8_t instruction) {
 }
 
 static void emitReturn() {
-    emitByte(OP_NULL); // Implicitly return null if function returns nothing
+    // Implicitly return null if function returns nothing
+    if (!current->implicitReturn && current->type == TYPE_FUNCTION) emitByte(OP_NULL);
+
     emitByte(OP_RETURN);
 }
 
@@ -209,6 +213,7 @@ static void initCompiler(Compiler* compiler, FunctionType type) {
     compiler->type = type;
     compiler->localCount = 0;
     compiler->scopeDepth = 0;
+    compiler->implicitReturn = false;
     compiler->function = newFunction();
     current = compiler;
 
@@ -228,12 +233,13 @@ static ObjFunction* endCompiler() {
     ObjFunction* function = current->function;
 
 #ifdef DEBUG_PRINT_CODE
-    if(!parser.hadError) {
+    if (!parser.hadError) {
         disassembleChunk(currentChunk(), function->name != NULL ? function->name->chars : "<script>");
     }
 #endif
 
     current = current->enclosing;
+    
     return function;
 }
 
@@ -665,7 +671,7 @@ static void letDeclaration() {
 static void expressionStatement() {
     expression();
     consumeSemicolon();
-    emitByte(OP_POP);
+    // emitByte(OP_POP);
 }
 
 static void ifStatement() {
@@ -766,6 +772,9 @@ static void statement() {
         endScope();
     } else {
         expressionStatement();
+
+        // Set the implicit return flag if in a function
+        if(current->type == TYPE_FUNCTION) current->implicitReturn = true;
     }
 }
 

@@ -31,7 +31,7 @@ static void runtimeError(const unsigned char* format, ...) {
         if(function->name == NULL) {
             fprintf(stderr, "script\n");
         } else {
-            fprintf(stderr, "%s()\n", function->name->chars);
+            fprintf(stderr, "%s\n", function->name->chars);
         }
     }
     

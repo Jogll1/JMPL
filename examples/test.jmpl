@@ -1,8 +1,17 @@
-func f(a, b) = a + b;
+let pi = 3.14159265359;
 
-func g(x) = out 2;
+func sinOf(x) = out "Sin of " + x + " is " + sin(x) + ".";
+func cosOf(x) = out "Cos of " + x + " is " + cos(x) + ".";
+func tanOf(x) = out "Tan of " + x + " is " + tan(x) + ".";
 
-out f(1, 2);
-out g(2);
+sinOf(pi);
+cosOf(pi);
+tanOf(pi);
 
-let x = 5;
+sinOf(pi / 2);
+cosOf(pi / 2);
+tanOf(pi / 2);
+
+sinOf(0);
+cosOf(0);
+tanOf(0);

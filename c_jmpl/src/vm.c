@@ -77,7 +77,14 @@ void initVM() {
     initTable(&vm.strings);
 
     // Add native functions
+
+    // General purpose
     defineNative("clock", 0, clockNative);
+
+    // Maths library
+    defineNative("sin", 1, sinNative);
+    defineNative("cos", 1, cosNative);
+    defineNative("tan", 1, tanNative);
 }
 
 void freeVM() {

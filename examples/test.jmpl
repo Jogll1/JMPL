@@ -1,6 +1,6 @@
 func f(a, b) = a + b;
 
-func g(x) = x^2;
+func g(x) = out 2;
 
 out f(1, 2);
 out g(2);

@@ -85,7 +85,7 @@ static void errorAt(Token* token, const unsigned char* message) {
     if(parser.panicMode) return;
     parser.panicMode = true;
     
-    fprintf(stderr, "[line %d] Error", token->line);
+    fprintf(stderr, "[line %d] " RED "Error" RESET, token->line);
 
     if(token->type == TOKEN_EOF) {
         fprintf(stderr, " at end");
@@ -175,7 +175,7 @@ static int emitJump(uint8_t instruction) {
 
 static void emitReturn() {
     // Implicitly return null if function returns nothing
-    if (!current->implicitReturn && current->type == TYPE_FUNCTION) emitByte(OP_NULL);
+    if (!current->implicitReturn && current->type != TYPE_FUNCTION) emitByte(OP_NULL);
 
     emitByte(OP_RETURN);
 }

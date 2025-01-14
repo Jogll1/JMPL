@@ -174,7 +174,7 @@ static int emitJump(uint8_t instruction) {
 }
 
 static void emitReturn() {
-    // Implicitly return null if function returns nothing
+    // Implicitly returns null if function returns nothing
     if (!current->implicitReturn && current->type != TYPE_FUNCTION) emitByte(OP_NULL);
 
     emitByte(OP_RETURN);

@@ -11,3 +11,6 @@
   - If and While statements
   - Functions with implicit and explicit return
   - Summation expression
+- Basic native functions
+  - clock()
+  - Trigonometry functions

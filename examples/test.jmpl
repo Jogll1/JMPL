@@ -1,17 +1,6 @@
-let pi = 3.14159265359;
+func callSum(upper, lower) = {
+    let s = ∑(upper, i = lower) i;
+    out "The sum of " + lower + " to " + upper + " is " + s;
+}
 
-func sinOf(x) = out "Sin of " + x + " is " + sin(x) + ".";
-func cosOf(x) = out "Cos of " + x + " is " + cos(x) + ".";
-func tanOf(x) = out "Tan of " + x + " is " + tan(x) + ".";
-
-sinOf(pi);
-cosOf(pi);
-tanOf(pi);
-
-sinOf(pi / 2);
-cosOf(pi / 2);
-tanOf(pi / 2);
-
-sinOf(0);
-cosOf(0);
-tanOf(0);
+callSum(5, 2);

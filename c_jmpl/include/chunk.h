@@ -30,6 +30,7 @@ typedef enum {
     OP_EXPONENT,
     OP_NOT,
     OP_NEGATE,
+    OP_SUMMATION,
     OP_OUT,
     OP_JUMP,
     OP_JUMP_IF_FALSE,

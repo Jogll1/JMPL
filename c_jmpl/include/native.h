@@ -36,5 +36,26 @@ Value cosNative(int argCount, Value* args);
  * Returns null if x is not a number.
  */
 Value tanNative(int argCount, Value* args);
+/**
+ * arcsin(x)
+ * 
+ * Returns the arcsine of x (in radians).
+ * Returns null if x is not a number.
+ */
+Value arcsinNative(int argCount, Value* args);
+/**
+ * arccos(x)
+ * 
+ * Returns the arccosine of x (in radians).
+ * Returns null if x is not a number.
+ */
+Value arccosNative(int argCount, Value* args);
+/**
+ * arctan(x)
+ * 
+ * Returns the arctangent of x (in radians).
+ * Returns null if x is not a number.
+ */
+Value arctanNative(int argCount, Value* args);
 
 #endif

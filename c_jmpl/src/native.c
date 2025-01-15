@@ -34,3 +34,21 @@ Value tanNative(int argCount, Value* args) {
 
     return NUMBER_VAL(tan(AS_NUMBER(args[0])));
 }
+
+Value arcsinNative(int argCount, Value* args) {
+    if(!IS_NUMBER(args[0])) return NULL_VAL; 
+
+    return NUMBER_VAL(asin(AS_NUMBER(args[0])));
+}
+
+Value arccosNative(int argCount, Value* args) {
+    if(!IS_NUMBER(args[0])) return NULL_VAL; 
+
+    return NUMBER_VAL(acos(AS_NUMBER(args[0])));
+}
+
+Value arctanNative(int argCount, Value* args) {
+    if(!IS_NUMBER(args[0])) return NULL_VAL; 
+
+    return NUMBER_VAL(atan(AS_NUMBER(args[0])));
+}

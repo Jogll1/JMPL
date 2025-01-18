@@ -528,27 +528,70 @@ static void sequenceOp(bool canAssign) {
     
     // Parse lowerbound expression (only assignments or declarations)
     // -- for now only declarations --
-    uint8_t global = parseVariable("Expected variable name");
+    uint8_t var = parseVariable("Expected variable name");
+    Token* name = &parser.previous;
 
     if(match(TOKEN_EQUAL)) {
         // Declare a variable with an expression as its initial value
-        expression();
+       parsePrecedence(PREC_SEQUENCE_OP);
     } else {
         // Error if no assignment
         error("Lower bound expression must be initialised to a value");
     }
 
-    defineVariable(global);
+    defineVariable(var);
     // -------------------------------
 
     consume(TOKEN_RIGHT_PAREN, "Expected ')' lower bound expression");
 
-    // Get the summand expression
+    // ---- Loop operation ----
+    int loopStart = currentChunk()->count;
+    int exitJump = -1;
+
+    // Condition
+    emitByte(OP_GREATER); // if n > i, continue loop
+    exitJump = emitJump(OP_JUMP_IF_FALSE);
+    emitByte(OP_POP);
+
+    // Increment
+    int bodyJump = emitJump(OP_JUMP);
+    int incrementStart = currentChunk()->count;
+    namedVariable(*name, false);
+    emitConstant(NUMBER_VAL(1));
+    emitByte(OP_ADD);
+    // TODO: reassign variable
+    emitByte(OP_POP);
+    
+    emitLoop(loopStart);
+    loopStart = incrementStart;
+    patchJump(bodyJump);
+
+    // Parse summand
     parsePrecedence(PREC_SEQUENCE_OP);
 
-    // Compile the operation
-    // TODO: 
-    // Recompile summand to reflect changing variables.
+    // Exit loop if upperbound = lower
+    // -- TODO --
+
+    // Call to sequence op
+    int op;
+    switch(operatorType) {
+        case TOKEN_SUMMATION:
+            op = OP_SUMMATION;
+            break;
+        default: 
+            error("Invalid sequence operation token");
+            return;
+    }
+    emitByte(op);
+
+    emitLoop(loopStart);
+
+    // Patch jump
+    if(exitJump != -1) {
+        patchJump(exitJump);
+        emitByte(OP_POP); // Pop loop condition
+    }
+    // ------------------------
     
     emitByte(OP_NULL); // TEMPORARY: Trying to fix bug where result is popped
     endScope();

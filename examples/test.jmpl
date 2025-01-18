@@ -1,6 +1,3 @@
-func callSum(upper, lower) = {
-    let s = ∑(upper, i = lower) i;
-    out "The sum of " + lower + " to " + upper + " is " + s;
-}
+// let i = 9;
 
-callSum(5, 2);
+out ∑(5, j = 2) j;

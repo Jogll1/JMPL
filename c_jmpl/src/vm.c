@@ -382,49 +382,22 @@ static InterpretResult run() {
                 break;
             }
             case OP_SUMMATION: {
-                // Check upper and lower bound are integers
-                if(!IS_INTEGER(peek(2)) || !IS_INTEGER(peek(1))) {
-                    runtimeError("Upper and lower bound value must be integers");
-                    return INTERPRET_RUNTIME_ERROR;
-                }
+                // // Check upper and lower bound are integers
+                // if(!IS_INTEGER(peek(2)) || !IS_INTEGER(peek(1))) {
+                //     runtimeError("Upper and lower bound value must be integers");
+                //     return INTERPRET_RUNTIME_ERROR;
+                // }
 
-                // Check upper bound is bigger or equal to lower bound
-                if(AS_NUMBER(peek(2)) < AS_NUMBER(peek(1))) {
-                    runtimeError("Upper bound must be greater than or equal to lower bound");
-                    return INTERPRET_RUNTIME_ERROR;
-                }
+                // // Check upper bound is bigger or equal to lower bound
+                // if(AS_NUMBER(peek(2)) < AS_NUMBER(peek(1))) {
+                //     runtimeError("Upper bound must be greater than or equal to lower bound");
+                //     return INTERPRET_RUNTIME_ERROR;
+                // }
                 
-                // Check summand is a number or string
-                if(!IS_NUMBER(peek(0)) && !IS_STRING(peek(0))) {
-                    runtimeError("Summand must be a number or string");
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-
-                // Value summand = pop();
-                // int lower = AS_NUMBER(pop());
-                // int upper = AS_NUMBER(pop());
-
-                // // Perform the summation
-                // if(IS_NUMBER(summand)) {
-                //     double sum = 0;
-                //     // for(int i = lower; i <= upper; i++) {
-                //     //     sum += i;
-                //     // }
-                //     // push(NUMBER_VAL(sum));
-
-                // } else {
-                //     if(lower == upper) {
-                //         push(summand);
-                //         break;
-                //     }
-
-                //     push(summand);
-
-                //     // Concatenate the strings
-                //     for(int i = lower; i <= upper - 1; i++) {
-                //         push(summand);
-                //         concatenate();
-                //     }
+                // // Check summand is a number or string
+                // if(!IS_NUMBER(peek(0)) && !IS_STRING(peek(0))) {
+                //     runtimeError("Summand must be a number or string");
+                //     return INTERPRET_RUNTIME_ERROR;
                 // }
 
                 break;

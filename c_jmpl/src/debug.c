@@ -94,6 +94,7 @@ int disassembleInstruction(Chunk* chunk, int offset) {
         case OP_MULTIPLY:      return simpleInstruction("OP_MULTIPLY", offset);
         case OP_DIVIDE:        return simpleInstruction("OP_DIVIDE", offset);
         case OP_EXPONENT:      return simpleInstruction("OP_EXPONENT", offset);
+        case OP_MOD:           return simpleInstruction("OP_MOD", offset);
         case OP_NOT:           return simpleInstruction("OP_NOT", offset);
         case OP_NEGATE:        return simpleInstruction("OP_NEGATE", offset);
         case OP_SUMMATION:     return simpleInstruction("OP_SUMMATION", offset);

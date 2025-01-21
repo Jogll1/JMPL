@@ -175,7 +175,9 @@ static int emitJump(uint8_t instruction) {
 
 static void emitReturn() {
     // Implicitly returns null if function returns nothing
-    if (!current->implicitReturn && current->type != TYPE_FUNCTION) emitByte(OP_NULL);
+    if (!current->implicitReturn || current->type != TYPE_FUNCTION) {
+        emitByte(OP_NULL);
+    }
 
     emitByte(OP_RETURN);
 }
@@ -349,6 +351,7 @@ static void declareVariable() {
 
     for(int i = current->localCount - 1; i >= 0; i--) {
         Local* local = &current->locals[i];
+
         if(local->depth != -1 && local->depth < current->scopeDepth) {
             break;
         }
@@ -417,6 +420,7 @@ static void binary(bool canAssign) {
         case TOKEN_ASTERISK:      emitByte(OP_MULTIPLY);      break;
         case TOKEN_SLASH:         emitByte(OP_DIVIDE);        break;
         case TOKEN_CARET:         emitByte(OP_EXPONENT);      break;
+        case TOKEN_MOD:           emitByte(OP_MOD);           break;
         default: return;
     }
 }
@@ -488,7 +492,7 @@ static void namedVariable(Token name, bool canAssign) {
         getOp = OP_GET_GLOBAL;
         setOp = OP_SET_GLOBAL;
     }
-    
+
     if(canAssign && match(TOKEN_ASSIGN)) {
         // Assign to variable if found ':='
         expression();
@@ -520,8 +524,9 @@ static void sequenceOp(bool canAssign) {
     TokenType operatorType = parser.previous.type;
     consume(TOKEN_LEFT_PAREN, "Expected '(' before upper bound expression");
 
-    // Parse upperbound expression (excluding assignments)
-    parsePrecedence(PREC_SEQUENCE_OP);
+    // Parse upperbound expression and store it in a local variable?
+    expression();
+
     consume(TOKEN_COMMA, "Expected ',' after upper bound expression");
 
     beginScope();
@@ -529,14 +534,14 @@ static void sequenceOp(bool canAssign) {
     // Parse lowerbound expression (only assignments or declarations)
     // -- for now only declarations --
     uint8_t var = parseVariable("Expected variable name");
-    Token* name = &parser.previous;
+    Token name = parser.previous;
 
     if(match(TOKEN_EQUAL)) {
         // Declare a variable with an expression as its initial value
-       parsePrecedence(PREC_SEQUENCE_OP);
+        expression();
     } else {
         // Error if no assignment
-        error("Lower bound expression must be initialised to a value");
+        error("Lower bound expression must be initialised");
     }
 
     defineVariable(var);
@@ -545,52 +550,40 @@ static void sequenceOp(bool canAssign) {
     consume(TOKEN_RIGHT_PAREN, "Expected ')' lower bound expression");
 
     // ---- Loop operation ----
-    int loopStart = currentChunk()->count;
-    int exitJump = -1;
-
-    // Condition
-    emitByte(OP_GREATER); // if n > i, continue loop
-    exitJump = emitJump(OP_JUMP_IF_FALSE);
-    emitByte(OP_POP);
-
-    // Increment
-    int bodyJump = emitJump(OP_JUMP);
-    int incrementStart = currentChunk()->count;
-    namedVariable(*name, false);
-    emitConstant(NUMBER_VAL(1));
-    emitByte(OP_ADD);
-    // TODO: reassign variable
-    emitByte(OP_POP);
+    expression();
+    // int exitJump = -1;
     
-    emitLoop(loopStart);
-    loopStart = incrementStart;
-    patchJump(bodyJump);
+    // // Exit conditions (i > n)
+    // emitByte(OP_POP); // Eek
+    // namedVariable(name, false); // Load i
+    // emitByte(OP_LESS_EQUAL); // Check if i <= n
 
-    // Parse summand
-    parsePrecedence(PREC_SEQUENCE_OP);
+    // // Jump if false
+    // exitJump = emitJump(OP_JUMP_IF_FALSE);
+    // emitByte(OP_POP); // Pop condition result
 
-    // Exit loop if upperbound = lower
-    // -- TODO --
+    // // Implicit increment of lower bound
+    // int incrementStart = currentChunk()->count;
+    // emitConstant(NUMBER_VAL(1));
+    // // Increment lower bound variable
+    // namedVariable(name, false); // Load i
+    // emitByte(OP_ADD);
+    // int arg = resolveLocal(current, &name);
+    // emitBytes(OP_SET_LOCAL, (uint8_t)arg);
+    // emitByte(OP_POP); // Pop result?
 
-    // Call to sequence op
-    int op;
-    switch(operatorType) {
-        case TOKEN_SUMMATION:
-            op = OP_SUMMATION;
-            break;
-        default: 
-            error("Invalid sequence operation token");
-            return;
-    }
-    emitByte(op);
+    // // Parse summand
+    // // TODO: actually add stuff
+    // parsePrecedence(PREC_SEQUENCE_OP);
+    // emitByte(OP_SUMMATION);
 
-    emitLoop(loopStart);
+    // emitLoop(incrementStart);
 
-    // Patch jump
-    if(exitJump != -1) {
-        patchJump(exitJump);
-        emitByte(OP_POP); // Pop loop condition
-    }
+    // // Patch jump
+    // if(exitJump != -1) {
+    //     patchJump(exitJump);
+    //     emitByte(OP_POP); // Pop condition result
+    // }
     // ------------------------
     
     emitByte(OP_NULL); // TEMPORARY: Trying to fix bug where result is popped
@@ -611,7 +604,7 @@ ParseRule rules[] = {
     [TOKEN_SLASH]         = {NULL,       binary, PREC_FACTOR},
     [TOKEN_ASTERISK]      = {NULL,       binary, PREC_FACTOR},
     [TOKEN_CARET]         = {NULL,       binary, PREC_EXPONENT},
-    [TOKEN_PERCENT]       = {NULL,       NULL,   PREC_NONE},
+    [TOKEN_MOD]           = {NULL,       binary, PREC_TERM},
     [TOKEN_SEMICOLON]     = {NULL,       NULL,   PREC_NONE},
     [TOKEN_COLON]         = {NULL,       NULL,   PREC_NONE},
     [TOKEN_PIPE]          = {NULL,       NULL,   PREC_NONE},
@@ -754,7 +747,7 @@ static void letDeclaration() {
 static void expressionStatement() {
     expression();
     consumeSemicolon();
-    // emitByte(OP_POP);
+    if (!current->implicitReturn) emitByte(OP_POP);
 }
 
 static void ifStatement() {
@@ -841,6 +834,8 @@ static void declaration() {
 }
 
 static void statement() {
+    current->implicitReturn = false;
+    
     if(match(TOKEN_OUT)) {
         outStatement();
     } else if(match(TOKEN_IF)) {
@@ -854,10 +849,10 @@ static void statement() {
         block();
         endScope();
     } else {
-        expressionStatement();
-
         // Set the implicit return flag if in a function
         if(current->type == TYPE_FUNCTION) current->implicitReturn = true;
+
+        expressionStatement();
     }
 }
 

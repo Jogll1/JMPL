@@ -9,7 +9,7 @@ typedef enum {
     TOKEN_COMMA, TOKEN_DOT, // , .
     TOKEN_MINUS, TOKEN_PLUS, // - +
     TOKEN_SLASH, TOKEN_ASTERISK, // / *
-    TOKEN_CARET, TOKEN_PERCENT, // ^ %
+    TOKEN_CARET, TOKEN_MOD, // ^ %
     TOKEN_SEMICOLON, TOKEN_COLON, // ; :
     TOKEN_PIPE, TOKEN_IN, TOKEN_HASHTAG, // | ∈ #
  

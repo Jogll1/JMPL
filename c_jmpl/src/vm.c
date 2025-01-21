@@ -354,6 +354,21 @@ static InterpretResult run() {
             }
             case OP_SUBTRACT: BINARY_OP(NUMBER_VAL, -); break;
             case OP_MULTIPLY: BINARY_OP(NUMBER_VAL, *); break;
+            case OP_MOD: {
+                if(!IS_INTEGER(peek(0)) || !IS_INTEGER(peek(1))) {
+                    runtimeError("Operands must be integers");
+                    return INTERPRET_RUNTIME_ERROR;
+                } else if (IS_NUMBER(peek(0)) && AS_NUMBER(peek(0)) == 0) {
+                    // Return error if divisor is 0
+                    runtimeError("Division by 0");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+                int b = AS_NUMBER(pop());
+                int a = AS_NUMBER(pop());
+                push(NUMBER_VAL(a % b));
+                break;
+            }
             case OP_DIVIDE: {
                 if(!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
                     runtimeError("Operands must be numbers");

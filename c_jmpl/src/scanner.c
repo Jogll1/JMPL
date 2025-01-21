@@ -169,6 +169,7 @@ static TokenType identifierType() {
             }
         case 'i': return checkKeyword(1, 1, "f", TOKEN_IF);
         case 'l': return checkKeyword(1, 2, "et", TOKEN_LET);
+        case 'm': return checkKeyword(1, 2, "od", TOKEN_MOD);
         case 'n': 
             if(scanner.current - scanner.start > 1) {
                 switch(scanner.start[1]) {
@@ -258,7 +259,7 @@ Token scanToken() {
         case '/': return makeToken(TOKEN_SLASH); break;
         case '*': return makeToken(TOKEN_ASTERISK); break;
         case '^': return makeToken(TOKEN_CARET); break;
-        case '%': return makeToken(TOKEN_PERCENT); break;
+        case '%': return makeToken(TOKEN_MOD); break;
         case ';': return makeToken(TOKEN_SEMICOLON); break;
         case '|': return makeToken(TOKEN_PIPE); break;
         case 0xE28888: return makeToken(TOKEN_IN); break; // '∈' U+2208, UTF-8: 0xE28888

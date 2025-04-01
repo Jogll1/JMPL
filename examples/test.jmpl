@@ -1,0 +1,10 @@
+let p = true;
+let q = false;
+
+func f(x, y) = x ∧ y;
+
+let r = f(p, q);
+
+if r == true then out "Result is true.";
+else out "Result is false.";
+

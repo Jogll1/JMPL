@@ -7,10 +7,9 @@
   - Comments
   - Output
   - Variables
-  - Basic operators
+  - Basic operators (+, -, *, /, %, ^, comparison, etc.)
   - If and While statements
   - Functions with implicit and explicit return
-  - Summation expression
 - Basic native functions
   - clock()
   - Trigonometry functions

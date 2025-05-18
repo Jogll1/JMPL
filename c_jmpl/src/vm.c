@@ -40,7 +40,7 @@ static void runtimeError(const unsigned char* format, ...) {
     va_list args;
     va_start(args, format);
     // Prints the arguments
-    printf(RED "RuntimeError" RESET ": ");
+    printf(ANSI_RED "RuntimeError" ANSI_RESET ": ");
     vfprintf(stderr, format, args);
     va_end(args);
     fputs(".\n", stderr);
@@ -51,9 +51,9 @@ static void runtimeError(const unsigned char* format, ...) {
 /**
  * Adds a native function.
  * 
- * @param name     the name of the function in JMPL
- * @param arity    how many parameters it should have
- * @param function the C function that is called
+ * @param name     The name of the function in JMPL
+ * @param arity    How many parameters it should have
+ * @param function The C function that is called
  */
 static void defineNative(const unsigned char* name, int arity, NativeFn function) {
     push(OBJ_VAL(copyString(name, (int)strlen(name))));
@@ -76,7 +76,7 @@ void initVM() {
     initTable(&vm.globals);
     initTable(&vm.strings);
 
-    // Add native functions
+    // --- Add native functions ---
 
     // General purpose
     defineNative("clock", 0, clockNative);
@@ -109,8 +109,8 @@ Value pop() {
 /**
  * Returns value from the stack but doesn't pop it.
  *
- * @param distance how far down from the top of the stack to look, zero being the top
- * @return         the value at that distance on the stack
+ * @param distance How far down from the top of the stack to look, zero being the top
+ * @return         The value at that distance on the stack
  */
 static Value peek(int distance) {
     return vm.stackTop[-1 - distance];
@@ -134,6 +134,12 @@ static bool call(ObjClosure* closure, int argCount) {
     return true;
 }
 
+/**
+ * @brief Call a callable.
+ * 
+ * @param callee   The object to call
+ * @param argCount The number of arguments to the callable
+ */
 static bool callValue(Value callee, int argCount) {
     if(IS_OBJ(callee)) {
         switch (OBJ_TYPE(callee)) {
@@ -211,9 +217,11 @@ static void concatenate() {
     ObjString* aString = valueToString(a);
     ObjString* bString = valueToString(b);
 
-    // Create new string concatenation
+    // Length of concatenated string
     int length = aString->length + bString->length;
-    unsigned char* chars = ALLOCATE(char, length + 1);
+    // Allocated memory for concatenated string and null terminator
+    unsigned char* chars = ALLOCATE(unsigned char, length + 1);
+
     memcpy(chars, aString->chars, aString->length);
     memcpy(chars + aString->length, bString->chars, bString->length);
     chars[length] = '\0';
@@ -394,27 +402,6 @@ static InterpretResult run() {
                     return INTERPRET_RUNTIME_ERROR;
                 }
                 push(NUMBER_VAL(-AS_NUMBER(pop())));
-                break;
-            }
-            case OP_SUMMATION: {
-                // // Check upper and lower bound are integers
-                // if(!IS_INTEGER(peek(2)) || !IS_INTEGER(peek(1))) {
-                //     runtimeError("Upper and lower bound value must be integers");
-                //     return INTERPRET_RUNTIME_ERROR;
-                // }
-
-                // // Check upper bound is bigger or equal to lower bound
-                // if(AS_NUMBER(peek(2)) < AS_NUMBER(peek(1))) {
-                //     runtimeError("Upper bound must be greater than or equal to lower bound");
-                //     return INTERPRET_RUNTIME_ERROR;
-                // }
-                
-                // // Check summand is a number or string
-                // if(!IS_NUMBER(peek(0)) && !IS_STRING(peek(0))) {
-                //     runtimeError("Summand must be a number or string");
-                //     return INTERPRET_RUNTIME_ERROR;
-                // }
-
                 break;
             }
             case OP_OUT: {

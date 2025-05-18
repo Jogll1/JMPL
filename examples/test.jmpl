@@ -7,4 +7,3 @@ let r = f(p, q);
 
 if r == true then out "Result is true.";
 else out "Result is false.";
-

@@ -5,5 +5,5 @@ func fib(n) = (
 )
 
 let start = clock();
-out "" + fib(34);
+out "Fib(34) = " + fib(34);
 out "Time: " + (clock() - start);

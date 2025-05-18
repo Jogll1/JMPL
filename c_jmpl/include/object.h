@@ -5,7 +5,7 @@
 #include "common.h"
 #include "value.h"
 
-#define OBJ_TYPE(value) (AS_OBJ(value)->type)
+#define OBJ_TYPE(value)    (AS_OBJ(value)->type)
 
 #define IS_CLOSURE(value)  isObjType(value, OBJ_CLOSURE)
 #define IS_FUNCTION(value) isObjType(value, OBJ_FUNCTION)

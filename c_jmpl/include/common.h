@@ -12,8 +12,8 @@
 #define UINT8_COUNT (UINT8_MAX + 1)
 
 // ANSI Colours
-#define RESET "\033[0m"
-#define YELLOW "\033[33m"
-#define RED "\033[31m"
+#define ANSI_RESET "\033[0m"
+#define ANSI_YELLOW "\033[33m"
+#define ANSI_RED "\033[31m"
 
 #endif

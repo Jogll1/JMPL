@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "memory.h"
 #include "object.h"
@@ -99,6 +100,7 @@ bool tableSet(Table* table, ObjString* key, Value value) {
 
     entry->key = key;
     entry->value = value;
+
     return isNewKey;
 }
 
@@ -112,6 +114,7 @@ bool tableDelete(Table* table, ObjString* key) {
     // Place a tombstone in the entry
     entry->key = NULL;
     entry->value = BOOL_VAL(true);
+
     return true;
 }
 
@@ -161,4 +164,37 @@ void markTable(Table* table) {
         markObject((Obj*)entry->key);
         markValue(entry->value);
     }
+}
+
+/**
+ * @brief Prints a diagnostic of the current table stats.
+ * 
+ * @param table A pointer to the table to run the diagnostic on
+ */
+void tableDebugStats(Table* table) {
+    printf("------- Table Debug -------\n");
+    printf("Capacity: %d\n", table->capacity);
+    printf("Count: %d\n", table->count);
+    printf("Load: %.2f\n", (float)table->count / (float)table->capacity);
+    
+    int tombstones = 0;
+    int longestProbe = 0;
+
+    for (int i = 0; i < table->capacity; i++) {
+        Entry* entry = &table->entries[i];
+
+        if (entry->key == NULL) {
+            if (!IS_NULL(entry->value)) tombstones++;
+            continue;
+        }
+
+        // How far is the entry from its ideal spot
+        uint32_t ideal = entry->key->hash % table->capacity;
+        int dist = (i + table->capacity - ideal) % table->capacity;
+        if (dist > longestProbe) longestProbe = dist;
+    }
+    
+    printf("Tombstones: %d\n", tombstones);
+    printf("Longest probe distance: %d\n", longestProbe);
+    printf("---------------------------\n");
 }

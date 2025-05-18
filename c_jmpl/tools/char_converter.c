@@ -1,6 +1,12 @@
 #include <stdio.h>
 
-void unicode_to_utf8(int code_point, unsigned char *output) {
+/**
+ * @brief Converts a Unicode code point to its UTF-8 encoding.
+ * 
+ * @param code_point The Unicode code point of a character
+ * @param output     A char pointer (string) for the output
+ */
+void unicodeToUtf8(int code_point, unsigned char* output) {
     if (code_point <= 0x7F) {
         // 1-byte sequence
         output[0] = code_point & 0x7F;
@@ -33,7 +39,7 @@ int main() {
     int code_point = 0x2227; // Unicode U+2227 (∧)
     unsigned char utf8[5];  // Buffer to hold UTF-8 bytes (max 4 bytes + null-terminator)
 
-    unicode_to_utf8(code_point, utf8);
+    unicodeToUtf8(code_point, utf8);
 
     printf("UTF-8 Encoding: ");
     for (int i = 0; utf8[i] != '\0'; i++) {

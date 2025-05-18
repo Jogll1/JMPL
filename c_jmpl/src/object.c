@@ -69,11 +69,11 @@ static ObjString* allocateString(unsigned char* chars, int length, uint32_t hash
 }
 
 /**
- * Hashes a char array using the FNV-1a hashing algorithm.
+ * @brief Hashes a char array using the FNV-1a hashing algorithm.
  * 
- * @param key    the char array that makes up the string
- * @param length the length of the string
- * @return       a hashed form of the string.
+ * @param key    The char array that makes up the string
+ * @param length The length of the string
+ * @return       A hashed form of the string
  */
 static uint32_t hashString(const unsigned char* key, int length) {
     uint32_t hash = 2166136261u;

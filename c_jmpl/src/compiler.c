@@ -19,11 +19,26 @@ typedef struct {
     bool panicMode;
 } Parser;
 
-// Precedence order lowest to highest
+/**
+ * @brief Precedence order of operations.
+ * 
+ * Precedence order lowest to highest:
+ * | None
+ * | Assignment: :=
+ * | Or:         or
+ * | And:        and
+ * | Equality:   ==, ¬=
+ * | Comparison: <, >, <=, >=
+ * | Term:       +, -
+ * | Factor:     *, /
+ * | Exponent:   ^
+ * | Unary:      ¬, -
+ * | Call:       ()
+ * | Primary
+ */ 
 typedef enum {
     PREC_NONE,
     PREC_ASSIGNMENT,  // :=
-    PREC_SEQUENCE_OP, // Sum
     PREC_OR,          // or
     PREC_AND,         // and
     PREC_EQUALITY,    // == ¬=
@@ -85,7 +100,7 @@ static void errorAt(Token* token, const unsigned char* message) {
     if(parser.panicMode) return;
     parser.panicMode = true;
     
-    fprintf(stderr, "[line %d] " RED "Error" RESET, token->line);
+    fprintf(stderr, "[line %d] " ANSI_RED "Error" ANSI_RESET, token->line);
 
     if(token->type == TOKEN_EOF) {
         fprintf(stderr, " at end");
@@ -96,7 +111,7 @@ static void errorAt(Token* token, const unsigned char* message) {
     }
 
     fprintf(stderr, ": %s.\n", message);
-    exit(70); // TEMPORARY HACK TO ALLOW PROGRAM TO EXIT WHEN THERE'S A COMPILER ERROR
+    exit(70); // TEMPORARY HACK TO FORCE PROGRAM TO EXIT WHEN THERE'S A COMPILER ERROR
     parser.hadError = true;
 }
 
@@ -520,76 +535,6 @@ static void unary(bool canAssign) {
     }
 }
 
-static void sequenceOp(bool canAssign) {
-    TokenType operatorType = parser.previous.type;
-    consume(TOKEN_LEFT_PAREN, "Expected '(' before upper bound expression");
-
-    // Parse upperbound expression and store it in a local variable?
-    expression();
-
-    consume(TOKEN_COMMA, "Expected ',' after upper bound expression");
-
-    beginScope();
-    
-    // Parse lowerbound expression (only assignments or declarations)
-    // -- for now only declarations --
-    uint8_t var = parseVariable("Expected variable name");
-    Token name = parser.previous;
-
-    if(match(TOKEN_EQUAL)) {
-        // Declare a variable with an expression as its initial value
-        expression();
-    } else {
-        // Error if no assignment
-        error("Lower bound expression must be initialised");
-    }
-
-    defineVariable(var);
-    // -------------------------------
-
-    consume(TOKEN_RIGHT_PAREN, "Expected ')' lower bound expression");
-
-    // ---- Loop operation ----
-    expression();
-    // int exitJump = -1;
-    
-    // // Exit conditions (i > n)
-    // emitByte(OP_POP); // Eek
-    // namedVariable(name, false); // Load i
-    // emitByte(OP_LESS_EQUAL); // Check if i <= n
-
-    // // Jump if false
-    // exitJump = emitJump(OP_JUMP_IF_FALSE);
-    // emitByte(OP_POP); // Pop condition result
-
-    // // Implicit increment of lower bound
-    // int incrementStart = currentChunk()->count;
-    // emitConstant(NUMBER_VAL(1));
-    // // Increment lower bound variable
-    // namedVariable(name, false); // Load i
-    // emitByte(OP_ADD);
-    // int arg = resolveLocal(current, &name);
-    // emitBytes(OP_SET_LOCAL, (uint8_t)arg);
-    // emitByte(OP_POP); // Pop result?
-
-    // // Parse summand
-    // // TODO: actually add stuff
-    // parsePrecedence(PREC_SEQUENCE_OP);
-    // emitByte(OP_SUMMATION);
-
-    // emitLoop(incrementStart);
-
-    // // Patch jump
-    // if(exitJump != -1) {
-    //     patchJump(exitJump);
-    //     emitByte(OP_POP); // Pop condition result
-    // }
-    // ------------------------
-    
-    emitByte(OP_NULL); // TEMPORARY: Trying to fix bug where result is popped
-    endScope();
-}
-
 ParseRule rules[] = {
     // Rules for parsing expressions
     // Token name            prefix      infix   precedence
@@ -636,7 +581,7 @@ ParseRule rules[] = {
     [TOKEN_ELSE]          = {NULL,       NULL,   PREC_NONE},
     [TOKEN_WHILE]         = {NULL,       NULL,   PREC_NONE},
     [TOKEN_DO]            = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_SUMMATION]     = {sequenceOp, NULL,   PREC_SEQUENCE_OP},
+    [TOKEN_SUMMATION]     = {NULL,       NULL,   PREC_NONE},
     [TOKEN_OUT]           = {NULL,       NULL,   PREC_NONE},
     [TOKEN_RETURN]        = {NULL,       NULL,   PREC_NONE},
     [TOKEN_FUNCTION]      = {NULL,       NULL,   PREC_NONE},

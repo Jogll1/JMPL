@@ -7,11 +7,11 @@
 #include "debug.h"
 #include "vm.h"
 
-#define CURRENT_VERSION "0.0.9"
+#define CURRENT_VERSION "0.1.0"
 
-// gcc -I.\c_jmpl\include -o .\build\c_jmpl\v0-0-5 .\c_jmpl\src\*.c
-// .\build\c_jmpl\v0-0-5.exe .\examples\test.jmpl
-// .\build\c_jmpl\v0-0-5.exe
+// gcc -I.\c_jmpl\include -o .\build\c_jmpl\v0-1-0 .\c_jmpl\src\*.c
+// .\build\c_jmpl\v0-1-0.exe .\examples\test.jmpl
+// .\build\c_jmpl\v0-1-0.exe
 
 // ToDo:
 // - RLE for line information in writeChunk (CH 14)
@@ -38,7 +38,7 @@ static void repl() {
     char line[1024];
 
     while(true) {
-        printf(YELLOW ">> " RESET);
+        printf(ANSI_YELLOW ">> " ANSI_RESET);
 
         if(!fgets(line, sizeof(line), stdin)) {
             printf("\n");
@@ -61,6 +61,7 @@ static char* readFile(const char* path) {
     // Seek to the end and get how many bytes the file is
     fseek(file, 0L, SEEK_END);
     size_t fileSize = ftell(file);
+    
     // Rewind file to the end
     rewind(file);
 

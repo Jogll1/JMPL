@@ -10,7 +10,8 @@ out a ∧ p
 out "---"
 out "Hi"
 out "Hi" + "\n"
-out ("Hi" + "\n" + "World")
+out ("Hi" + "\n"
+ + "World")
 out "Hi" + "\t" + "Hi"
 out "Hi" + "\t" + "World"
 out "---"

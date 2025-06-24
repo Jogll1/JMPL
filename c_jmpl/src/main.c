@@ -7,11 +7,11 @@
 #include "debug.h"
 #include "vm.h"
 
-#define CURRENT_VERSION "0.1.0"
+#define CURRENT_VERSION "0.1.1"
 
-// gcc -I.\c_jmpl\include -o .\build\c_jmpl\v0-1-0 .\c_jmpl\src\*.c
-// .\build\c_jmpl\v0-1-0.exe .\examples\test.jmpl
-// .\build\c_jmpl\v0-1-0.exe
+// gcc -I.\c_jmpl\include -o .\build\c_jmpl\v0-1-1 .\c_jmpl\src\*.c
+// .\build\c_jmpl\v0-1-1.exe .\examples\test.jmpl
+// .\build\c_jmpl\v0-1-1.exe
 
 static void repl() {
     char line[1024];

@@ -19,7 +19,7 @@ void initScanner(const unsigned char* source) {
 }
 
 /**
- * Determine the length of a character in bytes that is encoded with UTF-8.
+ * @brief Determine the length of a character in bytes that is encoded with UTF-8.
  * 
  * @param byte the first byte of the character
  * @returns    how long the character's byte sequence is
@@ -108,7 +108,7 @@ static Token errorToken(const unsigned char* message) {
 }
 
 static void skipWhitespace() {
-    for(;;) {
+    while (true) {
         unsigned int c = peek();
 
         switch(c) {
@@ -122,20 +122,20 @@ static void skipWhitespace() {
                 advance();
                 break;
             case '/':
-                if(peekNext() == '/') {
+                if (peekNext() == '/') {
                     // If it is a comment, keep consuming until end of the line
                     while (peek() != '\n' && !isAtEnd()) advance();
-                } else if(peekNext() =='*') {
-                    advance();
-                    advance();
+                } else if (peekNext() =='*') {
+                    advance(); // Skip the '/'
+                    advance(); // Skip the '*'
                     // If it is a multi-line comment, keep consuming until closed off
                     while (peek() != '*' && peekNext() != '/' && !isAtEnd()) {
                         // Increment line counter manually when scanning multi-line comments
                         if(peek() == '\n') scanner.line++;
                         advance();
                     }
-                    advance();
-                    advance();
+                    advance(); // Skip the '*'
+                    advance(); // Skip the '/'
                 } else {
                     return;
                 }
@@ -227,8 +227,7 @@ static Token string() {
 
     if(isAtEnd()) return errorToken("Unterminated string.");
 
-    // The closing quote
-    advance();
+    advance(); // The closing quote
     return makeToken(TOKEN_STRING);
 }
 

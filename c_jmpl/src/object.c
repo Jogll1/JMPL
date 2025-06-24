@@ -128,7 +128,7 @@ static void printFunction(ObjFunction* function) {
 }
 
 /**
- * Converts a value to an ObjString.
+ * @brief Converts a value to an ObjString.
  * 
  * @param value the value to convert
  * @return      a pointer to an ObjString

@@ -49,7 +49,7 @@ static void runtimeError(const unsigned char* format, ...) {
 }
 
 /**
- * Adds a native function.
+ * @brief Adds a native function.
  * 
  * @param name     The name of the function in JMPL
  * @param arity    How many parameters it should have
@@ -112,7 +112,7 @@ Value pop() {
 }
 
 /**
- * Returns a value from the stack but doesn't pop it.
+ * @brief Returns a value from the stack but doesn't pop it.
  *
  * @param distance How far down from the top of the stack to look, zero being the top
  * @return         The value at that distance on the stack

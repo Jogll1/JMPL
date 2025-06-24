@@ -9,7 +9,7 @@
 #include "value.h"
 #include "native.h"
 
-// ------------ General purpose ------------
+// --- General purpose ---
 
 /**
  * clock()
@@ -20,18 +20,34 @@ Value clockNative(int argCount, Value* args) {
     return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
 }
 
-// ------------ Maths library ------------
+// --- Maths library ---
+
+/**
+ * pi()
+ * 
+ * Returns the numerical value of pi.
+ */
+Value piNative(int argCount, Value* args) {
+    return NUMBER_VAL(JMPL_PI);
+}
 
 /**
  * sin(x)
  * 
  * Returns the sine of x (in radians).
  * Returns null if x is not a number.
+ * Manually returns 0 for all +/- n * pi
  */
 Value sinNative(int argCount, Value* args) {
-    if(!IS_NUMBER(args[0])) return NULL_VAL; 
+    if(!IS_NUMBER(args[0])) return NULL_VAL;
 
-    return NUMBER_VAL(sin(AS_NUMBER(args[0])));
+    double arg = AS_NUMBER(args[0]);
+
+    if (fabs((arg / JMPL_PI) - round(arg / JMPL_PI)) < JMPL_EPSILON) {
+        return NUMBER_VAL(0);
+    }
+
+    return NUMBER_VAL(sin(arg));
 }
 
 /**
@@ -39,11 +55,18 @@ Value sinNative(int argCount, Value* args) {
  * 
  * Returns the cosine of x (in radians).
  * Returns null if x is not a number.
+ * Manually returns 0 for all +/- (2n + 1) * pi / 2
  */
 Value cosNative(int argCount, Value* args) {
-    if(!IS_NUMBER(args[0])) return NULL_VAL; 
+    if(!IS_NUMBER(args[0])) return NULL_VAL;
+    
+    double arg = AS_NUMBER(args[0]);
 
-    return NUMBER_VAL(cos(AS_NUMBER(args[0])));
+    if ((fabs((arg / (JMPL_PI / 2)) - round(arg / (JMPL_PI / 2))) < JMPL_EPSILON && fmod(round(arg / (JMPL_PI / 2)), 2) != 0)) {
+        return NUMBER_VAL(0);
+    }
+
+    return NUMBER_VAL(cos(arg));
 }
 
 /**
@@ -51,11 +74,21 @@ Value cosNative(int argCount, Value* args) {
  * 
  * Returns the tangent of x (in radians).
  * Returns null if x is not a number.
+ * Manually returns 0 for all +/- n * pi
  */
 Value tanNative(int argCount, Value* args) {
-    if(!IS_NUMBER(args[0])) return NULL_VAL; 
+    if(!IS_NUMBER(args[0])) return NULL_VAL;
+    
+    double arg = AS_NUMBER(args[0]);
 
-    return NUMBER_VAL(tan(AS_NUMBER(args[0])));
+    if (fabs((arg / JMPL_PI) - round(arg / JMPL_PI)) < JMPL_EPSILON) {
+        return NUMBER_VAL(0);
+    }
+    else if ((fabs((arg / (JMPL_PI / 2)) - round(arg / (JMPL_PI / 2))) < JMPL_EPSILON && fmod(round(arg / (JMPL_PI / 2)), 2) != 0)) {
+        return NULL_VAL;
+    }
+
+    return NUMBER_VAL(tan(arg));
 }
 
 /**
@@ -92,4 +125,34 @@ Value arctanNative(int argCount, Value* args) {
     if(!IS_NUMBER(args[0])) return NULL_VAL; 
 
     return NUMBER_VAL(atan(AS_NUMBER(args[0])));
+}
+
+/**
+ * max(x, y)
+ * 
+ * Returns the maximum of x and y.
+ * Returns null if either x or y is not a number.
+ */
+Value maxNative(int argCount, Value* args) {
+    if(!IS_NUMBER(args[0]) || !IS_NUMBER(args[1])) return NULL_VAL;
+    
+    double arg1 = AS_NUMBER(args[0]);
+    double arg2 = AS_NUMBER(args[1]);
+
+    return NUMBER_VAL(arg1 > arg2 ? arg1 : arg2);
+}
+
+/**
+ * min(x, y)
+ * 
+ * Returns the minimum of x and y.
+ * Returns null if either x or y is not a number.
+ */
+Value minNative(int argCount, Value* args) {
+    if(!IS_NUMBER(args[0]) || !IS_NUMBER(args[1])) return NULL_VAL;
+    
+    double arg1 = AS_NUMBER(args[0]);
+    double arg2 = AS_NUMBER(args[1]);
+
+    return NUMBER_VAL(arg1 < arg2 ? arg1 : arg2);
 }

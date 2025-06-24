@@ -13,27 +13,6 @@
 // .\build\c_jmpl\v0-1-0.exe .\examples\test.jmpl
 // .\build\c_jmpl\v0-1-0.exe
 
-// ToDo:
-// - RLE for line information in writeChunk (CH 14)
-// - Constant long instruction (CH 14)
-// - Dynamically grow stack (CH 15)
-// - Remove repl line count
-// - Add error types
-// - Optimise storing global variable names as constants (CH 21)
-// - POPN instruction that pops n amount of times (CH 22)
-// - Constant variables, compiler error if try to reassign them (CH 22)
-// - Remove local variable limit (CH 22), maybe dynamic arrays
-// - Report runtime errors from native functions (CH 24)
-// - Fix compiler errors not finishing program.
-// - Only wrap closures over functions that need them (CH 25)
-// - Stress test GC to try and find bugs (CH 26)
-//
-// - implicit returns
-// - summation function
-//
-// - add documentation
-// - format to code to style guide
-
 static void repl() {
     char line[1024];
 
@@ -55,7 +34,7 @@ static char* readFile(const char* path) {
 
     if(file == NULL) {
         fprintf(stderr, "Could not open file \"%s\".\n", path);
-        exit(74); // I/O error
+        exit(IO_ERROR);
     }
 
     // Seek to the end and get how many bytes the file is
@@ -70,7 +49,7 @@ static char* readFile(const char* path) {
 
     if(buffer == NULL) {
         fprintf(stderr, "Not enough memory to read \"%s\".\n", path);
-        exit(74); // I/O error
+        exit(IO_ERROR);
     }
 
     // Read the whole file
@@ -78,7 +57,7 @@ static char* readFile(const char* path) {
 
     if(bytesRead < fileSize) {
         fprintf(stderr, "Could not read file \"%s\".\n", path);
-        exit(74); // I/O error
+        exit(IO_ERROR);
     }
 
     buffer[bytesRead] = '\0';
@@ -92,8 +71,8 @@ static void runFile(const unsigned char* path) {
     InterpretResult result = interpret(source);
     free(source);
 
-    if(result == INTERPRET_COMPILE_ERROR) exit(65); // Data format error
-    if(result == INTERPRET_RUNTIME_ERROR) exit(70); // Internal software error
+    if(result == INTERPRET_COMPILE_ERROR) exit(DATA_FORMAT_ERROR);
+    if(result == INTERPRET_RUNTIME_ERROR) exit(INTERNAL_SOFTWARE_ERROR);
 }
 
 int main(int argc, const char* argv[]) {
@@ -109,7 +88,7 @@ int main(int argc, const char* argv[]) {
         runFile(argv[1]);
     } else {
         fprintf(stderr, "Usage: c_jmpl [path]\n");
-        exit(64); // Command line usage error
+        exit(COMMAND_LINE_USAGE_ERROR);
     }
 
     freeVM();

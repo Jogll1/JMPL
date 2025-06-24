@@ -111,7 +111,7 @@ static void errorAt(Token* token, const unsigned char* message) {
     }
 
     fprintf(stderr, ": %s.\n", message);
-    exit(70); // TEMPORARY HACK TO FORCE PROGRAM TO EXIT WHEN THERE'S A COMPILER ERROR
+    exit(INTERNAL_SOFTWARE_ERROR); // TEMPORARY HACK TO FORCE PROGRAM TO EXIT WHEN THERE'S A COMPILER ERROR
     parser.hadError = true;
 }
 

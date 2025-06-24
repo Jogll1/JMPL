@@ -1,9 +1,6 @@
-let p = true;
-let q = false;
+let a = 1;
+let b = 4;
+let c = 5;
 
-func f(x, y) = x ∧ y;
-
-let r = f(p, q);
-
-if r == true then out "Result is true.";
-else out "Result is false.";
+out tan(pi() / 2);
+out tan(2 * pi() / 2);

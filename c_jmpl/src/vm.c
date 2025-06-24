@@ -82,12 +82,17 @@ void initVM() {
     defineNative("clock", 0, clockNative);
 
     // Maths library
+    defineNative("pi", 0, piNative);
+
     defineNative("sin", 1, sinNative);
     defineNative("cos", 1, cosNative);
     defineNative("tan", 1, tanNative);
     defineNative("arcsin", 1, arcsinNative);
     defineNative("arccos", 1, arccosNative);
     defineNative("arctan", 1, arctanNative);
+
+    defineNative("max", 2, maxNative);
+    defineNative("min", 2, minNative);
 }
 
 void freeVM() {
@@ -107,7 +112,7 @@ Value pop() {
 }
 
 /**
- * Returns value from the stack but doesn't pop it.
+ * Returns a value from the stack but doesn't pop it.
  *
  * @param distance How far down from the top of the stack to look, zero being the top
  * @return         The value at that distance on the stack
@@ -209,10 +214,15 @@ static bool isFalse(Value value) {
            (IS_STRING(value) && AS_CSTRING(value)[0] == '\0');
 }
 
+/**
+ * @brief Concatenate strings a and b if either are a string.
+ * 
+ * Pops two strings from the stack and pushes the concatenated
+ * string to the stack.
+ */
 static void concatenate() {
-    // Concatenate if either a or b is a string
-    Value b = peek(0);
-    Value a = peek(1);
+    Value b = peek(0); // Peek second String
+    Value a = peek(1); // Peek first String
 
     ObjString* aString = valueToString(a);
     ObjString* bString = valueToString(b);
@@ -224,7 +234,7 @@ static void concatenate() {
 
     memcpy(chars, aString->chars, aString->length);
     memcpy(chars + aString->length, bString->chars, bString->length);
-    chars[length] = '\0';
+    chars[length] = '\0'; // Null terminator
 
     ObjString* result = takeString(chars, length);
     pop();
@@ -235,11 +245,11 @@ static void concatenate() {
 static InterpretResult run() {
     CallFrame* frame = &vm.frames[vm.frameCount - 1];
 
-#define READ_BYTE() (*frame->ip++)
-#define READ_SHORT() (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
+#define READ_BYTE()     (*frame->ip++)
+#define READ_SHORT()    (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
 #define READ_CONSTANT() (frame->closure->function->chunk.constants.values[READ_BYTE()])
-#define READ_STRING() AS_STRING(READ_CONSTANT())
-// -- Ugly --
+#define READ_STRING()   AS_STRING(READ_CONSTANT())
+// --- Ugly ---
 #define BINARY_OP(valueType, op) \
     do { \
         if(!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) { \
@@ -260,7 +270,7 @@ static InterpretResult run() {
         double a = AS_NUMBER(pop()); \
         push(valueType(pow(a, b))); \
     } while (false)
-// ----------
+// ---
 
     while(true) {
 #ifdef DEBUG_TRACE_EXECUTION
@@ -351,6 +361,7 @@ static InterpretResult run() {
                     // Concatenate if at least one operand is a string
                     concatenate();
                 } else if(IS_NUMBER(peek(0)) && IS_NUMBER(peek(1))) {
+                    // Else, numerically add
                     double b = AS_NUMBER(pop());
                     double a = AS_NUMBER(pop());
                     push(NUMBER_VAL(a + b));

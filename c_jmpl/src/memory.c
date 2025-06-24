@@ -32,7 +32,7 @@ void* reallocate(void* pointer, size_t oldSize, size_t newSize) {
     }
 
     void* result = realloc(pointer, newSize);
-    if(result == NULL) exit(1);
+    if(result == NULL) exit(INTERNAL_SOFTWARE_ERROR);
     return result;
 }
 
@@ -53,7 +53,7 @@ void markObject(Obj* object) {
         vm.greyCapacity = GROW_CAPACITY(vm.greyCapacity);
         vm.greyStack = (Obj**)realloc(vm.greyStack, sizeof(Obj*) * vm.greyCapacity);
 
-        if(vm.greyStack == NULL) exit(1); // Exit abruptly - probably should change
+        if(vm.greyStack == NULL) exit(INTERNAL_SOFTWARE_ERROR); // Exit abruptly - probably should change
     }
 
     vm.greyStack[vm.greyCount++] = object;

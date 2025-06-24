@@ -245,50 +245,44 @@ Token scanToken() {
 
     switch(c) {
         // Switch single characters
-        case '(': return makeToken(TOKEN_LEFT_PAREN); break;
-        case ')': return makeToken(TOKEN_RIGHT_PAREN); break;
-        case '{': return makeToken(TOKEN_LEFT_BRACE); break;
-        case '}': return makeToken(TOKEN_RIGHT_BRACE); break;
-        case '[': return makeToken(TOKEN_LEFT_SQUARE); break;
-        case ']': return makeToken(TOKEN_RIGHT_SQUARE); break;
-        case ',': return makeToken(TOKEN_COMMA); break;
-        case '.': return makeToken(TOKEN_DOT); break;
-        case '-': return makeToken(TOKEN_MINUS); break;
-        case '+': return makeToken(TOKEN_PLUS); break;
-        case '/': return makeToken(TOKEN_SLASH); break;
-        case '*': return makeToken(TOKEN_ASTERISK); break;
-        case '^': return makeToken(TOKEN_CARET); break;
-        case '%': return makeToken(TOKEN_MOD); break;
-        case ';': return makeToken(TOKEN_SEMICOLON); break;
-        case '|': return makeToken(TOKEN_PIPE); break;
-        case 0xE28888: return makeToken(TOKEN_IN); break; // '∈' U+2208, UTF-8: 0xE28888
-        case 0xE288A7: return makeToken(TOKEN_AND); break; // '∧' U+2227, UTF-8: 0xE288A7
-        case 0xE288A8: return makeToken(TOKEN_OR); break; // '∨' U+2228, UTF-8: 0xE288A8
-        case '#': return makeToken(TOKEN_HASHTAG); break;
-        case 0xE289A0: return makeToken(TOKEN_NOT_EQUAL); break; // '≠' U+2260, UTF-8: 0xE289A0
-        case 0xE289A4: return makeToken(TOKEN_LESS_EQUAL); break; // '≤' U+2264, UTF-8: 0xE289A4
-        case 0xE289A5: return makeToken(TOKEN_GREATER_EQUAL); break; // '≥' U+2265, UTF-8: 0xE289A5
-        case 0xE28692: return makeToken(TOKEN_MAPS_TO); break; // '→' U+2192, UTF-8: 0xE28692
-        case 0xE28792: return makeToken(TOKEN_IMPLIES); break; // '⇒' U+21D2, UTF-8: 0xE28792
-        case 0xE28891: return makeToken(TOKEN_SUMMATION); break; // '∑' U+2211, UTF-8: 0xE28891
+        case '(': return makeToken(TOKEN_LEFT_PAREN);
+        case ')': return makeToken(TOKEN_RIGHT_PAREN);
+        case '{': return makeToken(TOKEN_LEFT_BRACE);
+        case '}': return makeToken(TOKEN_RIGHT_BRACE);
+        case '[': return makeToken(TOKEN_LEFT_SQUARE);
+        case ']': return makeToken(TOKEN_RIGHT_SQUARE);
+        case ',': return makeToken(TOKEN_COMMA);
+        case '.': return makeToken(TOKEN_DOT);
+        case '-': return makeToken(TOKEN_MINUS);
+        case '+': return makeToken(TOKEN_PLUS);
+        case '/': return makeToken(TOKEN_SLASH);
+        case '*': return makeToken(TOKEN_ASTERISK);
+        case '^': return makeToken(TOKEN_CARET);
+        case '%': return makeToken(TOKEN_MOD);
+        case ';': return makeToken(TOKEN_SEMICOLON);
+        case '|': return makeToken(TOKEN_PIPE);
+        case 0xE28888: return makeToken(TOKEN_IN); // '∈' U+2208, UTF-8: 0xE28888
+        case 0xE288A7: return makeToken(TOKEN_AND); // '∧' U+2227, UTF-8: 0xE288A7
+        case 0xE288A8: return makeToken(TOKEN_OR); // '∨' U+2228, UTF-8: 0xE288A8
+        case '#': return makeToken(TOKEN_HASHTAG);
+        case 0xE289A0: return makeToken(TOKEN_NOT_EQUAL); // '≠' U+2260, UTF-8: 0xE289A0
+        case 0xE289A4: return makeToken(TOKEN_LESS_EQUAL); // '≤' U+2264, UTF-8: 0xE289A4
+        case 0xE289A5: return makeToken(TOKEN_GREATER_EQUAL); // '≥' U+2265, UTF-8: 0xE289A5
+        case 0xE28692: return makeToken(TOKEN_MAPS_TO); // '→' U+2192, UTF-8: 0xE28692
+        case 0xE28792: return makeToken(TOKEN_IMPLIES); // '⇒' U+21D2, UTF-8: 0xE28792
+        case 0xE28891: return makeToken(TOKEN_SUMMATION); // '∑' U+2211, UTF-8: 0xE28891
         // Switch one or two character symbols
-        case ':': 
-            return makeToken(match('=') ? TOKEN_ASSIGN : TOKEN_COLON);
-            break;
-        case '=':
-            return makeToken(match('=') ? TOKEN_EQUAL_EQUAL : TOKEN_EQUAL);
-            break;
-        case 0xC2AC: // '¬' U+00AC, UTF-8: 0xC2AC
-            return makeToken(match('=') ? TOKEN_NOT_EQUAL : TOKEN_NOT);
-            break;
-        case '>':
-            return makeToken(match('=') ? TOKEN_GREATER_EQUAL : TOKEN_GREATER);
-            break;
-        case '<':
-            return makeToken(match('=') ? TOKEN_LESS_EQUAL : TOKEN_LESS);
-            break;
+        case ':': return makeToken(match('=') ? TOKEN_ASSIGN : TOKEN_COLON); 
+        case '=': return makeToken(match('=') ? TOKEN_EQUAL_EQUAL : TOKEN_EQUAL);
+        case 0xC2AC: return makeToken(match('=') ? TOKEN_NOT_EQUAL : TOKEN_NOT); // '¬' U+00AC, UTF-8: 0xC2AC
+        case '>': return makeToken(match('=') ? TOKEN_GREATER_EQUAL : TOKEN_GREATER);
+        case '<': return makeToken(match('=') ? TOKEN_LESS_EQUAL : TOKEN_LESS);
         // Literals
         case '"': return string();
+        // Escape characters
+        // case '\n':
+        //     scanner.line++;
+        //     return makeToken(TOKEN_NEWLINE);
     }
 
     // return errorToken("Unexpected character: '" + c + "'");

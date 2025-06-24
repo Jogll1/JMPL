@@ -105,7 +105,26 @@ ObjString* copyString(const unsigned char* chars, int length) {
     if(interned != NULL) return interned;
 
     unsigned char* heapChars = ALLOCATE(char, length + 1);
-    memcpy(heapChars, chars, length);
+
+    // Cppy each character to the new string - manually deal with escape characters
+    int j = 0;
+    for (int i = 0; i < length; i++)
+    {
+        if (chars[i] == '\\' && i + 1 < length) {
+            i++;
+            switch (chars[i])
+            {
+                case 'n': heapChars[j++] = '\n'; break;
+                case 't': heapChars[j++] = '\t'; break;
+                case '\\': heapChars[j++] = '\\'; break;
+                case '"': heapChars[j++] = '"'; break;
+                default: heapChars[j++] = chars[i]; break;
+            }
+        } else {
+            heapChars[j++] = chars[i];
+        }
+    }
+
     heapChars[length] = '\0';
 
     return allocateString(heapChars, length, hash);
@@ -171,7 +190,7 @@ void printObject(Value value) {
             printFunction(AS_FUNCTION(value));
             break;
         case OBJ_NATIVE:
-            printf("<native fn>");
+            printf("<native %s>", AS_FUNCTION(value)->name->chars);
             break;
         case OBJ_STRING:
             printf("%s", AS_CSTRING(value));

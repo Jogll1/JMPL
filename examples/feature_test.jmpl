@@ -1,0 +1,132 @@
+// Variable declarations and types
+let x = 5
+let y = 10
+let message = "Hello"
+let flag = true
+let nothing = null
+let π = 3.14159
+let name = "Σωκράτης"
+let valid = false
+
+// Output
+out x
+out y
+out message
+out flag
+out nothing
+out π
+out name
+out valid
+out "hi" + "\n"
+
+// Variable reassignment
+x := 15
+flag := not flag
+message := message + " world!"
+out x
+out flag
+out message
+
+// Arithmetic
+let a = 2 + 3
+let b = 10 - 4
+let c = 6 * 7
+let d = 20 / 5
+let e = 2^3
+let f = 17 % 3
+let g = 18 mod 4
+out a
+out b
+out c
+out d
+out e
+out f
+out g
+
+// Relational operators
+out x == 15
+out x ¬= 10
+out x < 100
+out x > 5
+out x <= 15
+out x >= 14
+
+// Logical operators
+out true and false
+out true ∧ true
+out true or false
+out false ∨ false
+out not false
+out ¬true
+
+// If statements
+if x > 10 then out "x is big"
+if y < 5 then out "small" else out "not small"
+
+if flag then {
+    out "flag is true"
+    out "continuing..."
+} else {
+    out "flag is false"
+    out "exiting..."
+}
+
+if (x + y) > 20 then {
+    out "sum is large"
+} else {
+    out "sum is not large"
+}
+
+// While loop
+let i = 0
+while i < 5 do {
+    out i
+    i := i + 1
+}
+
+// Functions
+func square(n) = n * n
+func greet(name) = out "Hello, " + name
+func max(a, b) = {
+    if a > b then a else b
+}
+func log_range(n) = {
+    let i = 0
+    while i < n do {
+        out i
+        i := i + 1
+    }
+}
+
+// Call functions
+out square(4)
+greet("world")
+out max(10, 5)
+log_range(3)
+
+// Function return
+func explicit_return(x) = {
+    return x * 2
+}
+
+func implicit_return(x) = {
+    let doubled = x * 2
+    doubled
+}
+
+out explicit_return(6)
+out implicit_return(7)
+
+// Function composition
+func double(x) = x * 2
+func triple(x) = x * 3
+
+let res1 = double(triple(2))
+let res2 = triple(double(2))
+out res1
+out res2
+
+// Comments
+// This line tests single-line comment
+/* This is a
+   multiline comment block */

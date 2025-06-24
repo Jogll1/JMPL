@@ -32,7 +32,7 @@ typedef enum {
     TOKEN_SUMMATION, 
     TOKEN_OUT, TOKEN_RETURN, TOKEN_FUNCTION,
 
-    TOKEN_ERROR, TOKEN_EOF
+    TOKEN_NEWLINE, TOKEN_ERROR, TOKEN_EOF
 } TokenType;
 
 typedef struct {

@@ -1,6 +1,9 @@
-let a = 1;
-let b = 4;
-let c = 5;
+let a = 1
+let b = 4
+let c = 1
 
-out tan(pi() / 2);
-out tan(2 * pi() / 2);
+func f(x) = if x > 2 then 100 else a
+
+func g(x) = x + b + c
+
+out f(5) + g(4)

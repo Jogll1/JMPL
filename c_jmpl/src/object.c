@@ -105,25 +105,7 @@ ObjString* copyString(const unsigned char* chars, int length) {
     if(interned != NULL) return interned;
 
     unsigned char* heapChars = ALLOCATE(char, length + 1);
-
-    // Cppy each character to the new string - manually deal with escape characters
-    int j = 0;
-    for (int i = 0; i < length; i++)
-    {
-        if (chars[i] == '\\' && i + 1 < length) {
-            i++;
-            switch (chars[i])
-            {
-                case 'n': heapChars[j++] = '\n'; break;
-                case 't': heapChars[j++] = '\t'; break;
-                case '\\': heapChars[j++] = '\\'; break;
-                case '"': heapChars[j++] = '"'; break;
-                default: heapChars[j++] = chars[i]; break;
-            }
-        } else {
-            heapChars[j++] = chars[i];
-        }
-    }
+    memcpy(heapChars, chars, length);
 
     heapChars[length] = '\0';
 
@@ -181,6 +163,52 @@ ObjString* valueToString(Value value) {
     return result;
 }
 
+/**
+ * @brief Returns the corresponding escaped character given a character.
+ * 
+ * @param esc The character to escape
+ * @return    The escaped character
+ */
+static unsigned char decodeEscape(unsigned char esc) {
+    switch (esc) {
+        case 'n': return '\n';
+        case 't': return '\t';
+        case 'r': return '\r';
+        case '\\': return '\\';
+        default: return esc;
+    }
+}
+
+/**
+ * @brief Print an ObjString to the console.
+ * 
+ * @param string A pointer to an ObjString
+ * 
+ * Decodes each character in the string object, including escape characters.
+ * For printing the raw characters, use printf().
+ */
+static void printJMPLString(ObjString* string) {
+    int length = string->length;
+    unsigned char* chars = string->chars;
+
+    char* result = malloc(length + 1);
+    int ri = 0;
+
+    for (int i = 0; i < length; i++) {
+        // Add each string and decode escapes if necessary
+        if (chars[i] == '\\' && i + 1 < length) {
+            result[ri++] = decodeEscape(chars[i + 1]);
+            i++; // Skip the escaped character
+        } else {
+            result[ri++] = chars[i];
+        }
+    }
+
+    result[ri] = '\0';
+    
+    printf("%s", result);
+}
+
 void printObject(Value value) {
     switch(OBJ_TYPE(value)) {
         case OBJ_CLOSURE:
@@ -193,7 +221,7 @@ void printObject(Value value) {
             printf("<native %s>", AS_FUNCTION(value)->name->chars);
             break;
         case OBJ_STRING:
-            printf("%s", AS_CSTRING(value));
+            printJMPLString(AS_STRING(value));
             break;
         case OBJ_UPVALUE:
             printf("upvalue");

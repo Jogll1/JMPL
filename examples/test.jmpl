@@ -1,9 +1,16 @@
-let a = 1
-let b = 4
-let c = 1
+out 2^3
+out 5 + 4
 
-func f(x) = if x > 2 then 100 else a
+let a = true
+let p = false
 
-func g(x) = x + b + c
+out a ∨ p
+out a ∧ p
 
-out f(5) + g(4)
+out "---"
+out "Hi"
+out "Hi" + "\n"
+out ("Hi" + "\n" + "World")
+out "Hi" + "\t" + "Hi"
+out "Hi" + "\t" + "World"
+out "---"

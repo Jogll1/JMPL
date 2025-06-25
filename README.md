@@ -1,4 +1,4 @@
-# <img src="assets/JMPLMascot.png" height="48px"/> JMPL
+# <img src="assets/JMPLMascot.png" height="24px"/> JMPL
 
 This repository contains the JMPL interpreter (c_jmpl made in C), example programs, and documentation.
 

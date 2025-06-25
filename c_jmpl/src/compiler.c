@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "object.h"
 #include "common.h"
@@ -120,7 +121,7 @@ static void errorAt(Token* token, const unsigned char* message) {
     if(parser.panicMode) return;
     parser.panicMode = true;
     
-    fprintf(stderr, "[line %d] " ANSI_RED "Error" ANSI_RESET, token->line);
+    fprintf(stderr, "[line %d] " ANSI_RED "SyntaxError" ANSI_RESET, token->line);
 
     if(token->type == TOKEN_EOF) {
         fprintf(stderr, " at end");
@@ -181,17 +182,6 @@ static bool match(TokenType type) {
     advance();
 
     return true;
-}
-
-/**
- * @brief Consumes a token as the end of a statement.
- * 
- * Can consume either a newline token or a semicolon token.
- */
-static void consumeEndOfStatement() {
-    // Match a semicolon or newline
-    match(TOKEN_SEMICOLON);
-    match(TOKEN_NEWLINE);
 }
 
 static void emitByte(uint8_t byte) {
@@ -566,6 +556,7 @@ static void unary(bool canAssign) {
     switch (operatorType) {
         case TOKEN_NOT:   emitByte(OP_NOT);    break;
         case TOKEN_MINUS: emitByte(OP_NEGATE); break;
+        case TOKEN_PLUS:  break;
         default: return;
     }
 }
@@ -580,7 +571,7 @@ ParseRule rules[] = {
     [TOKEN_COMMA]         = {NULL,       NULL,   PREC_NONE},
     [TOKEN_DOT]           = {NULL,       NULL,   PREC_NONE},
     [TOKEN_MINUS]         = {unary,      binary, PREC_TERM},
-    [TOKEN_PLUS]          = {NULL,       binary, PREC_TERM},
+    [TOKEN_PLUS]          = {unary,      binary, PREC_TERM},
     [TOKEN_SLASH]         = {NULL,       binary, PREC_FACTOR},
     [TOKEN_ASTERISK]      = {NULL,       binary, PREC_FACTOR},
     [TOKEN_CARET]         = {NULL,       binary, PREC_EXPONENT},
@@ -670,6 +661,9 @@ static void expression(bool ignoreNewlines) {
 }
 
 static void block() {
+    // Ignore newline
+    match(TOKEN_NEWLINE);
+
     while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
         declaration();
     }
@@ -729,13 +723,11 @@ static void letDeclaration() {
         emitByte(OP_NULL);
     }
 
-    consumeEndOfStatement();
     defineVariable(global);
 }
 
 static void expressionStatement() {
     expression(false);
-    consumeEndOfStatement();
     if (!current->implicitReturn) emitByte(OP_POP);
 }
 
@@ -758,7 +750,6 @@ static void ifStatement() {
 
 static void outStatement() {
     expression(false);
-    consumeEndOfStatement();
     emitByte(OP_OUT);
 }
 
@@ -771,7 +762,6 @@ static void returnStatement() {
         emitReturn();
     } else {
         expression(false);
-        consumeEndOfStatement();
         emitByte(OP_RETURN);
     }
 }
@@ -820,6 +810,11 @@ static void declaration() {
     }
 
     if(parser.panicMode) synchronise();
+
+    // Make sure either a semicolon or newline separates statements
+    if (!(match(TOKEN_NEWLINE) || match(TOKEN_SEMICOLON) || match(TOKEN_EOF))) {
+        error("Expected newline or semicolon");
+    } 
 }
 
 static void statement() {
@@ -858,9 +853,8 @@ ObjFunction* compile(const unsigned char* source) {
     // Consume statements
     while(!match(TOKEN_EOF)) {
         // Ignore lines that are just newlines or semicolons 
-        if (match(TOKEN_NEWLINE) || match(TOKEN_SEMICOLON)) continue; 
-        
-        // TODO: Make sure either a semicolon or newline separates statements
+        if (match(TOKEN_NEWLINE) || match(TOKEN_SEMICOLON)) continue;
+
         declaration();
     }
 

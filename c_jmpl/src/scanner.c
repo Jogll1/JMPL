@@ -19,6 +19,74 @@ void initScanner(const unsigned char* source) {
 }
 
 /**
+ * @brief Return a token type's name.
+ * 
+ * @param type The type to translate.
+ */
+const unsigned char* getTokenName(TokenType type) {
+    switch (type) {
+        case TOKEN_LEFT_PAREN:     return "TOKEN_LEFT_PAREN";
+        case TOKEN_RIGHT_PAREN:    return "TOKEN_RIGHT_PAREN";
+        case TOKEN_LEFT_BRACE:     return "TOKEN_LEFT_BRACE";
+        case TOKEN_RIGHT_BRACE:    return "TOKEN_RIGHT_BRACE";
+        case TOKEN_LEFT_SQUARE:    return "TOKEN_LEFT_SQUARE";
+        case TOKEN_RIGHT_SQUARE:   return "TOKEN_RIGHT_SQUARE";
+        case TOKEN_COMMA:          return "TOKEN_COMMA";
+        case TOKEN_DOT:            return "TOKEN_DOT";
+        case TOKEN_MINUS:          return "TOKEN_MINUS";
+        case TOKEN_PLUS:           return "TOKEN_PLUS";
+        case TOKEN_SLASH:          return "TOKEN_SLASH";
+        case TOKEN_ASTERISK:       return "TOKEN_ASTERISK";
+        case TOKEN_CARET:          return "TOKEN_CARET";
+        case TOKEN_MOD:            return "TOKEN_MOD";
+        case TOKEN_SEMICOLON:      return "TOKEN_SEMICOLON";
+        case TOKEN_COLON:          return "TOKEN_COLON";
+        case TOKEN_PIPE:           return "TOKEN_PIPE";
+        case TOKEN_IN:             return "TOKEN_IN";
+        case TOKEN_HASHTAG:        return "TOKEN_HASHTAG";
+
+        case TOKEN_EQUAL:          return "TOKEN_EQUAL";
+        case TOKEN_EQUAL_EQUAL:    return "TOKEN_EQUAL_EQUAL";
+        case TOKEN_ASSIGN:         return "TOKEN_ASSIGN";
+        case TOKEN_NOT:            return "TOKEN_NOT";
+        case TOKEN_NOT_EQUAL:      return "TOKEN_NOT_EQUAL";
+        case TOKEN_GREATER:        return "TOKEN_GREATER";
+        case TOKEN_GREATER_EQUAL:  return "TOKEN_GREATER_EQUAL";
+        case TOKEN_LESS:           return "TOKEN_LESS";
+        case TOKEN_LESS_EQUAL:     return "TOKEN_LESS_EQUAL";
+        case TOKEN_MAPS_TO:        return "TOKEN_MAPS_TO";
+        case TOKEN_IMPLIES:        return "TOKEN_IMPLIES";
+
+        case TOKEN_IDENTIFIER:     return "TOKEN_IDENTIFIER";
+        case TOKEN_STRING:         return "TOKEN_STRING";
+        case TOKEN_NUMBER:         return "TOKEN_NUMBER";
+
+        case TOKEN_AND:            return "TOKEN_AND";
+        case TOKEN_OR:             return "TOKEN_OR";
+        case TOKEN_XOR:            return "TOKEN_XOR";
+        case TOKEN_TRUE:           return "TOKEN_TRUE";
+        case TOKEN_FALSE:          return "TOKEN_FALSE";
+        case TOKEN_LET:            return "TOKEN_LET";
+        case TOKEN_NULL:           return "TOKEN_NULL";
+        case TOKEN_IF:             return "TOKEN_IF";
+        case TOKEN_THEN:           return "TOKEN_THEN";
+        case TOKEN_ELSE:           return "TOKEN_ELSE";
+        case TOKEN_WHILE:          return "TOKEN_WHILE";
+        case TOKEN_DO:             return "TOKEN_DO";
+        case TOKEN_SUMMATION:      return "TOKEN_SUMMATION";
+        case TOKEN_OUT:            return "TOKEN_OUT";
+        case TOKEN_RETURN:         return "TOKEN_RETURN";
+        case TOKEN_FUNCTION:       return "TOKEN_FUNCTION";
+
+        case TOKEN_NEWLINE:        return "TOKEN_NEWLINE";
+        case TOKEN_ERROR:          return "TOKEN_ERROR";
+        case TOKEN_EOF:            return "TOKEN_EOF";
+
+        default:                   return "UNKNOWN_TOKEN";
+    }
+}
+
+/**
  * @brief Determine the length of a character in bytes that is encoded with UTF-8.
  * 
  * @param byte the first byte of the character

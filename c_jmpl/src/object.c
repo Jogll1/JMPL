@@ -218,7 +218,8 @@ void printObject(Value value) {
             printFunction(AS_FUNCTION(value));
             break;
         case OBJ_NATIVE:
-            printf("<native %s>", AS_FUNCTION(value)->name->chars);
+            // Could give natives a name but probably no point
+            printf("<native>");
             break;
         case OBJ_STRING:
             printJMPLString(AS_STRING(value));

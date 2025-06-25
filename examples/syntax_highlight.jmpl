@@ -3,20 +3,20 @@
 */
 
 // Variables
-let p = true;
-let n = 0;
-let a = 2;
+let p = true
+let n = 0
+let a = 2
 
 // Control
 while p < 2^(2 + a) do {
-    out n;
+    out n
 
-    n := n + 1;
+    n := n + 1
 }
 
-if n > 10 then p := false;
+if n > 10 then p := false
 
 // Strings
-let name = "Joel";
+let name = "Joel"
 
-out "Hello " + name + "\n";
+out "Hello " + name + "\n"

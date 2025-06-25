@@ -205,6 +205,13 @@ static void closeUpvalues(Value* last) {
     }
 }
 
+/**
+ * @brief Determines if a value is false.
+ * 
+ * @param value the value to determine the Boolean value of
+ * 
+ * Values are false if they are null, false, 0, or an empty string.
+ */
 static bool isFalse(Value value) {
     // Return false if null, false, 0, or empty string
     return IS_NULL(value) || 

@@ -35,7 +35,6 @@ static void runtimeError(const unsigned char* format, ...) {
         }
     }
     
-
     // List of arbritrary number of arguments
     va_list args;
     va_start(args, format);

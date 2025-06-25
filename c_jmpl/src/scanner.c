@@ -117,10 +117,10 @@ static void skipWhitespace() {
             case '\t':
                 advance();
                 break;
-            case '\n':
-                scanner.line++;
-                advance();
-                break;
+            // case '\n':
+            //     scanner.line++;
+            //     advance();
+            //     break;
             case '/':
                 if (peekNext() == '/') {
                     // If it is a comment, keep consuming until end of the line
@@ -280,9 +280,9 @@ Token scanToken() {
         // Literals
         case '"': return string();
         // Escape characters
-        // case '\n':
-        //     scanner.line++;
-        //     return makeToken(TOKEN_NEWLINE);
+        case '\n':
+            scanner.line++;
+            return makeToken(TOKEN_NEWLINE);
     }
 
     // return errorToken("Unexpected character: '" + c + "'");

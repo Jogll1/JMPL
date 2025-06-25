@@ -1,17 +1,11 @@
-out 2^3
-out 5 + 4
+out "2^3 = " + 2^3
+out "5 + 4 = " + (5 + 4)
 
-let a = true
-let p = false
+let a = true let p = false
 
-out a ∨ p
-out a ∧ p
+func add(x, y) = x + y
 
-out "---"
-out "Hi"
-out "Hi" + "\n"
-out ("Hi" + "\n"
- + "World")
-out "Hi" + "\t" + "Hi"
-out "Hi" + "\t" + "World"
-out "---"
+out "A or P = " + (a ∨ p)
+out "A and P = " + (a ∧ p)
+
+out add(3, 6)

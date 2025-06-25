@@ -96,6 +96,26 @@ static Chunk* currentChunk() {
     return &current->function->chunk;
 }
 
+/**
+ * @brief Print the the raw characters of a string without escaping characters.
+ */
+static void fprintRawString(FILE* f, const unsigned char* string, int length) {
+    for (int i = 0; i < length; ++i) {
+        unsigned char c = string[i];
+        switch (c) {
+            case '\n': fputs("\\n", f); break;
+            case '\t': fputs("\\t", f); break;
+            case '\r': fputs("\\r", f); break;
+            case '\\': fputs("\\\\", f); break;
+            case '\'': fputs("\\'", f); break;
+            case '\"': fputs("\\\"", f); break;
+            default:
+                if (isprint(c)) fputc(c, f);
+                else fprintf(f, "\\x%02x", c);
+        }
+    }
+}
+
 static void errorAt(Token* token, const unsigned char* message) {
     if(parser.panicMode) return;
     parser.panicMode = true;
@@ -107,7 +127,9 @@ static void errorAt(Token* token, const unsigned char* message) {
     } else if (token->type == TOKEN_ERROR) {
         // Nothing
     } else {
-        fprintf(stderr, " at '%.*s'", token->length, token->start);
+        fprintf(stderr, " at '");
+        fprintRawString(stderr, token->start, token->length);
+        fprintf(stderr, "'");
     }
 
     fprintf(stderr, ": %s.\n", message);
@@ -291,11 +313,11 @@ static void endScope() {
 }
 
 // Function declarations 
-static void expression();
+static void expression(bool ignoreNewlines);
 static void statement();
 static void declaration();
 static ParseRule* getRule(TokenType type);
-static void parsePrecedence(Precedence precendence);
+static void parsePrecedence(Precedence precendence, bool ignoreNewlines);
 
 static uint8_t identifierConstant(Token* name) {
     return makeConstant(OBJ_VAL(copyString(name->start, name->length)));
@@ -419,7 +441,7 @@ static uint8_t argumentList() {
     uint8_t argCount = 0;
     if (!check(TOKEN_RIGHT_PAREN)) {
         do {
-            expression();
+            expression(true);
             if(argCount == 255) {
                 error("Can't have more than 255 arguments");
             }
@@ -434,7 +456,7 @@ static uint8_t argumentList() {
 static void binary(bool canAssign) {
     TokenType operatorType = parser.previous.type;
     ParseRule* rule = getRule(operatorType);
-    parsePrecedence((Precedence)(rule->precedence + 1));
+    parsePrecedence((Precedence)(rule->precedence + 1), false);
 
     switch (operatorType) {
         case TOKEN_NOT_EQUAL:     emitByte(OP_NOT_EQUAL);     break;
@@ -468,7 +490,7 @@ static void literal(bool canAssign) {
 }
 
 static void grouping(bool canAssign) {
-    expression();
+    expression(true);
     consume(TOKEN_RIGHT_PAREN, "Expected ')' after expression");
 }
 
@@ -484,7 +506,7 @@ static void and_(bool canAssign) {
     
     // Pop left operand if true and evaluate right operand
     emitByte(OP_POP);
-    parsePrecedence(PREC_AND);
+    parsePrecedence(PREC_AND, false);
     
     patchJump(endJump);
 }
@@ -496,7 +518,7 @@ static void or_(bool canAssign) {
     patchJump(elseJump);
     emitByte(OP_POP);
 
-    parsePrecedence(PREC_OR);
+    parsePrecedence(PREC_OR, false);
     patchJump(endJump);
 }
 
@@ -523,7 +545,7 @@ static void namedVariable(Token name, bool canAssign) {
 
     if (canAssign && match(TOKEN_ASSIGN)) {
         // Assign to variable if found ':='
-        expression();
+        expression(false);
         emitBytes(setOp, (uint8_t)arg);
     } else {
         emitBytes(getOp, (uint8_t)arg);
@@ -538,7 +560,7 @@ static void unary(bool canAssign) {
     TokenType operatorType = parser.previous.type;
 
     // Compile the operand
-    parsePrecedence(PREC_UNARY);
+    parsePrecedence(PREC_UNARY, false);
 
     // Emit the operator instruction
     switch (operatorType) {
@@ -603,7 +625,7 @@ ParseRule rules[] = {
     [TOKEN_EOF]           = {NULL,       NULL,   PREC_NONE},
 };
 
-static void parsePrecedence(Precedence precendence) {
+static void parsePrecedence(Precedence precendence, bool ignoreNewlines) {
     advance();
 
     // Get which function to call for the prefix as the first token of an expression is always a prefix (inc. numbers)
@@ -635,8 +657,16 @@ static ParseRule* getRule(TokenType type) {
     return &rules[type];
 }
 
-static void expression() {
-    parsePrecedence(PREC_ASSIGNMENT);
+/**
+ * @brief Parse an expression.
+ * 
+ * @param ignoreNewlines whether to ignore newline tokens
+ * 
+ * This requires an ignore newlines flag as the parser should ignore newlines when parsing
+ * expressions such as groupings.
+ */
+static void expression(bool ignoreNewlines) {
+    parsePrecedence(PREC_ASSIGNMENT, ignoreNewlines);
 }
 
 static void block() {
@@ -693,7 +723,7 @@ static void letDeclaration() {
 
     if (match(TOKEN_EQUAL)) {
         // Declare a variable with an expression as its initial value
-        expression();
+        expression(false);
     } else {
         // Declare it with a null value
         emitByte(OP_NULL);
@@ -704,13 +734,13 @@ static void letDeclaration() {
 }
 
 static void expressionStatement() {
-    expression();
+    expression(false);
     consumeEndOfStatement();
     if (!current->implicitReturn) emitByte(OP_POP);
 }
 
 static void ifStatement() {
-    expression();
+    expression(false);
     consume(TOKEN_THEN, "Expected 'then' after condition");
 
     int thenJump = emitJump(OP_JUMP_IF_FALSE);
@@ -727,7 +757,7 @@ static void ifStatement() {
 }
 
 static void outStatement() {
-    expression();
+    expression(false);
     consumeEndOfStatement();
     emitByte(OP_OUT);
 }
@@ -740,7 +770,7 @@ static void returnStatement() {
     if(match(TOKEN_SEMICOLON)) {
         emitReturn();
     } else {
-        expression();
+        expression(false);
         consumeEndOfStatement();
         emitByte(OP_RETURN);
     }
@@ -748,7 +778,7 @@ static void returnStatement() {
 
 static void whileStatement() {
     int loopStart = currentChunk()->count;
-    expression();
+    expression(false);
     consume(TOKEN_DO, "Expected 'do' after condition");
 
     int exitJump = emitJump(OP_JUMP_IF_FALSE);
@@ -827,9 +857,10 @@ ObjFunction* compile(const unsigned char* source) {
     
     // Consume statements
     while(!match(TOKEN_EOF)) {
-        // Ignore newlines or semicolons
+        // Ignore lines that are just newlines or semicolons 
         if (match(TOKEN_NEWLINE) || match(TOKEN_SEMICOLON)) continue; 
-
+        
+        // TODO: Make sure either a semicolon or newline separates statements
         declaration();
     }
 

@@ -149,7 +149,7 @@ static void errorAtCurrent(const unsigned char* message) {
 
 static void advance() {
     parser.previous = parser.current;
-
+    
     while (true) {
         parser.current = scanToken();
 #ifdef DEBUG_PRINT_TOKENS
@@ -158,7 +158,7 @@ static void advance() {
         printf("(");
         fprintfRawString(stderr, parser.current.start, parser.current.length);
         printf(") ");
-        if (parser.current.type == TOKEN_NEWLINE || parser.current.type == TOKEN_EOF) printf("\n");
+        if (parser.current.type == TOKEN_NEWLINE || parser.current.type == TOKEN_INDENT || parser.current.type == TOKEN_DEDENT || parser.current.type == TOKEN_EOF) printf("\n\n");
 #endif
 
         if(parser.current.type != TOKEN_ERROR) break;
@@ -190,14 +190,7 @@ static void consume(TokenType type, const unsigned char* message) {
  */
 static void skipNewlines() {
     while (parser.current.type == TOKEN_NEWLINE) {
-        //Advance the parser newline without setting newline as previous
-        while (true) {
-            parser.current = scanToken();
-
-            if(parser.current.type != TOKEN_ERROR) break;
-
-            errorAtCurrent(parser.current.start);
-        }
+        advance();
     }
 }
 
@@ -210,6 +203,19 @@ static bool match(TokenType type) {
     advance();
 
     return true;
+}
+
+/**
+ * @brief Consume a statement separator (newline or semicolon).
+ */
+static void consumeSeparator() {
+    // Make sure a seperator separates statements
+    if (match(TOKEN_SEMICOLON) || match(TOKEN_NEWLINE)) return;
+    
+    if (check(TOKEN_DEDENT) || check(TOKEN_EOF)) return;
+    
+    error("Expected newline or semicolon between statements");
+    
 }
 
 static void emitByte(uint8_t byte) {
@@ -647,6 +653,8 @@ ParseRule rules[] = {
     [TOKEN_RETURN]        = {NULL,       NULL,   PREC_NONE},
     [TOKEN_FUNCTION]      = {NULL,       NULL,   PREC_NONE},
     [TOKEN_NEWLINE]       = {NULL,       NULL,   PREC_NONE},
+    [TOKEN_INDENT]        = {NULL,       NULL,   PREC_NONE},
+    [TOKEN_DEDENT]        = {NULL,       NULL,   PREC_NONE},
     [TOKEN_ERROR]         = {NULL,       NULL,   PREC_NONE},
     [TOKEN_EOF]           = {NULL,       NULL,   PREC_NONE},
 };
@@ -703,19 +711,15 @@ static void expression(bool ignoreNewlines) {
 }
 
 static void block() {
-    // Ignore newline
-    match(TOKEN_NEWLINE);
-
     skipNewlines();
 
-    while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
+    while (!check(TOKEN_DEDENT) && !check(TOKEN_EOF)) {
         declaration();
         skipNewlines();
     }
 
     skipNewlines();
-
-    consume(TOKEN_RIGHT_BRACE, "Expected '}' after block");
+    consume(TOKEN_DEDENT, "Expected 'DEDENT' after block");
 }
 
 static void function(FunctionType type) {
@@ -858,10 +862,11 @@ static void declaration() {
 
     if(parser.panicMode) synchronise();
 
-    // Make sure either a semicolon or newline separates statements
-    if (!(match(TOKEN_SEMICOLON) || match(TOKEN_NEWLINE) || match(TOKEN_EOF))) {
-        error("Expected newline or semicolon");
-    } 
+    if (match(TOKEN_INDENT)) {
+        error("Unexpected indent");
+    }
+
+    consumeSeparator();
 }
 
 static void statement() {
@@ -875,7 +880,7 @@ static void statement() {
         returnStatement();
     } else if (match(TOKEN_WHILE)) {
         whileStatement();
-    } else if(match(TOKEN_LEFT_BRACE)) {
+    } else if(match(TOKEN_INDENT)) {
         beginScope();
         block();
         endScope();

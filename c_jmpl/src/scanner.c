@@ -4,9 +4,16 @@
 #include "common.h"
 #include "scanner.h"
 
+#define MAX_INDENT_SIZE 16
+
 typedef struct {
     const unsigned char* start;
     const unsigned char* current;
+
+    int indentStack[MAX_INDENT_SIZE];
+    int* indentTop;
+    int pendingDedents;
+
     int line;
 } Scanner;
 
@@ -15,6 +22,11 @@ Scanner scanner;
 void initScanner(const unsigned char* source) {
     scanner.start = source;
     scanner.current = source;
+
+    scanner.indentStack[0] = 0; // Base indent level
+    scanner.indentTop = scanner.indentStack;
+    scanner.pendingDedents = 0;
+
     scanner.line = 1;
 }
 
@@ -108,7 +120,7 @@ static Token makeToken(TokenType type) {
 
 static Token errorToken(const unsigned char* message) {
     Token token;
-    token.type = TOKEN_EOF;
+    token.type = TOKEN_ERROR;
     token.start = message;
     token.length = (int)strlen(message);
     return token;
@@ -234,17 +246,82 @@ static Token string() {
 }
 
 /**
- * @brief Determine whether a newline character indiciates a newline, indent or dedent.
+ * @brief Determine whether a newline character indicates a newline, indent or dedent.
+ * 
+ * @return The relevant token
  */
-static Token scanNewlines() {
+static Token scanNewline() {
+    // Increment line
+    scanner.line++;
 
+    // Count spaces
+    int currentIndent = 0;
+    while (peek() == ' ')
+    {
+        advance();
+        currentIndent++;
+    }
+
+    // Ignore empty lines
+    skipWhitespace();
+
+    // If indent - emit one indent
+    if (currentIndent > *(scanner.indentTop)) {
+        // Indent - Push a new indent level
+        scanner.indentTop++;
+        *(scanner.indentTop) = currentIndent;
+
+        return makeToken(TOKEN_INDENT);
+    }
+
+    // If dedent decreased - queue all dedents
+    int dedents = 0;
+    while (scanner.indentTop > scanner.indentStack && currentIndent < *(scanner.indentTop)) {
+        scanner.indentTop--;
+        dedents++;
+    }
+
+    if (dedents > 0) {
+        scanner.pendingDedents = dedents - 1;
+        return makeToken(TOKEN_DEDENT);
+    }
+
+    // Otherwise, newline
+    return makeToken(TOKEN_NEWLINE);
+}
+
+/**
+ * @brief Append dedent tokens to close any opened blocks at the end of a file
+ */
+static Token flushDedents() {
+    while (scanner.indentTop > scanner.indentStack) {
+        scanner.indentTop--;
+    }
 }
 
 Token scanToken() {
+    // Flush queued dedents
+    if (scanner.pendingDedents > 0) {
+        scanner.pendingDedents--;
+        return makeToken(TOKEN_DEDENT);
+    }
+
     skipWhitespace();
     scanner.start = scanner.current;
 
-    if(isAtEnd()) return makeToken(TOKEN_EOF);
+    if(isAtEnd()) {
+        // If at end and there are unclosed indents, make dedents
+        if (scanner.indentTop > scanner.indentStack) {
+            int dedents = scanner.indentTop - scanner.indentStack;
+            scanner.indentTop = scanner.indentStack;
+            scanner.pendingDedents = dedents - 1;
+
+            return makeToken(TOKEN_DEDENT);
+        }
+        
+        // Otherwise return an EOF token
+        return makeToken(TOKEN_EOF);
+    }
 
     unsigned int c = advance();
 
@@ -288,9 +365,7 @@ Token scanToken() {
         // Literals
         case '"': return string();
         // Newline and indents
-        case '\n':
-            scanner.line++;
-            return makeToken(TOKEN_NEWLINE);
+        case '\n': return scanNewline();
     }
 
     return errorToken("Unexpected character.");

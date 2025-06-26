@@ -1,8 +1,6 @@
 #ifndef c_jmpl_scanner_h
 #define c_jmpl_scanner_h
 
-#define TAB_TO_SPACES 4 // Tab -> no. spaces
-
 typedef enum {
     // Single-character tokens - some can be represented by words
     TOKEN_LEFT_PAREN, TOKEN_RIGHT_PAREN,   // ( )

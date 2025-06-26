@@ -1,17 +1,12 @@
-let a = 3
-let b = (7 + 5)
-let n = 5
+let a = 5
+let b = 1
+  
+out "A + B = " + (a + b);
 
-out "a = " + a
-out "b = " + b
-out "n = " + n
+func f(x, y) = 
+    if x + y > 10 then 
+        out "x + y > 10" 
+    else 
+        out "x + y <= 10"
 
-// let z = (a * b); let answer = z mod n; out "(" + a + " * " + b + ") = " + z; out z + " mod " + n + " = " + answer;
-
-func printTimesModN(x, y, n) = {
-    let z = (x * y); let answer = z mod n; out "(" + x + " * " + y + ") = " + z; out z + " mod " + n + " = " + answer;
-}
-
-printTimesModN(a, b, n);
-
-out "\nEnd Of Line"
+f(12, 9)

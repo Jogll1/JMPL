@@ -190,7 +190,6 @@ static void consume(TokenType type, const unsigned char* message) {
  */
 static void skipNewlines() {
     while (parser.current.type == TOKEN_NEWLINE) {
-        printf("%d Skipped!\n", parser.current.line);
         //Advance the parser newline without setting newline as previous
         while (true) {
             parser.current = scanToken();
@@ -471,7 +470,7 @@ static uint8_t argumentList() {
     }
 
     skipNewlines();
-    
+
     consume(TOKEN_RIGHT_PAREN, "Expected ')' after arguments");
     return argCount;
 }
@@ -707,9 +706,14 @@ static void block() {
     // Ignore newline
     match(TOKEN_NEWLINE);
 
+    skipNewlines();
+
     while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
         declaration();
+        skipNewlines();
     }
+
+    skipNewlines();
 
     consume(TOKEN_RIGHT_BRACE, "Expected '}' after block");
 }
@@ -855,7 +859,7 @@ static void declaration() {
     if(parser.panicMode) synchronise();
 
     // Make sure either a semicolon or newline separates statements
-    if (!(match(TOKEN_NEWLINE) || match(TOKEN_SEMICOLON) || match(TOKEN_EOF))) {
+    if (!(match(TOKEN_SEMICOLON) || match(TOKEN_NEWLINE) || match(TOKEN_EOF))) {
         error("Expected newline or semicolon");
     } 
 }

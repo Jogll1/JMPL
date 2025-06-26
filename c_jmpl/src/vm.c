@@ -208,7 +208,7 @@ static void closeUpvalues(Value* last) {
 /**
  * @brief Determines if a value is false.
  * 
- * @param value the value to determine the Boolean value of
+ * @param value The value to determine the Boolean value of
  * 
  * Values are false if they are null, false, 0, or an empty string.
  */

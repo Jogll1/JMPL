@@ -4,6 +4,79 @@
 #include "object.h"
 #include "value.h"
 
+// --- DEBUG TOKENS ---
+/**
+ * @brief Return a token type's name.
+ * 
+ * @param type The type to translate.
+ */
+const unsigned char* getTokenName(TokenType type) {
+    switch (type) {
+        case TOKEN_LEFT_PAREN:     return "LEFT_PAREN";
+        case TOKEN_RIGHT_PAREN:    return "RIGHT_PAREN";
+        case TOKEN_LEFT_BRACE:     return "LEFT_BRACE";
+        case TOKEN_RIGHT_BRACE:    return "RIGHT_BRACE";
+        case TOKEN_LEFT_SQUARE:    return "LEFT_SQUARE";
+        case TOKEN_RIGHT_SQUARE:   return "RIGHT_SQUARE";
+        case TOKEN_COMMA:          return "COMMA";
+        case TOKEN_DOT:            return "DOT";
+        case TOKEN_MINUS:          return "MINUS";
+        case TOKEN_PLUS:           return "PLUS";
+        case TOKEN_SLASH:          return "SLASH";
+        case TOKEN_ASTERISK:       return "ASTERISK";
+        case TOKEN_CARET:          return "CARET";
+        case TOKEN_MOD:            return "MOD";
+        case TOKEN_SEMICOLON:      return "SEMICOLON";
+        case TOKEN_COLON:          return "COLON";
+        case TOKEN_PIPE:           return "PIPE";
+        case TOKEN_IN:             return "IN";
+        case TOKEN_HASHTAG:        return "HASHTAG";
+
+        case TOKEN_EQUAL:          return "EQUAL";
+        case TOKEN_EQUAL_EQUAL:    return "EQUAL_EQUAL";
+        case TOKEN_ASSIGN:         return "ASSIGN";
+        case TOKEN_NOT:            return "NOT";
+        case TOKEN_NOT_EQUAL:      return "NOT_EQUAL";
+        case TOKEN_GREATER:        return "GREATER";
+        case TOKEN_GREATER_EQUAL:  return "GREATER_EQUAL";
+        case TOKEN_LESS:           return "LESS";
+        case TOKEN_LESS_EQUAL:     return "LESS_EQUAL";
+        case TOKEN_MAPS_TO:        return "MAPS_TO";
+        case TOKEN_IMPLIES:        return "IMPLIES";
+
+        case TOKEN_IDENTIFIER:     return "IDENTIFIER";
+        case TOKEN_STRING:         return "STRING";
+        case TOKEN_NUMBER:         return "NUMBER";
+
+        case TOKEN_AND:            return "AND";
+        case TOKEN_OR:             return "OR";
+        case TOKEN_XOR:            return "XOR";
+        case TOKEN_TRUE:           return "TRUE";
+        case TOKEN_FALSE:          return "FALSE";
+        case TOKEN_LET:            return "LET";
+        case TOKEN_NULL:           return "NULL";
+        case TOKEN_IF:             return "IF";
+        case TOKEN_THEN:           return "THEN";
+        case TOKEN_ELSE:           return "ELSE";
+        case TOKEN_WHILE:          return "WHILE";
+        case TOKEN_DO:             return "DO";
+        case TOKEN_SUMMATION:      return "SUMMATION";
+        case TOKEN_OUT:            return "OUT";
+        case TOKEN_RETURN:         return "RETURN";
+        case TOKEN_FUNCTION:       return "FUNCTION";
+
+        case TOKEN_NEWLINE:        return "NEWLINE";
+        case TOKEN_INDENT:         return "INDENT";
+        case TOKEN_DEDENT:         return "DEDENT";
+        
+        case TOKEN_ERROR:          return "ERROR";
+        case TOKEN_EOF:            return "EOF";
+
+        default:                   return "UNKNOWN";
+    }
+}
+
+// --- DEBUG BYTECODE ---
 // Disassemble each instruction of bytecode
 void disassembleChunk(Chunk* chunk, const char* name) {
     printf("== %s ==\n", name);

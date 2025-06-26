@@ -8,10 +8,7 @@
 #include "compiler.h"
 #include "memory.h"
 #include "scanner.h"
-
-#ifdef DEBUG_PRINT_CODE
 #include "debug.h"
-#endif
 
 typedef struct {
     Token current;
@@ -99,8 +96,12 @@ static Chunk* currentChunk() {
 
 /**
  * @brief Print the the raw characters of a string without escaping characters.
+ * 
+ * @param f      The file format to print
+ * @param string The array of characters to print
+ * @param length The length of the array of characters 
  */
-static void fprintRawString(FILE* f, const unsigned char* string, int length) {
+static void fprintfRawString(FILE* f, const unsigned char* string, int length) {
     for (int i = 0; i < length; ++i) {
         unsigned char c = string[i];
         switch (c) {
@@ -129,7 +130,7 @@ static void errorAt(Token* token, const unsigned char* message) {
         // Nothing
     } else {
         fprintf(stderr, " at '");
-        fprintRawString(stderr, token->start, token->length);
+        fprintfRawString(stderr, token->start, token->length);
         fprintf(stderr, "'");
     }
 
@@ -151,7 +152,15 @@ static void advance() {
 
     while (true) {
         parser.current = scanToken();
-        // printf("parsed '%.*s', %d\n", parser.current.length, parser.current.start, parser.current.type);
+#ifdef DEBUG_PRINT_TOKENS
+        // Debug tokens
+        printf("%s", getTokenName(parser.current.type));
+        printf("(");
+        fprintfRawString(stderr, parser.current.start, parser.current.length);
+        printf(") ");
+        if (parser.current.type == TOKEN_NEWLINE || parser.current.type == TOKEN_EOF) printf("\n");
+#endif
+
         if(parser.current.type != TOKEN_ERROR) break;
 
         errorAtCurrent(parser.current.start);
@@ -160,6 +169,9 @@ static void advance() {
 
 /**
  * @brief Consumes a token of a given type. If the token is not present, returns an error.
+ * 
+ * @param type    The type of the token to consume
+ * @param message The message to report as an error incase the token is not consumed
  * 
  * If the current token has the given token type it calls advance().
  * If not, an error is displayed with errorAtCurrent().
@@ -171,6 +183,23 @@ static void consume(TokenType type, const unsigned char* message) {
     }
 
     errorAtCurrent(message);
+}
+
+/**
+ * @brief Skip zero or more newlines.
+ */
+static void skipNewlines() {
+    while (parser.current.type == TOKEN_NEWLINE) {
+        printf("%d Skipped!\n", parser.current.line);
+        //Advance the parser newline without setting newline as previous
+        while (true) {
+            parser.current = scanToken();
+
+            if(parser.current.type != TOKEN_ERROR) break;
+
+            errorAtCurrent(parser.current.start);
+        }
+    }
 }
 
 static bool check(TokenType type) {
@@ -431,6 +460,8 @@ static uint8_t argumentList() {
     uint8_t argCount = 0;
     if (!check(TOKEN_RIGHT_PAREN)) {
         do {
+            skipNewlines();
+
             expression(true);
             if(argCount == 255) {
                 error("Can't have more than 255 arguments");
@@ -439,6 +470,8 @@ static uint8_t argumentList() {
         } while (match(TOKEN_COMMA));
     }
 
+    skipNewlines();
+    
     consume(TOKEN_RIGHT_PAREN, "Expected ')' after arguments");
     return argCount;
 }
@@ -480,7 +513,10 @@ static void literal(bool canAssign) {
 }
 
 static void grouping(bool canAssign) {
+    skipNewlines();
     expression(true);
+    skipNewlines();
+
     consume(TOKEN_RIGHT_PAREN, "Expected ')' after expression");
 }
 
@@ -619,6 +655,9 @@ ParseRule rules[] = {
 static void parsePrecedence(Precedence precendence, bool ignoreNewlines) {
     advance();
 
+    // Ignore newline tokens if the flag is set
+    if (ignoreNewlines) skipNewlines();
+
     // Get which function to call for the prefix as the first token of an expression is always a prefix (inc. numbers)
     ParseFn prefixRule = getRule(parser.previous.type)->prefix;
 
@@ -633,6 +672,10 @@ static void parsePrecedence(Precedence precendence, bool ignoreNewlines) {
 
     while (precendence <= getRule(parser.current.type)->precedence) {
         advance();
+
+        // Ignore newline tokens if the flag is set
+        if (ignoreNewlines) skipNewlines();
+        
         ParseFn infixRule = getRule(parser.previous.type)->infix;
 
         // Call the function for the infix operation
@@ -651,7 +694,7 @@ static ParseRule* getRule(TokenType type) {
 /**
  * @brief Parse an expression.
  * 
- * @param ignoreNewlines whether to ignore newline tokens
+ * @param ignoreNewlines Whether to ignore newline tokens
  * 
  * This requires an ignore newlines flag as the parser should ignore newlines when parsing
  * expressions such as groupings.

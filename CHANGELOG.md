@@ -19,12 +19,14 @@
 - New native functions
   - `pi()`
   - `max()` and `min()`
-- Escape characters can now be printed to the console
+  - `floor()` and `ceil()`
 ### Changed
-- Statements no longer need to end with a semicolon
+- Statements no longer need to end with a semicolon (`;`)
+- Blocks use indents instead of curly braces (`{`)
 ### Fixed
 - The trigonometric functions
   - `sin(n * pi())` will now return 0 for any integer n
   - `tan(n * pi())` will now return 0 for any integer n
   - `cos((2 * n - 1) * pi())` will now return 0 for any odd integer n
   - `tan(n * pi() / 2)` will now return null for any integer n
+- Escape characters can now be properly printed to the console

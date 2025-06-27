@@ -156,3 +156,27 @@ Value minNative(int argCount, Value* args) {
 
     return NUMBER_VAL(arg1 < arg2 ? arg1 : arg2);
 }
+
+/**
+ * floor(x)
+ * 
+ * Returns the floor of x.
+ * Returns null if x is not a number.
+ */
+Value floorNative(int argCount, Value* args) {
+    if(!IS_NUMBER(args[0])) return NULL_VAL;
+    
+    return NUMBER_VAL(floor(AS_NUMBER(args[0])));
+}
+
+/**
+ * ceil(x)
+ * 
+ * Returns the ceiling of x.
+ * Returns null if x is not a number.
+ */
+Value ceilNative(int argCount, Value* args) {
+    if(!IS_NUMBER(args[0])) return NULL_VAL;
+    
+    return NUMBER_VAL(ceil(AS_NUMBER(args[0])));
+}

@@ -92,6 +92,8 @@ void initVM() {
 
     defineNative("max", 2, maxNative);
     defineNative("min", 2, minNative);
+    defineNative("floor", 1, floorNative);
+    defineNative("ceil", 1, ceilNative);
 }
 
 void freeVM() {

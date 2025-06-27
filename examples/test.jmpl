@@ -1,5 +1,4 @@
-let i = 0
+let π = pi()
 
-while i < 10 do
-    out "I = " + i
-    i := i + 1
+out "floor(π) = " + floor(π)
+out "ceil(π) = " + ceil(π)

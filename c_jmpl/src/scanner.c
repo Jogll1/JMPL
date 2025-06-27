@@ -5,6 +5,16 @@
 #include "scanner.h"
 
 #define MAX_INDENT_SIZE 16
+#define TOKEN_QUEUE_SIZE 16
+
+// --- Scanner and TokenQueue ---
+
+// Circular queue for pending tokens
+typedef struct {
+    Token tokens[TOKEN_QUEUE_SIZE];
+    int head;
+    int tail;
+} TokenQueue;
 
 typedef struct {
     const unsigned char* start;
@@ -12,7 +22,10 @@ typedef struct {
 
     int indentStack[MAX_INDENT_SIZE];
     int* indentTop;
-    int pendingDedents;
+    
+    TokenQueue tokenQueue;
+
+    int groupingDepth;
 
     int line;
 } Scanner;
@@ -24,11 +37,25 @@ void initScanner(const unsigned char* source) {
     scanner.current = source;
 
     scanner.indentStack[0] = 0; // Base indent level
-    scanner.indentTop = scanner.indentStack;
-    scanner.pendingDedents = 0;
+    scanner.indentTop = scanner.indentStack; // Top of indent stack
+    
+    scanner.tokenQueue.head = 0;
+    scanner.tokenQueue.tail = 0;
+
+    scanner.groupingDepth = 0; // Shouldn't create indent tokens when in a grouping
 
     scanner.line = 1;
 }
+
+bool isTokenQueueEmpty(TokenQueue* queue) {
+    return queue->head == queue->tail;
+}
+
+bool isTokenQueueFull(TokenQueue* queue) {
+    return (queue->tail + 1) % TOKEN_QUEUE_SIZE == queue->head;
+}
+
+// ------
 
 /**
  * @brief Determine the length of a character in bytes that is encoded with UTF-8.
@@ -123,6 +150,26 @@ static Token errorToken(const unsigned char* message) {
     token.type = TOKEN_ERROR;
     token.start = message;
     token.length = (int)strlen(message);
+    return token;
+}
+
+bool enqueueToken(Token token) {
+    TokenQueue* queue = &scanner.tokenQueue;
+
+    if (isTokenQueueFull(queue)) return false;
+
+    queue->tokens[queue->tail] = token;
+    queue->tail = (queue->tail + 1) % TOKEN_QUEUE_SIZE;
+    return true;
+}
+
+Token dequeueToken() {
+    TokenQueue* queue = &scanner.tokenQueue;
+
+    if (isTokenQueueEmpty(queue)) return errorToken("Token queue empty");
+
+    Token token = queue->tokens[queue->head];
+    queue->head = (queue->head + 1) % TOKEN_QUEUE_SIZE;
     return token;
 }
 
@@ -246,15 +293,12 @@ static Token string() {
 }
 
 /**
- * @brief Determine whether a newline character indicates a newline, indent or dedent.
+ * @brief Determine whether a newline character indicates a just a newline, indent or dedent.
  * 
- * @return The relevant token
+ * @return Whether the process completed. Returning false indicates the queue is full
  */
-static Token scanNewline() {
-    // Increment line
-    scanner.line++;
-
-    // Count spaces
+static bool scanAfterNewline() {
+    // Count spaces after line starts
     int currentIndent = 0;
     while (peek() == ' ')
     {
@@ -262,65 +306,83 @@ static Token scanNewline() {
         currentIndent++;
     }
 
-    // Ignore empty lines
+    // Skip completely empty lines
     skipWhitespace();
+    if (peek() == '\n' || peek() == '\0') {
+        return true;
+    }
 
-    // If indent - emit one indent
+    // Queue relevant tokens
     if (currentIndent > *(scanner.indentTop)) {
         // Indent - Push a new indent level
-        scanner.indentTop++;
-        *(scanner.indentTop) = currentIndent;
+        if (scanner.indentTop - scanner.indentStack >= MAX_INDENT_SIZE - 1) {
+            return enqueueToken(errorToken("Too many nested indents"));
+        }
 
-        return makeToken(TOKEN_INDENT);
+        *(++scanner.indentTop) = currentIndent;
+        return enqueueToken(makeToken(TOKEN_INDENT));
+    } else {
+        // Dedent - Push dedents until it reaches the current indent
+        while (scanner.indentTop > scanner.indentStack && currentIndent < *scanner.indentTop) {
+            scanner.indentTop--;
+            if(!enqueueToken(makeToken(TOKEN_DEDENT))) return false;
+        }
+
+        return true;
     }
-
-    // If dedent decreased - queue all dedents
-    int dedents = 0;
-    while (scanner.indentTop > scanner.indentStack && currentIndent < *(scanner.indentTop)) {
-        scanner.indentTop--;
-        dedents++;
-    }
-
-    if (dedents > 0) {
-        scanner.pendingDedents = dedents - 1;
-        return makeToken(TOKEN_DEDENT);
-    }
-
-    // Otherwise, newline
-    return makeToken(TOKEN_NEWLINE);
 }
 
 /**
- * @brief Append dedent tokens to close any opened blocks at the end of a file
+ * @brief Enqueue dedent tokens to close opened indents
+ * 
+ * @return If there is room for all the dedent tokens
  */
-static Token flushDedents() {
+static bool flushDedents() {
     while (scanner.indentTop > scanner.indentStack) {
         scanner.indentTop--;
+
+        if (!enqueueToken(makeToken(TOKEN_DEDENT))) {
+            return false;
+        }   
     }
+
+    return true;
 }
 
 Token scanToken() {
-    // Flush queued dedents
-    if (scanner.pendingDedents > 0) {
-        scanner.pendingDedents--;
-        return makeToken(TOKEN_DEDENT);
-    }
+    // Return any queued tokens
+    if (!isTokenQueueEmpty(&scanner.tokenQueue)) return dequeueToken();
 
     skipWhitespace();
     scanner.start = scanner.current;
 
     if(isAtEnd()) {
         // If at end and there are unclosed indents, make dedents
-        if (scanner.indentTop > scanner.indentStack) {
-            int dedents = scanner.indentTop - scanner.indentStack;
-            scanner.indentTop = scanner.indentStack;
-            scanner.pendingDedents = dedents - 1;
-
-            return makeToken(TOKEN_DEDENT);
-        }
+        if(!flushDedents()) return errorToken("Pending token queue full");
+        if (!isTokenQueueEmpty(&scanner.tokenQueue)) return dequeueToken();
         
         // Otherwise return an EOF token
         return makeToken(TOKEN_EOF);
+    }
+
+    // Handle newlines
+    if (peek() == '\n') {
+        advance();
+        scanner.line++;
+
+        // Only return a token if grouping depth is 0
+        if (scanner.groupingDepth == 0) {
+            // Enqueue indent or dedent tokens if necessary and possible
+            if (!scanAfterNewline()) return errorToken("Pending token queue full");
+
+            // Enqueue a newline (if the token wasn't an indent) then return top of queue
+            enqueueToken(makeToken(TOKEN_NEWLINE));
+            
+            return dequeueToken();
+        } else {
+            // Re-skip whitespace if in a grouping
+            skipWhitespace();
+        }
     }
 
     unsigned int c = advance();
@@ -330,12 +392,12 @@ Token scanToken() {
 
     switch(c) {
         // Switch single characters
-        case '(': return makeToken(TOKEN_LEFT_PAREN);
-        case ')': return makeToken(TOKEN_RIGHT_PAREN);
-        case '{': return makeToken(TOKEN_LEFT_BRACE);
-        case '}': return makeToken(TOKEN_RIGHT_BRACE);
-        case '[': return makeToken(TOKEN_LEFT_SQUARE);
-        case ']': return makeToken(TOKEN_RIGHT_SQUARE);
+        case '(': scanner.groupingDepth++; return makeToken(TOKEN_LEFT_PAREN);
+        case ')': scanner.groupingDepth--; return makeToken(TOKEN_RIGHT_PAREN);
+        case '{': scanner.groupingDepth++; return makeToken(TOKEN_LEFT_BRACE);
+        case '}': scanner.groupingDepth--; return makeToken(TOKEN_RIGHT_BRACE);
+        case '[': scanner.groupingDepth++; return makeToken(TOKEN_LEFT_SQUARE);
+        case ']': scanner.groupingDepth--; return makeToken(TOKEN_RIGHT_SQUARE);
         case ',': return makeToken(TOKEN_COMMA);
         case '.': return makeToken(TOKEN_DOT);
         case '+': return makeToken(TOKEN_PLUS);
@@ -364,9 +426,7 @@ Token scanToken() {
         case '<': return makeToken(match('=') ? TOKEN_LESS_EQUAL : TOKEN_LESS);
         // Literals
         case '"': return string();
-        // Newline and indents
-        case '\n': return scanNewline();
     }
 
-    return errorToken("Unexpected character.");
+    return errorToken("Unexpected character");
 }

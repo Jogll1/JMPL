@@ -1,12 +1,5 @@
-let a = 5
-let b = 1
-  
-out "A + B = " + (a + b);
+let i = 0
 
-func f(x, y) = 
-    if x + y > 10 then 
-        out "x + y > 10" 
-    else 
-        out "x + y <= 10"
-
-f(12, 9)
+while i < 10 do
+    out "I = " + i
+    i := i + 1

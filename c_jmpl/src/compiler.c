@@ -187,6 +187,8 @@ static void consume(TokenType type, const unsigned char* message) {
 
 /**
  * @brief Skip zero or more newlines.
+ * 
+ * @param skipBlocks Flag to skip indents and dedents too
  */
 static void skipNewlines() {
     while (parser.current.type == TOKEN_NEWLINE) {
@@ -212,7 +214,7 @@ static void consumeSeparator() {
     // Make sure a seperator separates statements
     if (match(TOKEN_SEMICOLON) || match(TOKEN_NEWLINE)) return;
     
-    if (check(TOKEN_DEDENT) || check(TOKEN_EOF)) return;
+    if (check(TOKEN_INDENT) || check(TOKEN_DEDENT) || check(TOKEN_EOF)) return;
     
     error("Expected newline or semicolon between statements");
     
@@ -338,7 +340,7 @@ static void endScope() {
 
 // Function declarations 
 static void expression(bool ignoreNewlines);
-static void statement();
+static void statement(bool blockAllowed);
 static void declaration();
 static ParseRule* getRule(TokenType type);
 static void parsePrecedence(Precedence precendence, bool ignoreNewlines);
@@ -466,8 +468,8 @@ static uint8_t argumentList() {
     if (!check(TOKEN_RIGHT_PAREN)) {
         do {
             skipNewlines();
-
             expression(true);
+
             if(argCount == 255) {
                 error("Can't have more than 255 arguments");
             }
@@ -682,7 +684,7 @@ static void parsePrecedence(Precedence precendence, bool ignoreNewlines) {
 
         // Ignore newline tokens if the flag is set
         if (ignoreNewlines) skipNewlines();
-        
+
         ParseFn infixRule = getRule(parser.previous.type)->infix;
 
         // Call the function for the infix operation
@@ -715,10 +717,8 @@ static void block() {
 
     while (!check(TOKEN_DEDENT) && !check(TOKEN_EOF)) {
         declaration();
-        skipNewlines();
     }
 
-    skipNewlines();
     consume(TOKEN_DEDENT, "Expected 'DEDENT' after block");
 }
 
@@ -745,7 +745,7 @@ static void function(FunctionType type) {
     consume(TOKEN_EQUAL, "Expected '=' after function signature");
 
     // Compile the body
-    statement();
+    statement(true);
 
     ObjFunction* function = endCompiler();
     emitBytes(OP_CLOSURE, makeConstant(OBJ_VAL(function)));
@@ -785,17 +785,19 @@ static void expressionStatement() {
 static void ifStatement() {
     expression(false);
     consume(TOKEN_THEN, "Expected 'then' after condition");
+    skipNewlines();
 
     int thenJump = emitJump(OP_JUMP_IF_FALSE);
     emitByte(OP_POP);
-    statement();
+    statement(true);
 
     int elseJump = emitJump(OP_JUMP);
 
     patchJump(thenJump);
     emitByte(OP_POP);
 
-    if(match(TOKEN_ELSE)) statement();
+    skipNewlines();
+    if(match(TOKEN_ELSE)) statement(true);
     patchJump(elseJump);
 }
 
@@ -824,7 +826,7 @@ static void whileStatement() {
 
     int exitJump = emitJump(OP_JUMP_IF_FALSE);
     emitByte(OP_POP);
-    statement();
+    statement(true);
     emitLoop(loopStart);
 
     patchJump(exitJump);
@@ -857,19 +859,16 @@ static void declaration() {
     } else if (match(TOKEN_LET)) {
         letDeclaration();
     } else {
-        statement();
+        statement(false);
     }
 
     if(parser.panicMode) synchronise();
 
-    if (match(TOKEN_INDENT)) {
-        error("Unexpected indent");
-    }
-
     consumeSeparator();
+    skipNewlines();
 }
 
-static void statement() {
+static void statement(bool blockAllowed) {
     current->implicitReturn = false;
     
     if (match(TOKEN_OUT)) {
@@ -881,6 +880,8 @@ static void statement() {
     } else if (match(TOKEN_WHILE)) {
         whileStatement();
     } else if(match(TOKEN_INDENT)) {
+        if (!blockAllowed) error("Unexpected indent");
+
         beginScope();
         block();
         endScope();

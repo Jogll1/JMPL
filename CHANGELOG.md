@@ -22,7 +22,7 @@
   - `floor()` and `ceil()`
 ### Changed
 - Statements no longer need to end with a semicolon (`;`)
-- Blocks use indents instead of curly braces (`{`)
+- Blocks use indents instead of curly braces (`{}`)
 ### Fixed
 - The trigonometric functions
   - `sin(n * pi())` will now return 0 for any integer n

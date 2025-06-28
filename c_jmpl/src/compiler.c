@@ -122,7 +122,8 @@ static void errorAt(Token* token, const unsigned char* message) {
     if(parser.panicMode) return;
     parser.panicMode = true;
     
-    fprintf(stderr, "[line %d] " ANSI_RED "SyntaxError" ANSI_RESET, token->line);
+    // TODO: error types such as syntax error, software error, etc
+    fprintf(stderr, "[line %d] " ANSI_RED "Error" ANSI_RESET, token->line);
 
     if(token->type == TOKEN_EOF) {
         fprintf(stderr, " at end");

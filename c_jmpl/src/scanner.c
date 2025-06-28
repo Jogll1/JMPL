@@ -150,6 +150,7 @@ static Token errorToken(const unsigned char* message) {
     token.type = TOKEN_ERROR;
     token.start = message;
     token.length = (int)strlen(message);
+    token.line = scanner.line;
     return token;
 }
 
@@ -313,7 +314,7 @@ static bool scanAfterNewline() {
     }
 
     // Queue relevant tokens
-    if (currentIndent > *(scanner.indentTop)) {
+    if (currentIndent > *scanner.indentTop) {
         // Indent - Push a new indent level
         if (scanner.indentTop - scanner.indentStack >= MAX_INDENT_SIZE - 1) {
             return enqueueToken(errorToken("Too many nested indents"));
@@ -325,10 +326,16 @@ static bool scanAfterNewline() {
         // Dedent - Push dedents until it reaches the current indent
         while (scanner.indentTop > scanner.indentStack && currentIndent < *scanner.indentTop) {
             scanner.indentTop--;
+
+            // Otherwise return a dedent token
             if(!enqueueToken(makeToken(TOKEN_DEDENT))) return false;
         }
 
-        return true;
+        // Error if top of indent stack does not match the current indent
+        if(*scanner.indentTop != currentIndent) enqueueToken(errorToken("Unexpected indent"));
+
+        // Return true as there has been no queue overflow
+        return true;    
     }
 }
 

@@ -128,6 +128,8 @@ static void printFunction(ObjFunction* function) {
     }
 }
 
+// --- Strings and Printing -- 
+
 /**
  * @brief Converts a value to an ObjString.
  * 
@@ -141,6 +143,11 @@ ObjString* valueToString(Value value) {
 
     if(IS_FUNCTION(value)) {
         unsigned char* str = AS_FUNCTION(value)->name->chars;
+        return AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
+    }
+
+    if(IS_NATIVE(value)) {
+        unsigned char* str = "<native>";
         return AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
     }
 

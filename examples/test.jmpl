@@ -1,5 +1,5 @@
-let a = 0
-let b = 0
+let a = 5
+let b = 6
 
 func f(x, y) = 
     if y == 0 then
@@ -7,11 +7,4 @@ func f(x, y) =
     else
         out x + " / " + y + " = " + floor(x / y) + " remainder " + (x mod y)
 
-while a < 25 do
-    while b < 25 do
-        f(a, b)
-        b := b + 1
-    b := 0
-    a := a + 1
-
-out "\nEnd of Line"
+f(a, b)

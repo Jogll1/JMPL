@@ -77,6 +77,7 @@ const unsigned char* getTokenName(TokenType type) {
 }
 
 // --- DEBUG BYTECODE ---
+
 // Disassemble each instruction of bytecode
 void disassembleChunk(Chunk* chunk, const char* name) {
     printf("== %s ==\n", name);

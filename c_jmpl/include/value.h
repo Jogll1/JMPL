@@ -10,10 +10,10 @@ typedef struct ObjString ObjString;
  * @brief The type of a Value.
  */
 typedef enum {
-    VAL_BOOL,   /**> Boolean */
-    VAL_NULL,   /**> Null */
-    VAL_NUMBER, /**> Number */
-    VAL_OBJ     /**> Object */
+    VAL_BOOL,
+    VAL_NULL,
+    VAL_NUMBER,
+    VAL_OBJ
 } ValueType;
 
 /**
@@ -61,9 +61,9 @@ typedef struct {
             *(resultPtr) = (unsigned char*)malloc(size); \
             snprintf(*(resultPtr), size, "%d", (int)(value)); \
         } else { \
-            int size = snprintf(NULL, 0, "%g", (value)) + 1; \
+            int size = snprintf(NULL, 0, "%lf", (value)) + 1; \
             *(resultPtr) = (unsigned char*)malloc(size); \
-            snprintf(*(resultPtr), size, "%g", (value)); \
+            snprintf(*(resultPtr), size, "%lf", (value)); \
         } \
     } while(false)
 

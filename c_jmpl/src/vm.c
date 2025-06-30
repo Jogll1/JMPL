@@ -11,7 +11,7 @@
 #include "native.h"
 #include "debug.h"
 
-// ToDo: swap this for a pointer (CH 15)
+// ToDo: swap this for a pointer
 VM vm;
 
 static void resetStack() {

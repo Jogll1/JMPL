@@ -9,7 +9,7 @@
 
 #define IS_CLOSURE(value)  isObjType(value, OBJ_CLOSURE)
 #define IS_FUNCTION(value) isObjType(value, OBJ_FUNCTION)
-#define IN_NATIVE(value)   isObjType(value, OBJ_NATIVE)
+#define IS_NATIVE(value)   isObjType(value, OBJ_NATIVE)
 #define IS_STRING(value)   isObjType(value, OBJ_STRING)
 
 #define AS_CLOSURE(value)  ((ObjClosure*)AS_OBJ(value))

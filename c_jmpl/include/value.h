@@ -5,6 +5,7 @@
 
 typedef struct Obj Obj;
 typedef struct ObjString ObjString;
+typedef struct Set Set;
 
 /**
  * @brief The type of a Value.
@@ -17,7 +18,7 @@ typedef enum {
 } ValueType;
 
 /**
- * @brief A JMPL representation of a value.
+ * @brief The JMPL representation of a value.
  */
 typedef struct {
     ValueType type;
@@ -39,9 +40,9 @@ typedef struct {
 
 // JMPL Value to C value
 
-#define AS_OBJ(value)     ((value).as.obj)
 #define AS_BOOL(value)    ((value).as.boolean)
 #define AS_NUMBER(value)  ((value).as.number)
+#define AS_OBJ(value)     ((value).as.obj)
 
 // C value to JMPL Value
 

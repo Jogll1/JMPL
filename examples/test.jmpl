@@ -1,10 +1,6 @@
 let a = 5
 let b = 6
 
-func f(x, y) = 
-    if y == 0 then
-        out x + " / " + y + " = null"
-    else
-        out x + " / " + y + " = " + floor(x / y) + " remainder " + (x mod y)
+func f(x, y) = x + y
 
-f(a, b)
+out f(a, b)

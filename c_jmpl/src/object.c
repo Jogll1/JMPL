@@ -11,7 +11,7 @@
 #define ALLOCATE_OBJ(type, objectType) \
     (type*)allocateObject(sizeof(type), objectType)
 
-static Obj* allocateObject(size_t size, ObjType type) {
+Obj* allocateObject(size_t size, ObjType type) {
     Obj* object = (Obj*)reallocate(NULL, 0, size);
     object->type = type;
     object->isMarked = true;
@@ -128,8 +128,6 @@ static void printFunction(ObjFunction* function) {
     }
 }
 
-// --- Strings and Printing -- 
-
 /**
  * @brief Converts a value to an ObjString.
  * 
@@ -137,22 +135,28 @@ static void printFunction(ObjFunction* function) {
  * @return      A pointer to an ObjString
  */
 ObjString* valueToString(Value value) {
-    if(IS_STRING(value)) {
+    if (IS_STRING(value)) {
         return AS_STRING(value);
     }
 
-    if(IS_FUNCTION(value)) {
+    if (IS_FUNCTION(value)) {
         unsigned char* str = AS_FUNCTION(value)->name->chars;
         return AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
     }
 
-    if(IS_NATIVE(value)) {
+    if (IS_NATIVE(value)) {
         unsigned char* str = "<native>";
         return AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
     }
 
+    if (IS_SET(value)) {
+        // This for now
+        unsigned char* str = "<set>";
+        return AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
+    }
+
     unsigned char* str;
-    switch(value.type) {
+    switch (value.type) {
         case VAL_BOOL:
             str = BOOL_TO_STRING(AS_BOOL(value));
             break;
@@ -233,6 +237,9 @@ void printObject(Value value) {
             break;
         case OBJ_UPVALUE:
             printf("upvalue");
+            break;
+        case OBJ_SET:
+            printf("set");
             break;
         default: return;
     }

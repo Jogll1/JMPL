@@ -13,7 +13,9 @@
 // Tune
 #define GC_HEAP_GROW_FACTOR 2
 
-// Function for dynamic memory allocation in c_jmpl
+/**
+ * @brief Function for dynamic memory reallocation in c_jmpl.
+ */
 void* reallocate(void* pointer, size_t oldSize, size_t newSize) {
     vm.bytesAllocated += newSize - oldSize;
     if(newSize > oldSize) {

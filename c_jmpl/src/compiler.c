@@ -528,6 +528,20 @@ static void grouping(bool canAssign) {
     consume(TOKEN_RIGHT_PAREN, "Expected ')' after expression");
 }
 
+static void set(bool canAssign) {
+    emitByte(OP_SET_CREATE);
+
+    if (!check(TOKEN_RIGHT_BRACE)) {
+        do {
+            expression(true);
+
+            emitByte(OP_SET_INSERT);
+        } while (match(TOKEN_COMMA));
+    }
+
+    consume(TOKEN_RIGHT_BRACE, "Expected '}' after set literal");
+}
+
 static void number(bool canAssign) {
     // Convert string to double
     double value = strtod(parser.previous.start, NULL);
@@ -610,7 +624,7 @@ ParseRule rules[] = {
     // Token name            prefix      infix   precedence
     [TOKEN_LEFT_PAREN]    = {grouping,   call,   PREC_CALL},
     [TOKEN_RIGHT_PAREN]   = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_LEFT_BRACE]    = {NULL,       NULL,   PREC_NONE}, 
+    [TOKEN_LEFT_BRACE]    = {set,        NULL,   PREC_PRIMARY}, 
     [TOKEN_RIGHT_BRACE]   = {NULL,       NULL,   PREC_NONE},
     [TOKEN_COMMA]         = {NULL,       NULL,   PREC_NONE},
     [TOKEN_DOT]           = {NULL,       NULL,   PREC_NONE},

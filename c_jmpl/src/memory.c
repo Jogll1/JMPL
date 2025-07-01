@@ -3,6 +3,7 @@
 
 #include "compiler.h"
 #include "memory.h"
+#include "set.h"
 #include "vm.h"
 
 #ifdef DEBUG_LOG_GC
@@ -70,6 +71,15 @@ static void markArray(ValueArray* array) {
     }
 }
 
+static void markSet(ObjSet* set) {
+    for (int i = 0; i < set->elements.capacity; i++) {
+        ValEntry* entry = &set->elements.entries[i];
+        if (entry->key.type != VAL_NULL && !IS_NULL(entry->key)) {
+            markValue(entry->key);
+        }
+    }
+}
+
 static void blackenObject(Obj* object) {
 #ifdef DEBUG_LOG_GC
     printf("%p blacken ", (void*)object);
@@ -95,8 +105,14 @@ static void blackenObject(Obj* object) {
         case OBJ_UPVALUE:
             markValue(((ObjUpvalue*)object)->closed);
             break;
+        case OBJ_SET:
+            ObjSet* set = (ObjSet*)object;
+            markObject((Obj*)set);
+            markSet(set);
+            break;
         case OBJ_NATIVE:
         case OBJ_STRING:
+        default:
             break;
     }
 }
@@ -117,9 +133,10 @@ static void freeObject(Obj* object) {
             FREE(ObjFunction, object);
             break;
         }
-        case OBJ_NATIVE: 
+        case OBJ_NATIVE: {
             FREE(ObjNative, object);
             break;
+        }
         case OBJ_STRING: {
             ObjString* string = (ObjString*)object;
             FREE_ARRAY(char, string->chars, string->length + 1);
@@ -130,6 +147,10 @@ static void freeObject(Obj* object) {
             ObjClosure* closure = (ObjClosure*)object;
             FREE_ARRAY(ObjUpvalue*, closure->upvalues, closure->upvalueCount);
             FREE(ObjUpvalue, object);
+            break;
+        }
+        case OBJ_SET: {
+            freeSet((ObjSet*)object);
             break;
         }
     }

@@ -4,6 +4,7 @@
 
 #include "memory.h"
 #include "object.h"
+#include "set.h"
 #include "table.h"
 #include "value.h"
 #include "vm.h"
@@ -120,60 +121,6 @@ ObjUpvalue* newUpvalue(Value* slot) {
     return upvalue;
 }
 
-static void printFunction(ObjFunction* function) {
-    if(function->name == NULL) {
-        printf("<script>");
-    } else {
-        printf("<fn %s>", function->name->chars);
-    }
-}
-
-/**
- * @brief Converts a value to an ObjString.
- * 
- * @param value The value to convert
- * @return      A pointer to an ObjString
- */
-ObjString* valueToString(Value value) {
-    if (IS_STRING(value)) {
-        return AS_STRING(value);
-    }
-
-    if (IS_FUNCTION(value)) {
-        unsigned char* str = AS_FUNCTION(value)->name->chars;
-        return AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
-    }
-
-    if (IS_NATIVE(value)) {
-        unsigned char* str = "<native>";
-        return AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
-    }
-
-    if (IS_SET(value)) {
-        // This for now
-        unsigned char* str = "<set>";
-        return AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
-    }
-
-    unsigned char* str;
-    switch (value.type) {
-        case VAL_BOOL:
-            str = BOOL_TO_STRING(AS_BOOL(value));
-            break;
-        case VAL_NULL:
-            str = NULL_TO_STRING;
-            break;
-        case VAL_NUMBER:
-            NUMBER_TO_STRING(AS_NUMBER(value), &str);
-            break;
-        default: return NULL;
-    }
-
-    ObjString* result = AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
-
-    return result;
-}
-
 /**
  * @brief Returns the corresponding escaped character given a character.
  * 
@@ -198,7 +145,7 @@ static unsigned char decodeEscape(unsigned char esc) {
  * Decodes each character in the string object, including escape characters.
  * For printing the raw characters, use printf().
  */
-static void printJMPLString(ObjString* string) {
+void printJMPLString(ObjString* string) {
     int length = string->length;
     unsigned char* chars = string->chars;
 
@@ -218,29 +165,4 @@ static void printJMPLString(ObjString* string) {
     result[ri] = '\0';
     
     printf("%s", result);
-}
-
-void printObject(Value value) {
-    switch(OBJ_TYPE(value)) {
-        case OBJ_CLOSURE:
-            printFunction(AS_CLOSURE(value)->function);
-            break;
-        case OBJ_FUNCTION:
-            printFunction(AS_FUNCTION(value));
-            break;
-        case OBJ_NATIVE:
-            // Could give natives a name but probably no point
-            printf("<native>");
-            break;
-        case OBJ_STRING:
-            printJMPLString(AS_STRING(value));
-            break;
-        case OBJ_UPVALUE:
-            printf("upvalue");
-            break;
-        case OBJ_SET:
-            printf("set");
-            break;
-        default: return;
-    }
 }

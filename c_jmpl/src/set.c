@@ -5,13 +5,16 @@
 #include "memory.h"
 #include "object.h"
 
+// Max elements to convert to string in a set
+#define MAX_STRING_SET_ELEMS 10 
+
 ObjSet* newSet() {
     ObjSet* set = (ObjSet*)allocateObject(sizeof(ObjSet), OBJ_SET);
     initValTable(&set->elements);
     return set;
 }
 
-bool setAdd(ObjSet* set, Value value) {
+bool setInsert(ObjSet* set, Value value) {
     return valTableSet(&set->elements, value, BOOL_VAL(true));
 }
 
@@ -26,9 +29,4 @@ bool setRemove(ObjSet* set, Value value) {
 bool freeSet(ObjSet* set) {
     freeValTable(&set->elements);
     FREE(ObjSet, set); 
-}
-
-void printSet(ObjSet* set) {
-    // For now print this
-    printf("<set>"); 
 }

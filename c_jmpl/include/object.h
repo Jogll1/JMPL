@@ -96,8 +96,7 @@ ObjNative* newNative(NativeFn function, int arity);
 ObjString* takeString(unsigned char* chars, int length);
 ObjString* copyString(const unsigned char* chars, int length);
 ObjUpvalue* newUpvalue(Value* slot);
-ObjString* valueToString(Value value);
-void printObject(Value value);
+void printJMPLString(ObjString* string);
 
 static inline bool isObjType(Value value, ObjType type) {
     return IS_OBJ(value) && AS_OBJ(value)->type == type;

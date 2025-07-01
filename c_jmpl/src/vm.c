@@ -7,6 +7,7 @@
 #include "compiler.h"
 #include "vm.h"
 #include "object.h"
+#include "set.h"
 #include "memory.h"
 #include "native.h"
 #include "debug.h"
@@ -483,6 +484,19 @@ static InterpretResult run() {
                 vm.stackTop = frame->slots;
                 push(result);
                 frame = &vm.frames[vm.frameCount - 1];
+                break;
+            }
+            case OP_SET_CREATE: {
+                ObjSet* set = newSet();
+                push(OBJ_VAL(set));
+                break;
+            }
+            case OP_SET_INSERT: {
+                Value value = pop(); // Pop the value
+                Value setVal = pop(); // Pop the set
+                ObjSet* set = AS_SET(setVal);
+                setInsert(set, value);
+                push(setVal);
                 break;
             }
         }

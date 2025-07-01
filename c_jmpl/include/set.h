@@ -25,7 +25,7 @@ typedef struct ObjSet {
 } ObjSet;
 
 ObjSet* newSet();
-bool setAdd(ObjSet* set, Value value);
+bool setInsert(ObjSet* set, Value value);
 bool setContains(ObjSet* set, Value value);
 bool setRemove(ObjSet* set, Value value);
 bool freeSet(ObjSet* set);

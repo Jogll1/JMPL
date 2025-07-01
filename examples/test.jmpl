@@ -1,6 +1,5 @@
-let a = 5
-let b = 6
+let S = {1, 2, 3, 4}
 
-func f(x, y) = x + y
+out S
 
-out f(a, b)
+out "\nEnd of Line"

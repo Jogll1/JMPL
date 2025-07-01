@@ -1,3 +1,3 @@
 cls
-gcc -I.\c_jmpl\include -o .\build\c_jmpl\v0-1-1 .\c_jmpl\src\*.c
-.\build\c_jmpl\v0-1-1.exe .\examples\test.jmpl
+cmake --build .\build\c_jmpl
+.\build\c_jmpl\v0-2-0.exe .\examples\test.jmpl

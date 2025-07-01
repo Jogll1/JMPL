@@ -1,5 +1,7 @@
 *.class
 *.exe
 
+/build/
 /bin/
 /.vscode/
+/CMakeFiles/

@@ -4,6 +4,7 @@
 
 #include "value.h"
 #include "object.h"
+#include "set.h"
 #include "memory.h"
 
 void initValueArray(ValueArray* array) {
@@ -42,13 +43,11 @@ ObjString* valueToString(Value value) {
     }
 
     if (IS_FUNCTION(value)) {
-        unsigned char* str = AS_FUNCTION(value)->name->chars;
-        return AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
+        return AS_FUNCTION(value)->name;
     }
 
     if (IS_CLOSURE(value)) {
-        unsigned char* str = AS_CLOSURE(value)->function->name->chars;
-        return AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
+        return AS_CLOSURE(value)->function->name;
     }
 
     if (IS_NATIVE(value)) {
@@ -57,8 +56,7 @@ ObjString* valueToString(Value value) {
     }
 
     if (IS_SET(value)) {
-        // This for now
-        unsigned char* str = "set";
+        unsigned char* str = setToString(AS_SET(value));
         return AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
     }
 
@@ -76,7 +74,6 @@ ObjString* valueToString(Value value) {
             break;
         default: 
             str = "CAST_ERROR";
-            // return NULL;
             break;
     }
 
@@ -86,8 +83,13 @@ ObjString* valueToString(Value value) {
 }
 
 void printValue(Value value) {
-    ObjString* stringRep = valueToString(value);
-    printJMPLString(stringRep);
+    switch(value.type) {
+        case VAL_BOOL:   printf(AS_BOOL(value) ? "true" : "false"); break;
+        case VAL_NULL:   printf("null"); break;
+        case VAL_NUMBER: printf("%g", AS_NUMBER(value)); break;
+        case VAL_OBJ:    printObject(value); break;
+        default: return;
+    }
 }
 
 bool valuesEqual(Value a, Value b) {

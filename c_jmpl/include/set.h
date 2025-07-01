@@ -30,6 +30,6 @@ bool setContains(ObjSet* set, Value value);
 bool setRemove(ObjSet* set, Value value);
 bool freeSet(ObjSet* set);
 
-void printSet(ObjSet* set);
+unsigned char* setToString(ObjSet* set);
 
 #endif

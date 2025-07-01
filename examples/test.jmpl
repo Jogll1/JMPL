@@ -1,4 +1,6 @@
-let S = {1, 2, 3, 4}
+func f(x, y, z) = {x, x + y, x + z}
+
+let S = f(5, 7, 8)
 
 out S
 

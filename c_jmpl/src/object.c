@@ -121,6 +121,14 @@ ObjUpvalue* newUpvalue(Value* slot) {
     return upvalue;
 }
 
+static void printFunction(ObjFunction* function) {
+    if(function->name == NULL) {
+        printf("<script>");
+    } else {
+        printf("<fn %s>", function->name->chars);
+    }
+}
+
 /**
  * @brief Returns the corresponding escaped character given a character.
  * 
@@ -150,6 +158,10 @@ void printJMPLString(ObjString* string) {
     unsigned char* chars = string->chars;
 
     char* result = malloc(length + 1);
+    if (result == NULL) {
+        fprintf(stderr, "Out of memory.\n");
+        exit(1);
+    }
     int ri = 0;
 
     for (int i = 0; i < length; i++) {
@@ -165,4 +177,29 @@ void printJMPLString(ObjString* string) {
     result[ri] = '\0';
     
     printf("%s", result);
+    free(result);
+}
+
+void printObject(Value value) {
+    switch(OBJ_TYPE(value)) {
+        case OBJ_CLOSURE:
+            printFunction(AS_CLOSURE(value)->function);
+            break;
+        case OBJ_FUNCTION:
+            printFunction(AS_FUNCTION(value));
+            break;
+        case OBJ_NATIVE:
+            printf("native");
+            break;
+        case OBJ_STRING:
+            printJMPLString(AS_STRING(value));
+            break;
+        case OBJ_UPVALUE:
+            printf("upvalue");
+            break;
+        case OBJ_SET:
+            printf("%s", setToString(AS_SET(value)));
+            break;
+        default: return;
+    }
 }

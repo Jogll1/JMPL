@@ -13,5 +13,8 @@ Currently, to run the interpreter have gcc or another C compiler installed then 
 
 Running the interpreter with no source file will start the in-terminal REPL.
 
+## Third-party code
+- <a href="https://github.com/cavaliercoder/c-stringbuilder?tab=readme-ov-file">c-stringbuilder<a> by cavaliercodernk
+
 ## Credits
 Implementation of the v0.1.0 interpreter was based off the book Crafting Interpreters by Bob Nystrom.

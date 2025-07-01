@@ -25,7 +25,7 @@ typedef struct {
  * | Assignment: :=
  * | Or:         or
  * | And:        and
- * | Equality:   ==, ¬=
+ * | Equality:   ==, ¬=, in
  * | Comparison: <, >, <=, >=
  * | Term:       +, -
  * | Factor:     *, /
@@ -502,6 +502,7 @@ static void binary(bool canAssign) {
         case TOKEN_SLASH:         emitByte(OP_DIVIDE);        break;
         case TOKEN_CARET:         emitByte(OP_EXPONENT);      break;
         case TOKEN_MOD:           emitByte(OP_MOD);           break;
+        case TOKEN_IN:            emitByte(OP_SET_IN);        break;
         default: return;
     }
 }
@@ -637,7 +638,7 @@ ParseRule rules[] = {
     [TOKEN_SEMICOLON]     = {NULL,       NULL,   PREC_NONE},
     [TOKEN_COLON]         = {NULL,       NULL,   PREC_NONE},
     [TOKEN_PIPE]          = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_IN]            = {NULL,       NULL,   PREC_NONE},
+    [TOKEN_IN]            = {NULL,       binary, PREC_EQUALITY},
     [TOKEN_HASHTAG]       = {NULL,       NULL,   PREC_NONE},
     [TOKEN_EQUAL]         = {NULL,       NULL,   PREC_NONE},
     [TOKEN_EQUAL_EQUAL]   = {NULL,       binary, PREC_EQUALITY},

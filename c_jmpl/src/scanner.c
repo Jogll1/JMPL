@@ -229,7 +229,13 @@ static TokenType identifierType() {
                     case 'u': return checkKeyword(2, 2, "nc", TOKEN_FUNCTION);
                 }
             }
-        case 'i': return checkKeyword(1, 1, "f", TOKEN_IF);
+        case 'i': 
+            if(scanner.current - scanner.start > 1) {
+                switch(scanner.start[1]) {
+                    case 'f': return TOKEN_IF;
+                    case 'n': return TOKEN_IN;
+                }
+            }
         case 'l': return checkKeyword(1, 2, "et", TOKEN_LET);
         case 'm': return checkKeyword(1, 2, "od", TOKEN_MOD);
         case 'n': 

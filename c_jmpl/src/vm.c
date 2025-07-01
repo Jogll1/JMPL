@@ -499,6 +499,16 @@ static InterpretResult run() {
                 push(setVal);
                 break;
             }
+            case OP_SET_IN: {
+                if(!IS_SET(peek(0))) {
+                    runtimeError("Right hand operator must be a set");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                Value setVal = pop();
+                ObjSet* set = AS_SET(setVal);
+                Value value = pop();
+                push(BOOL_VAL(setContains(set, value)));
+            }
         }
     }
 #undef READ_BYTE

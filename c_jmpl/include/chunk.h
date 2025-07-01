@@ -40,7 +40,8 @@ typedef enum {
     OP_CLOSE_UPVALUE,
     OP_RETURN,
     OP_SET_CREATE,
-    OP_SET_INSERT
+    OP_SET_INSERT,
+    OP_SET_IN
 } OpCode;
 
 typedef struct {

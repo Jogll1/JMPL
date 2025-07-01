@@ -27,6 +27,27 @@ bool setRemove(ObjSet* set, Value value) {
     return valTableDelete(&set->elements, value);
 }
 
+bool setsEqual(ObjSet* a, ObjSet* b) {
+    if (a->elements.count != b->elements.count) return false;
+    
+    for (int i = 0; i < a->elements.capacity; i++) {
+        Value valA = a->elements.entries[i].key;
+        bool found = false;
+
+        for (int j = 0; j < a->elements.capacity; j++) {
+            Value valB = b->elements.entries[j].key;
+            if (valuesEqual(valA, valB)) {
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) return false;
+    }
+
+    return true;
+}
+
 bool freeSet(ObjSet* set) {
     freeValTable(&set->elements);
     FREE(ObjSet, set); 
@@ -43,7 +64,7 @@ unsigned char* setToString(ObjSet* set) {
     int numElements = set->elements.count;
     int count = 0;
 
-    for (int i = 0; i < numElements; i++) {
+    for (int i = 0; i < set->elements.capacity; i++) {
         ValEntry* entry = &set->elements.entries[i];
         if (entry->key.type != VAL_NULL && !IS_NULL(entry->key)) {
             sb_appendf(sb, "%s", valueToString(entry->key)->chars);

@@ -1,0 +1,15 @@
+func isPrime(x) = 
+    if x ≤ 1 then return false
+    let i = 2
+    while i ≤ floor(x / 2) do
+        if x mod i == 0 then return false
+        i := i + 1
+    true
+
+let P = {}
+let i = 0
+while i < 100 do
+    if isPrime(i) then P := P ∪ {i}
+    i := i + 1
+
+out "Set of primes from 1-100 = " + P

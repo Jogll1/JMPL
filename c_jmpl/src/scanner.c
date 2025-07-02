@@ -423,12 +423,12 @@ Token scanToken() {
         case ',': return makeToken(TOKEN_COMMA);
         case '.': return makeToken(TOKEN_DOT);
         case '+': return makeToken(TOKEN_PLUS);
-        case '/': return makeToken(TOKEN_SLASH);
         case '*': return makeToken(TOKEN_ASTERISK);
         case '^': return makeToken(TOKEN_CARET);
         case '%': return makeToken(TOKEN_MOD);
         case ';': return makeToken(TOKEN_SEMICOLON);
-        case '|': return makeToken(TOKEN_PIPE); 
+        case '|': return makeToken(TOKEN_PIPE);
+        case 0xC2AC: return makeToken(TOKEN_NOT); // '¬' U+00AC, UTF-8: 0xC2AC
         case 0xE28888: return makeToken(TOKEN_IN); // '∈' U+2208, UTF-8: 0xE28888
         case 0xE288A7: return makeToken(TOKEN_AND); // '∧' U+2227, UTF-8: 0xE288A7
         case 0xE288A8: return makeToken(TOKEN_OR); // '∨' U+2228, UTF-8: 0xE288A8
@@ -445,7 +445,7 @@ Token scanToken() {
         case '-': return makeToken(match('>') ? TOKEN_MAPS_TO : TOKEN_MINUS);
         case ':': return makeToken(match('=') ? TOKEN_ASSIGN : TOKEN_COLON); 
         case '=': return makeToken(match('=') ? TOKEN_EQUAL_EQUAL : TOKEN_EQUAL);
-        case 0xC2AC: return makeToken(match('=') ? TOKEN_NOT_EQUAL : TOKEN_NOT); // '¬' U+00AC, UTF-8: 0xC2AC
+        case '/': return makeToken(match('=') ? TOKEN_NOT_EQUAL : TOKEN_SLASH); 
         case '>': return makeToken(match('=') ? TOKEN_GREATER_EQUAL : TOKEN_GREATER);
         case '<': return makeToken(match('=') ? TOKEN_LESS_EQUAL : TOKEN_LESS);
         // Literals

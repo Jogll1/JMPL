@@ -159,7 +159,7 @@ static void advance() {
         printf("(");
         fprintfRawString(stderr, parser.current.start, parser.current.length);
         printf(") ");
-        if (parser.current.type == TOKEN_NEWLINE || parser.current.type == TOKEN_INDENT || parser.current.type == TOKEN_DEDENT || parser.current.type == TOKEN_EOF) printf("\n\n");
+        if (parser.current.type == TOKEN_NEWLINE || parser.current.type == TOKEN_DEDENT || parser.current.type == TOKEN_EOF) printf("\n\n");
 #endif
 
         if(parser.current.type != TOKEN_ERROR) break;
@@ -218,7 +218,6 @@ static void consumeSeparator() {
     if (check(TOKEN_INDENT) || check(TOKEN_DEDENT) || check(TOKEN_EOF)) return;
     
     error("Expected newline or semicolon between statements");
-    
 }
 
 static void emitByte(uint8_t byte) {
@@ -333,7 +332,7 @@ static void endScope() {
         if (current->locals[current->localCount - 1].isCaptured) {
             emitByte(OP_CLOSE_UPVALUE);
         } else {
-            emitByte(OP_POP);
+            if (!current->implicitReturn) emitByte(OP_POP);
         }
         current->localCount--;
     }
@@ -341,7 +340,7 @@ static void endScope() {
 
 // Function declarations 
 static void expression(bool ignoreNewlines);
-static void statement(bool blockAllowed);
+static void statement(bool blockAllowed, bool ignoreSeparator);
 static void declaration();
 static ParseRule* getRule(TokenType type);
 static void parsePrecedence(Precedence precendence, bool ignoreNewlines);
@@ -765,7 +764,7 @@ static void function(FunctionType type) {
     consume(TOKEN_EQUAL, "Expected '=' after function signature");
 
     // Compile the body
-    statement(true);
+    statement(true, false);
 
     ObjFunction* function = endCompiler();
     emitBytes(OP_CLOSURE, makeConstant(OBJ_VAL(function)));
@@ -795,6 +794,8 @@ static void letDeclaration() {
     }
 
     defineVariable(global);
+
+    consumeSeparator();
 }
 
 static void expressionStatement() {
@@ -809,15 +810,16 @@ static void ifStatement() {
 
     int thenJump = emitJump(OP_JUMP_IF_FALSE);
     emitByte(OP_POP);
-    statement(true);
+    statement(true, true);
 
     int elseJump = emitJump(OP_JUMP);
 
     patchJump(thenJump);
     emitByte(OP_POP);
 
-    skipNewlines();
-    if(match(TOKEN_ELSE)) statement(true);
+    skipNewlines(); // Skip newlines to search for else
+    if(match(TOKEN_ELSE)) statement(true, false);
+
     patchJump(elseJump);
 }
 
@@ -831,7 +833,7 @@ static void returnStatement() {
         error("Can't return from top-level code");
     }
 
-    if(match(TOKEN_SEMICOLON)) {
+    if(match(TOKEN_SEMICOLON) || match(TOKEN_NEWLINE)) {
         emitReturn();
     } else {
         expression(false);
@@ -846,7 +848,7 @@ static void whileStatement() {
 
     int exitJump = emitJump(OP_JUMP_IF_FALSE);
     emitByte(OP_POP);
-    statement(true);
+    statement(true, false);
     emitLoop(loopStart);
 
     patchJump(exitJump);
@@ -879,24 +881,26 @@ static void declaration() {
     } else if (match(TOKEN_LET)) {
         letDeclaration();
     } else {
-        statement(false);
+        statement(false, false);
     }
 
     if(parser.panicMode) synchronise();
 
-    consumeSeparator();
+    // consumeSeparator();
     skipNewlines();
 }
 
-static void statement(bool blockAllowed) {
-    current->implicitReturn = false;
+static void statement(bool blockAllowed, bool ignoreSeparator) {
+    if(current->type == TYPE_SCRIPT) current->implicitReturn = false;
     
     if (match(TOKEN_OUT)) {
         outStatement();
+        if(!ignoreSeparator) consumeSeparator();
     } else if (match(TOKEN_IF)) {
         ifStatement();
     } else if (match(TOKEN_RETURN)) {
         returnStatement();
+        if(!ignoreSeparator) consumeSeparator();
     } else if (match(TOKEN_WHILE)) {
         whileStatement();
     } else if(match(TOKEN_INDENT)) {
@@ -907,9 +911,11 @@ static void statement(bool blockAllowed) {
         endScope();
     } else {
         // Set the implicit return flag if in a function
-        if(current->type == TYPE_FUNCTION) current->implicitReturn = true;
-
+        if(current->type == TYPE_FUNCTION) {
+            current->implicitReturn = true;
+        } 
         expressionStatement();
+        if(!ignoreSeparator) consumeSeparator();
     }
 }
 

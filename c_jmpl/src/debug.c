@@ -31,6 +31,8 @@ const unsigned char* getTokenName(TokenType type) {
         case TOKEN_PIPE:           return "PIPE";
         case TOKEN_IN:             return "IN";
         case TOKEN_HASHTAG:        return "HASHTAG";
+        case TOKEN_INTERSECT:      return "INTERSECT";
+        case TOKEN_UNION:          return "UNION";
 
         case TOKEN_EQUAL:          return "EQUAL";
         case TOKEN_EQUAL_EQUAL:    return "EQUAL_EQUAL";
@@ -182,6 +184,8 @@ int disassembleInstruction(Chunk* chunk, int offset) {
         case OP_SET_CREATE:    return simpleInstruction("OP_SET_CREATE", offset);
         case OP_SET_INSERT:    return simpleInstruction("OP_SET_INSERT", offset);
         case OP_SET_IN:        return simpleInstruction("OP_SET_IN", offset);
+        case OP_SET_INTERSECT: return simpleInstruction("OP_SET_INTERSECT", offset);
+        case OP_SET_UNION:     return simpleInstruction("OP_SET_UNION", offset);
         default:
             printf("Unknown opcode %d\n", instruction);
             return offset + 1;

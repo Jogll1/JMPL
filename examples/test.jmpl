@@ -1,5 +1,7 @@
-let S = {4, 5, {6}}
+let S = {1, 2, {3}, 4, 5}
+let T = {{3}, 5, 6, 7}
 
-out S
+out S ∩ T
+out S ∪ T
 
 out "\nEnd of Line"

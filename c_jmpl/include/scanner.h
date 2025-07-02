@@ -12,6 +12,7 @@ typedef enum {
     TOKEN_CARET, TOKEN_MOD,                // ^ %
     TOKEN_SEMICOLON, TOKEN_COLON,          // ; :
     TOKEN_PIPE, TOKEN_IN, TOKEN_HASHTAG,   // | ∈ #
+    TOKEN_INTERSECT,TOKEN_UNION,           // ∩, ∪
  
     // One or two character tokens 
     // This is when a common character can be followed by another

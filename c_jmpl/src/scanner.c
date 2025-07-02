@@ -216,8 +216,10 @@ static TokenType checkKeyword(unsigned int start, int length, const unsigned cha
     return TOKEN_IDENTIFIER;
 }
 
+/**
+ * @brief Switch identifier to possibly match it to a keyword.
+ */
 static TokenType identifierType() {
-    // Switch identifier to possibly match it to a keyword
     switch(scanner.start[0]) {
         case 'a': return checkKeyword(1, 2, "nd", TOKEN_AND);
         case 'd': return checkKeyword(1, 1, "o", TOKEN_DO);
@@ -232,8 +234,14 @@ static TokenType identifierType() {
         case 'i': 
             if(scanner.current - scanner.start > 1) {
                 switch(scanner.start[1]) {
-                    case 'f': return TOKEN_IF;
-                    case 'n': return TOKEN_IN;
+                    case 'f': return checkKeyword(2, 0, "", TOKEN_IF);
+                    case 'n': 
+                        if(scanner.current - scanner.start > 2) {
+                            switch(scanner.start[2]) {
+                                case 't': return checkKeyword(3, 6, "ersect", TOKEN_INTERSECT);
+                            }
+                        }
+                        return checkKeyword(2, 0, "", TOKEN_IN);
                 }
             }
         case 'l': return checkKeyword(1, 2, "et", TOKEN_LET);
@@ -249,7 +257,7 @@ static TokenType identifierType() {
             if(scanner.current - scanner.start > 1) {
                 switch(scanner.start[1]) {
                     case 'u': return checkKeyword(2, 1, "t", TOKEN_OUT);
-                    case 'r': return TOKEN_OR;
+                    case 'r': return checkKeyword(2, 0, "", TOKEN_OR);
                 }
             }
         case 'r': return checkKeyword(1, 5, "eturn", TOKEN_RETURN);
@@ -260,6 +268,7 @@ static TokenType identifierType() {
                     case 'r': return checkKeyword(2, 2, "ue", TOKEN_TRUE);
                 }
             }
+        case 'u': return checkKeyword(1, 4, "nion", TOKEN_UNION);
         case 'w': return checkKeyword(1, 4, "hile", TOKEN_WHILE);
         case 'S': return checkKeyword(1, 2, "um", TOKEN_SUMMATION);
     }
@@ -419,10 +428,12 @@ Token scanToken() {
         case '^': return makeToken(TOKEN_CARET);
         case '%': return makeToken(TOKEN_MOD);
         case ';': return makeToken(TOKEN_SEMICOLON);
-        case '|': return makeToken(TOKEN_PIPE);
+        case '|': return makeToken(TOKEN_PIPE); 
         case 0xE28888: return makeToken(TOKEN_IN); // '∈' U+2208, UTF-8: 0xE28888
         case 0xE288A7: return makeToken(TOKEN_AND); // '∧' U+2227, UTF-8: 0xE288A7
         case 0xE288A8: return makeToken(TOKEN_OR); // '∨' U+2228, UTF-8: 0xE288A8
+        case 0xE288A9: return makeToken(TOKEN_INTERSECT); // '∩' U+2229, UTF-8: 0xE288A9
+        case 0xE288AA: return makeToken(TOKEN_UNION); // '∪' U+222A, UTF-8: 0xE288AA
         case '#': return makeToken(TOKEN_HASHTAG);
         case 0xE289A0: return makeToken(TOKEN_NOT_EQUAL); // '≠' U+2260, UTF-8: 0xE289A0
         case 0xE289A4: return makeToken(TOKEN_LESS_EQUAL); // '≤' U+2264, UTF-8: 0xE289A4

@@ -509,13 +509,33 @@ static InterpretResult run() {
             }
             case OP_SET_IN: {
                 if(!IS_SET(peek(0))) {
-                    runtimeError("Right hand operator must be a set");
+                    runtimeError("Right hand operands must be a set");
                     return INTERPRET_RUNTIME_ERROR;
                 }
-                Value setVal = pop();
-                ObjSet* set = AS_SET(setVal);
+                ObjSet* set = AS_SET(pop());
                 Value value = pop();
                 push(BOOL_VAL(setContains(set, value)));
+                break;
+            }
+            case OP_SET_INTERSECT: {
+                if(!IS_SET(peek(0)) || !IS_SET(peek(1))) {
+                    runtimeError("Operands must be sets");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                ObjSet* setB = AS_SET(pop());
+                ObjSet* setA = AS_SET(pop());
+                push(OBJ_VAL(setIntersect(setA, setB)));
+                break;
+            }
+            case OP_SET_UNION: {
+                if(!IS_SET(peek(0)) || !IS_SET(peek(1))) {
+                    runtimeError("Operands must be sets");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                ObjSet* setB = AS_SET(pop());
+                ObjSet* setA = AS_SET(pop());
+                push(OBJ_VAL(setUnion(setA, setB)));
+                break;
             }
         }
     }

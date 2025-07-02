@@ -41,7 +41,9 @@ typedef enum {
     OP_RETURN,
     OP_SET_CREATE,
     OP_SET_INSERT,
-    OP_SET_IN
+    OP_SET_IN,
+    OP_SET_INTERSECT,
+    OP_SET_UNION
 } OpCode;
 
 typedef struct {

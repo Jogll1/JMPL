@@ -27,7 +27,7 @@ typedef struct {
  * | And:        and
  * | Equality:   ==, ¬=, in
  * | Comparison: <, >, <=, >=
- * | Term:       +, -
+ * | Term:       +, -, ∩, ∪
  * | Factor:     *, /
  * | Exponent:   ^
  * | Unary:      ¬, -
@@ -503,6 +503,8 @@ static void binary(bool canAssign) {
         case TOKEN_CARET:         emitByte(OP_EXPONENT);      break;
         case TOKEN_MOD:           emitByte(OP_MOD);           break;
         case TOKEN_IN:            emitByte(OP_SET_IN);        break;
+        case TOKEN_INTERSECT:     emitByte(OP_SET_INTERSECT); break;
+        case TOKEN_UNION:         emitByte(OP_SET_UNION);     break;
         default: return;
     }
 }
@@ -640,6 +642,8 @@ ParseRule rules[] = {
     [TOKEN_PIPE]          = {NULL,       NULL,   PREC_NONE},
     [TOKEN_IN]            = {NULL,       binary, PREC_EQUALITY},
     [TOKEN_HASHTAG]       = {NULL,       NULL,   PREC_NONE},
+    [TOKEN_INTERSECT]     = {NULL,       binary, PREC_TERM},
+    [TOKEN_UNION]         = {NULL,       binary, PREC_TERM},
     [TOKEN_EQUAL]         = {NULL,       NULL,   PREC_NONE},
     [TOKEN_EQUAL_EQUAL]   = {NULL,       binary, PREC_EQUALITY},
     [TOKEN_ASSIGN]        = {NULL,       NULL,   PREC_NONE},

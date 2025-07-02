@@ -61,6 +61,52 @@ bool freeSet(ObjSet* set) {
     FREE(ObjSet, set); 
 }
 
+ObjSet* setIntersect(ObjSet* a, ObjSet* b) {
+    ObjSet* result = newSet();
+
+    // Iterate through smaller set
+    if (a->elements.count > b->elements.count) {
+        ObjSet* temp = a;
+        a = b;
+        b = temp;
+    }
+
+    for (int i = 0; i < a->elements.capacity; i++) {
+        Value valA = a->elements.entries[i].key;
+        if (IS_NULL(valA)) continue;
+
+        if (setContains(b, valA)) setInsert(result, valA);
+    }
+
+    return result;
+}
+
+ObjSet* setUnion(ObjSet* a, ObjSet* b) {
+    ObjSet* result = newSet();
+
+    for (int i = 0; i < a->elements.capacity; i++) {
+        Value valA = a->elements.entries[i].key;
+        if (IS_NULL(valA)) continue;
+
+        setInsert(result, valA);
+    }
+
+    for (int i = 0; i < b->elements.capacity; i++) {
+        Value valB = b->elements.entries[i].key;
+        if (IS_NULL(valB)) continue;
+
+        setInsert(result, valB);
+    }
+
+    return result;
+}
+
+/**
+ * @brief Hashes a set using the FNV-1a hashing algorithm.
+ * 
+ * @param set The set to hash
+ * @return    A hashed form of the set
+ */
 uint32_t hashSet(ObjSet* set) {
     uint32_t hash = 2166136261u;
 
@@ -96,7 +142,6 @@ unsigned char* setToString(ObjSet* set) {
     }
 
     sb_append(sb, "}");
-
     str = sb_concat(sb);
 
     // Clean up

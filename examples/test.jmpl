@@ -1,7 +1,5 @@
 let S = {4, 5, {6}}
-out "S = " + S
 
-out 6 ∈ S
-out {6} ∈ S
+out S
 
 out "\nEnd of Line"

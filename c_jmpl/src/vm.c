@@ -213,14 +213,15 @@ static void closeUpvalues(Value* last) {
  * 
  * @param value The value to determine the Boolean value of
  * 
- * Values are false if they are null, false, 0, or an empty string.
+ * Values are false if they are null, false, 0, empty string, or an empty set.
  */
 static bool isFalse(Value value) {
     // Return false if null, false, 0, or empty string
     return IS_NULL(value) || 
            (IS_NUMBER(value) && AS_NUMBER(value) == 0) || 
            (IS_BOOL(value) && !AS_BOOL(value)) ||
-           (IS_STRING(value) && AS_CSTRING(value)[0] == '\0');
+           (IS_STRING(value) && AS_CSTRING(value)[0] == '\0' ||
+           (IS_SET(value) && AS_SET(value)->elements.count == 0));
 }
 
 /**
@@ -352,7 +353,14 @@ static InterpretResult run() {
             case OP_EQUAL: {
                 Value b = pop();
                 Value a = pop();
-                push(BOOL_VAL(valuesEqual(a, b)));
+                
+                if(IS_BOOL(b) || IS_BOOL(a)) {
+                    // Use truth values
+                    push(BOOL_VAL(isFalse(b) == isFalse(a)));
+                } else {
+                    push(BOOL_VAL(valuesEqual(a, b)));
+                }
+
                 break;
             }
             case OP_NOT_EQUAL: {

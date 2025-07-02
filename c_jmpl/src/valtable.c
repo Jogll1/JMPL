@@ -4,12 +4,13 @@
 
 #include "memory.h"
 #include "valtable.h"
+#include "set.h"
 #include "value.h"
 
 // NOTE: should be fine-tuned once table implemented and tested
 #define VAL_TABLE_MAX_LOAD 0.75
 
-static uint32_t hashValue(Value value) {
+uint32_t hashValue(Value value) {
     switch(value.type) {
         case VAL_BOOL: return AS_BOOL(value) ? 0xAAAA : 0xBBBB;
         case VAL_NULL: return 0xCCCC;
@@ -17,7 +18,11 @@ static uint32_t hashValue(Value value) {
             uint64_t bits = *(uint64_t*)&value.as.number;
             return (uint32_t)(bits ^ (bits >> 32));
         }
-        case VAL_OBJ:  return (uint32_t)((uintptr_t)AS_OBJ(value) >> 2);
+        case VAL_OBJ:  
+            switch(AS_OBJ(value)->type) {
+                case OBJ_SET: return hashSet(AS_SET(value));
+                default:      return (uint32_t)((uintptr_t)AS_OBJ(value) >> 2);
+            }
         default:       return 0;
     }
 }

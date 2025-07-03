@@ -8,6 +8,7 @@
 #include "vm.h"
 #include "object.h"
 #include "set.h"
+#include "tuple.h"
 #include "memory.h"
 #include "native.h"
 #include "debug.h"

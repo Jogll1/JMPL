@@ -5,6 +5,7 @@
 #include "memory.h"
 #include "valtable.h"
 #include "set.h"
+#include "tuple.h"
 #include "value.h"
 
 // NOTE: should be fine-tuned once table implemented and tested
@@ -20,8 +21,9 @@ uint32_t hashValue(Value value) {
         }
         case VAL_OBJ:  
             switch(AS_OBJ(value)->type) {
-                case OBJ_SET: return hashSet(AS_SET(value));
-                default:      return (uint32_t)((uintptr_t)AS_OBJ(value) >> 2);
+                case OBJ_SET:   return hashSet(AS_SET(value));
+                case OBJ_TUPLE: return hashTuple(AS_TUPLE(value));
+                default:        return (uint32_t)((uintptr_t)AS_OBJ(value) >> 2);
             }
         default:       return 0;
     }

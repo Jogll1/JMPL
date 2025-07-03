@@ -5,6 +5,7 @@
 #include "value.h"
 #include "object.h"
 #include "set.h"
+#include "tuple.h"
 #include "memory.h"
 
 void initValueArray(ValueArray* array) {
@@ -60,6 +61,11 @@ ObjString* valueToString(Value value) {
         return AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
     }
 
+    if (IS_TUPLE(value)) {
+        unsigned char* str = tupleToString(AS_TUPLE(value));
+        return AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
+    }
+
     // If its a value
     unsigned char* str;
     switch (value.type) {
@@ -101,8 +107,9 @@ bool valuesEqual(Value a, Value b) {
         case VAL_NUMBER: return AS_NUMBER(a) == AS_NUMBER(b);
         case VAL_OBJ:    
             switch(AS_OBJ(a)->type) {
-                case OBJ_SET: return setsEqual(AS_SET(a), AS_SET(b));
-                default:      return AS_OBJ(a) == AS_OBJ(b);
+                case OBJ_SET:   return setsEqual(AS_SET(a), AS_SET(b));
+                case OBJ_TUPLE: return tuplesEqual(AS_TUPLE(a), AS_TUPLE(b));
+                default:        return AS_OBJ(a) == AS_OBJ(b);
             }
 
         default: return false;

@@ -89,12 +89,6 @@ typedef struct {
     int upvalueCount;
 } ObjClosure;
 
-typedef struct {
-    Obj obj;
-    int arity;
-    Value* elements;
-} ObjTuple;
-
 // ------
 
 Obj* allocateObject(size_t size, ObjType type);
@@ -105,9 +99,7 @@ ObjNative* newNative(NativeFn function, int arity);
 ObjString* takeString(unsigned char* chars, int length);
 ObjString* copyString(const unsigned char* chars, int length);
 ObjUpvalue* newUpvalue(Value* slot);
-ObjTuple* newTuple(int size);
 
-unsigned char* tupleToString(ObjTuple* tuple);
 void printObject(Value value);
 
 static inline bool isObjType(Value value, ObjType type) {

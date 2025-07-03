@@ -5,6 +5,7 @@
 #include "memory.h"
 #include "object.h"
 #include "set.h"
+#include "tuple.h"
 #include "table.h"
 #include "value.h"
 #include "vm.h"
@@ -120,48 +121,6 @@ ObjUpvalue* newUpvalue(Value* slot) {
     upvalue->location = slot;
     upvalue->next = NULL;
     return upvalue;
-}
-
-ObjTuple* newTuple(int size) {
-    ObjTuple* tuple = ALLOCATE_OBJ(ObjTuple, OBJ_TUPLE);
-    tuple->arity = size;
-    tuple->elements = ALLOCATE(Value, size); 
-    
-    for (int i = 0; i < size; i++) {
-        tuple->elements[i] = NULL_VAL;
-    }
-    
-    return tuple;
-}
-
-unsigned char* tupleToString(ObjTuple* tuple) {
-    // Create an empty string builder
-    StringBuilder* sb = sb_create();
-    char* str = NULL;
-
-    sb_append(sb, "(");
-    
-    // Append elements
-    int numElements = tuple->arity;
-    for (int i = 0; i < numElements; i++) {
-        Value value = tuple->elements[i];
-
-        if (IS_OBJ(value) && IS_STRING(value)) {
-                sb_appendf(sb, "\"%s\"", valueToString(value)->chars);
-            } else {
-                sb_appendf(sb, "%s", valueToString(value)->chars);
-            }
-
-            if (i < numElements - 1) sb_append(sb, ", ");
-    }
-
-    sb_append(sb, ")");
-    str = sb_concat(sb);
-
-    // Clean up
-    sb_free(sb);
-
-    return str;
 }
 
 static void printFunction(ObjFunction* function) {

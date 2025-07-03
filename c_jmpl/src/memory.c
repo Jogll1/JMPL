@@ -4,6 +4,7 @@
 #include "compiler.h"
 #include "memory.h"
 #include "set.h"
+#include "tuple.h"
 #include "vm.h"
 
 #ifdef DEBUG_LOG_GC

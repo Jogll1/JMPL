@@ -47,7 +47,8 @@ typedef enum {
     OP_SIZE,
     OP_SET_DIFFERENCE,
     OP_SUBSET,
-    OP_SUBSETEQ
+    OP_SUBSETEQ,
+    OP_CREATE_TUPLE
 } OpCode;
 
 typedef struct {

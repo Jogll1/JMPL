@@ -16,6 +16,7 @@
 #define IS_NATIVE(value)   isObjType(value, OBJ_NATIVE)
 #define IS_STRING(value)   isObjType(value, OBJ_STRING)
 #define IS_SET(value)      isObjType(value, OBJ_SET)
+#define IS_TUPLE(value)    isObjType(value, OBJ_TUPLE)
 
 // JMPL Object to C object
 
@@ -25,6 +26,7 @@
 #define AS_STRING(value)   ((ObjString*)AS_OBJ(value))
 #define AS_CSTRING(value)  (((ObjString*)AS_OBJ(value))->chars)
 #define AS_SET(value)      (((ObjSet*)AS_OBJ(value)))
+#define AS_TUPLE(value)    (((ObjTuple*)AS_OBJ(value)))
 
 /**
  * @brief The type of an Object.
@@ -35,7 +37,8 @@ typedef enum {
     OBJ_NATIVE,
     OBJ_STRING,
     OBJ_UPVALUE,
-    OBJ_SET
+    OBJ_SET,
+    OBJ_TUPLE
 } ObjType;
 
 /**
@@ -86,6 +89,12 @@ typedef struct {
     int upvalueCount;
 } ObjClosure;
 
+typedef struct {
+    Obj obj;
+    int arity;
+    Value* elements;
+} ObjTuple;
+
 // ------
 
 Obj* allocateObject(size_t size, ObjType type);
@@ -96,6 +105,9 @@ ObjNative* newNative(NativeFn function, int arity);
 ObjString* takeString(unsigned char* chars, int length);
 ObjString* copyString(const unsigned char* chars, int length);
 ObjUpvalue* newUpvalue(Value* slot);
+ObjTuple* newTuple(int size);
+
+unsigned char* tupleToString(ObjTuple* tuple);
 void printObject(Value value);
 
 static inline bool isObjType(Value value, ObjType type) {

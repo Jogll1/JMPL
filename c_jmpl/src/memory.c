@@ -110,6 +110,12 @@ static void blackenObject(Obj* object) {
             markObject((Obj*)set);
             markSet(set);
             break;
+        case OBJ_TUPLE:
+            ObjTuple* tuple = (ObjTuple*)object;
+            markObject((Obj*)tuple);
+            for(int i = 0; i < tuple->arity; i++) {
+                markValue(tuple->elements[i]);
+            }
         case OBJ_NATIVE:
         case OBJ_STRING:
         default:
@@ -151,6 +157,12 @@ static void freeObject(Obj* object) {
         }
         case OBJ_SET: {
             freeSet((ObjSet*)object);
+            break;
+        }
+        case OBJ_TUPLE: {
+            ObjTuple* tuple = (ObjTuple*)object;
+            FREE_ARRAY(Value, tuple->elements, tuple->arity);
+            FREE(ObjTuple, object);
             break;
         }
     }

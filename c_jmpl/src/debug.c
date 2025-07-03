@@ -193,6 +193,7 @@ int disassembleInstruction(Chunk* chunk, int offset) {
         case OP_SET_DIFFERENCE: return simpleInstruction("OP_SET_DIFFERENCE", offset);
         case OP_SUBSET:         return simpleInstruction("OP_SUBSET", offset);
         case OP_SUBSETEQ:       return simpleInstruction("OP_SUBSETEQ", offset);
+        case OP_CREATE_TUPLE:   return simpleInstruction("OP_CREATE_TUPLE", offset);
         default:
             printf("Unknown opcode %d\n", instruction);
             return offset + 1;

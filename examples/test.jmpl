@@ -1,4 +1,10 @@
-let A = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-let B = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+let S = {1, 2, 4, 6}
+let T = {5, 6, 7, 8}
 
-out "\nEnd of Line"
+func nInS(n) = n ∈ S
+
+if nInS(6) then out "S ∪ T = " + (S ∪ T)
+else out "S ∩ T = " + (S ∩ T)
+
+out max(#S, #T)
+

@@ -526,9 +526,20 @@ static void literal(bool canAssign) {
 }
 
 static void grouping(bool canAssign) {
-    skipNewlines();
     expression(true);
-    skipNewlines();
+
+    // Could be a tuple
+    if (check(TOKEN_COMMA)) {
+        advance();
+        int count = 1;
+
+        do {
+            expression(true);
+            count++;
+        } while (match(TOKEN_COMMA));
+
+        emitBytes(OP_CREATE_TUPLE, count);
+    }   
 
     consume(TOKEN_RIGHT_PAREN, "Expected ')' after expression");
 }

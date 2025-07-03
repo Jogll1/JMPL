@@ -427,6 +427,7 @@ static InterpretResult run() {
                 double b = AS_NUMBER(pop()); \
                 double a = AS_NUMBER(pop()); \
                 push(NUMBER_VAL(pow(a, b))); \
+                break;
             }
             case OP_NOT: {   
                 push(BOOL_VAL(isFalse(pop()))); 
@@ -555,6 +556,16 @@ static InterpretResult run() {
                         break;
                     default: break;
                 }
+                break;
+            }
+            case OP_CREATE_TUPLE: {
+                int arity = READ_BYTE();
+                ObjTuple* tuple = newTuple(arity);
+                for (int i = arity - 1; i >= 0; i--) {
+                    tuple->elements[i] = pop();
+                }
+                push(OBJ_VAL(tuple));
+                break;
             }
         }
     }

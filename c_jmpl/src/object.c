@@ -8,6 +8,7 @@
 #include "table.h"
 #include "value.h"
 #include "vm.h"
+#include "../lib/c-stringbuilder/sb.h"
 
 #define ALLOCATE_OBJ(type, objectType) \
     (type*)allocateObject(sizeof(type), objectType)
@@ -121,6 +122,48 @@ ObjUpvalue* newUpvalue(Value* slot) {
     return upvalue;
 }
 
+ObjTuple* newTuple(int size) {
+    ObjTuple* tuple = ALLOCATE_OBJ(ObjTuple, OBJ_TUPLE);
+    tuple->arity = size;
+    tuple->elements = ALLOCATE(Value, size); 
+    
+    for (int i = 0; i < size; i++) {
+        tuple->elements[i] = NULL_VAL;
+    }
+    
+    return tuple;
+}
+
+unsigned char* tupleToString(ObjTuple* tuple) {
+    // Create an empty string builder
+    StringBuilder* sb = sb_create();
+    char* str = NULL;
+
+    sb_append(sb, "(");
+    
+    // Append elements
+    int numElements = tuple->arity;
+    for (int i = 0; i < numElements; i++) {
+        Value value = tuple->elements[i];
+
+        if (IS_OBJ(value) && IS_STRING(value)) {
+                sb_appendf(sb, "\"%s\"", valueToString(value)->chars);
+            } else {
+                sb_appendf(sb, "%s", valueToString(value)->chars);
+            }
+
+            if (i < numElements - 1) sb_append(sb, ", ");
+    }
+
+    sb_append(sb, ")");
+    str = sb_concat(sb);
+
+    // Clean up
+    sb_free(sb);
+
+    return str;
+}
+
 static void printFunction(ObjFunction* function) {
     if(function->name == NULL) {
         printf("<script>");
@@ -199,6 +242,9 @@ void printObject(Value value) {
             break;
         case OBJ_SET:
             printf("%s", setToString(AS_SET(value)));
+            break;
+        case OBJ_TUPLE:
+            printf("%s", tupleToString(AS_TUPLE(value)));
             break;
         default: return;
     }

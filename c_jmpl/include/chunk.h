@@ -43,7 +43,11 @@ typedef enum {
     OP_SET_INSERT,
     OP_SET_IN,
     OP_SET_INTERSECT,
-    OP_SET_UNION
+    OP_SET_UNION,
+    OP_SIZE,
+    OP_SET_DIFFERENCE,
+    OP_SUBSET,
+    OP_SUBSETEQ
 } OpCode;
 
 typedef struct {

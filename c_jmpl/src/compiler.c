@@ -489,21 +489,24 @@ static void binary(bool canAssign) {
     parsePrecedence((Precedence)(rule->precedence + 1), false);
 
     switch (operatorType) {
-        case TOKEN_NOT_EQUAL:     emitByte(OP_NOT_EQUAL);     break;
-        case TOKEN_EQUAL_EQUAL:   emitByte(OP_EQUAL);         break;
-        case TOKEN_GREATER:       emitByte(OP_GREATER);       break;
-        case TOKEN_GREATER_EQUAL: emitByte(OP_GREATER_EQUAL); break;
-        case TOKEN_LESS:          emitByte(OP_LESS);          break;
-        case TOKEN_LESS_EQUAL:    emitByte(OP_LESS_EQUAL);    break;
-        case TOKEN_PLUS:          emitByte(OP_ADD);           break;
-        case TOKEN_MINUS:         emitByte(OP_SUBTRACT);      break;
-        case TOKEN_ASTERISK:      emitByte(OP_MULTIPLY);      break;
-        case TOKEN_SLASH:         emitByte(OP_DIVIDE);        break;
-        case TOKEN_CARET:         emitByte(OP_EXPONENT);      break;
-        case TOKEN_MOD:           emitByte(OP_MOD);           break;
-        case TOKEN_IN:            emitByte(OP_SET_IN);        break;
-        case TOKEN_INTERSECT:     emitByte(OP_SET_INTERSECT); break;
-        case TOKEN_UNION:         emitByte(OP_SET_UNION);     break;
+        case TOKEN_NOT_EQUAL:     emitByte(OP_NOT_EQUAL);      break;
+        case TOKEN_EQUAL_EQUAL:   emitByte(OP_EQUAL);          break;
+        case TOKEN_GREATER:       emitByte(OP_GREATER);        break;
+        case TOKEN_GREATER_EQUAL: emitByte(OP_GREATER_EQUAL);  break;
+        case TOKEN_LESS:          emitByte(OP_LESS);           break;
+        case TOKEN_LESS_EQUAL:    emitByte(OP_LESS_EQUAL);     break;
+        case TOKEN_PLUS:          emitByte(OP_ADD);            break;
+        case TOKEN_MINUS:         emitByte(OP_SUBTRACT);       break;
+        case TOKEN_ASTERISK:      emitByte(OP_MULTIPLY);       break;
+        case TOKEN_SLASH:         emitByte(OP_DIVIDE);         break;
+        case TOKEN_CARET:         emitByte(OP_EXPONENT);       break;
+        case TOKEN_MOD:           emitByte(OP_MOD);            break;
+        case TOKEN_IN:            emitByte(OP_SET_IN);         break;
+        case TOKEN_INTERSECT:     emitByte(OP_SET_INTERSECT);  break;
+        case TOKEN_UNION:         emitByte(OP_SET_UNION);      break;
+        case TOKEN_BACK_SLASH:    emitByte(OP_SET_DIFFERENCE); break;
+        case TOKEN_SUBSET:        emitByte(OP_SUBSET);         break;
+        case TOKEN_SUBSETEQ:      emitByte(OP_SUBSETEQ);       break;
         default: return;
     }
 }
@@ -614,9 +617,10 @@ static void unary(bool canAssign) {
 
     // Emit the operator instruction
     switch (operatorType) {
-        case TOKEN_NOT:   emitByte(OP_NOT);    break;
-        case TOKEN_MINUS: emitByte(OP_NEGATE); break;
-        case TOKEN_PLUS:  break;
+        case TOKEN_NOT:     emitByte(OP_NOT);    break;
+        case TOKEN_MINUS:   emitByte(OP_NEGATE); break;
+        case TOKEN_PLUS:    break;
+        case TOKEN_HASHTAG: emitByte(OP_SIZE);   break;
         default: return;
     }
 }
@@ -634,19 +638,22 @@ ParseRule rules[] = {
     [TOKEN_PLUS]          = {unary,      binary, PREC_TERM},
     [TOKEN_SLASH]         = {NULL,       binary, PREC_FACTOR},
     [TOKEN_ASTERISK]      = {NULL,       binary, PREC_FACTOR},
+    [TOKEN_BACK_SLASH]    = {NULL,       binary, PREC_TERM},
     [TOKEN_CARET]         = {NULL,       binary, PREC_EXPONENT},
     [TOKEN_MOD]           = {NULL,       binary, PREC_TERM},
     [TOKEN_SEMICOLON]     = {NULL,       NULL,   PREC_NONE},
     [TOKEN_COLON]         = {NULL,       NULL,   PREC_NONE},
     [TOKEN_PIPE]          = {NULL,       NULL,   PREC_NONE},
     [TOKEN_IN]            = {NULL,       binary, PREC_EQUALITY},
-    [TOKEN_HASHTAG]       = {NULL,       NULL,   PREC_NONE},
+    [TOKEN_HASHTAG]       = {unary,      NULL,   PREC_UNARY},
     [TOKEN_INTERSECT]     = {NULL,       binary, PREC_TERM},
     [TOKEN_UNION]         = {NULL,       binary, PREC_TERM},
+    [TOKEN_SUBSET]        = {NULL,       binary, PREC_TERM},
+    [TOKEN_SUBSETEQ]      = {NULL,       binary, PREC_TERM},
     [TOKEN_EQUAL]         = {NULL,       NULL,   PREC_NONE},
     [TOKEN_EQUAL_EQUAL]   = {NULL,       binary, PREC_EQUALITY},
     [TOKEN_ASSIGN]        = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_NOT]           = {unary,      NULL,   PREC_NONE},
+    [TOKEN_NOT]           = {unary,      NULL,   PREC_UNARY},
     [TOKEN_NOT_EQUAL]     = {NULL,       binary, PREC_EQUALITY},
     [TOKEN_GREATER]       = {NULL,       binary, PREC_COMPARISON},
     [TOKEN_GREATER_EQUAL] = {NULL,       binary, PREC_COMPARISON},
@@ -764,6 +771,7 @@ static void function(FunctionType type) {
     consume(TOKEN_EQUAL, "Expected '=' after function signature");
 
     // Compile the body
+    skipNewlines();
     statement(true, false);
 
     ObjFunction* function = endCompiler();
@@ -819,7 +827,8 @@ static void ifStatement() {
 
     skipNewlines(); // Skip newlines to search for else
     if(match(TOKEN_ELSE)) statement(true, false);
-
+    skipNewlines();
+    
     patchJump(elseJump);
 }
 
@@ -848,6 +857,7 @@ static void whileStatement() {
 
     int exitJump = emitJump(OP_JUMP_IF_FALSE);
     emitByte(OP_POP);
+    skipNewlines();
     statement(true, false);
     emitLoop(loopStart);
 

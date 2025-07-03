@@ -34,6 +34,9 @@ bool setsEqual(ObjSet* a, ObjSet* b);
 
 ObjSet* setIntersect(ObjSet* a, ObjSet* b);
 ObjSet* setUnion(ObjSet* a, ObjSet* b);
+ObjSet* setDifference(ObjSet* a, ObjSet* b);
+bool isProperSubset(ObjSet* a, ObjSet* b);
+bool isSubset(ObjSet* a, ObjSet* b);
 
 uint32_t hashSet(ObjSet* set);
 unsigned char* setToString(ObjSet* set);

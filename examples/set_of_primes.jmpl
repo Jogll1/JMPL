@@ -6,10 +6,13 @@ func isPrime(x) =
         i := i + 1
     true
 
-let P = {}
-let i = 0
-while i < 100 do
-    if isPrime(i) then P := P ∪ {i}
-    i := i + 1
+func nPrimes(n) = 
+    let P = {}
+    let i = 0
+    while i < n do
+        if isPrime(i) then P := P ∪ {i}
+        i := i + 1
+    P
 
-out "Set of primes from 1-100 = " + P
+let n = 200
+out "Set of primes from 1 - " + n + " = " + nPrimes(n)

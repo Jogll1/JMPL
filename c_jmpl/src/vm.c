@@ -270,15 +270,15 @@ static InterpretResult run() {
         double a = AS_NUMBER(pop()); \
         push(valueType(a op b)); \
     } while (false)
-#define EXPONENT(valueType) \
+#define SET_OP(valueType, setFunction) \
     do { \
-        if(!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) { \
-            runtimeError("Operands must be numbers"); \
+        if(!IS_SET(peek(0)) || !IS_SET(peek(1))) { \
+            runtimeError("Operands must be sets"); \
             return INTERPRET_RUNTIME_ERROR; \
         } \
-        double b = AS_NUMBER(pop()); \
-        double a = AS_NUMBER(pop()); \
-        push(valueType(pow(a, b))); \
+        ObjSet* setB = AS_SET(pop()); \
+        ObjSet* setA = AS_SET(pop()); \
+        push(valueType(setFunction(setA, setB))); \
     } while (false)
 // ---
 
@@ -419,7 +419,15 @@ static InterpretResult run() {
                 push(NUMBER_VAL(a / b));
                 break;
             }
-            case OP_EXPONENT: EXPONENT(NUMBER_VAL); break;
+            case OP_EXPONENT: {
+                if(!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) { \
+                    runtimeError("Operands must be numbers"); \
+                    return INTERPRET_RUNTIME_ERROR; \
+                } \
+                double b = AS_NUMBER(pop()); \
+                double a = AS_NUMBER(pop()); \
+                push(NUMBER_VAL(pow(a, b))); \
+            }
             case OP_NOT: {   
                 push(BOOL_VAL(isFalse(pop()))); 
                 break;
@@ -517,25 +525,36 @@ static InterpretResult run() {
                 push(BOOL_VAL(setContains(set, value)));
                 break;
             }
-            case OP_SET_INTERSECT: {
-                if(!IS_SET(peek(0)) || !IS_SET(peek(1))) {
-                    runtimeError("Operands must be sets");
-                    return INTERPRET_RUNTIME_ERROR;
+            case OP_SET_INTERSECT: SET_OP(OBJ_VAL, setIntersect); break;
+            case OP_SET_UNION: SET_OP(OBJ_VAL, setUnion); break;
+            case OP_SET_DIFFERENCE: SET_OP(OBJ_VAL, setDifference); break;
+            case OP_SUBSET: SET_OP(BOOL_VAL, isProperSubset); break;
+            case OP_SUBSETEQ: SET_OP(BOOL_VAL, isSubset); break;
+            case OP_SIZE: {
+                Value value = pop();
+                switch (value.type) {
+                    case VAL_NUMBER:
+                        push(NUMBER_VAL(fabs(AS_NUMBER(value))));
+                        break;
+                    case VAL_OBJ:
+                        switch (AS_OBJ(value)->type) {
+                            case OBJ_STRING:
+                                push(NUMBER_VAL(AS_STRING(value)->length));
+                                break;
+                            case OBJ_SET:
+                                push(NUMBER_VAL(AS_SET(value)->elements.count));
+                                break;
+                            default:
+                                runtimeError("Invalid operand type");
+                                break;
+                        }
+                        break;
+                    case VAL_NULL:
+                    case VAL_BOOL:
+                        runtimeError("Invalid operand type");
+                        break;
+                    default: break;
                 }
-                ObjSet* setB = AS_SET(pop());
-                ObjSet* setA = AS_SET(pop());
-                push(OBJ_VAL(setIntersect(setA, setB)));
-                break;
-            }
-            case OP_SET_UNION: {
-                if(!IS_SET(peek(0)) || !IS_SET(peek(1))) {
-                    runtimeError("Operands must be sets");
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                ObjSet* setB = AS_SET(pop());
-                ObjSet* setA = AS_SET(pop());
-                push(OBJ_VAL(setUnion(setA, setB)));
-                break;
             }
         }
     }
@@ -544,7 +563,7 @@ static InterpretResult run() {
 #undef READ_CONSTANT
 #undef READ_STRING
 #undef BINARY_OP
-#undef EXPONENT
+#undef SET_OP
 }
 
 InterpretResult interpret(const unsigned char* source) {

@@ -208,8 +208,12 @@ static void skipWhitespace() {
     }
 }
 
+static bool isKeyword(unsigned int start, int length, const unsigned char* rest, TokenType type) {
+    return scanner.current - scanner.start == start + length && memcmp(scanner.start + start, rest, length) == 0;
+}
+
 static TokenType checkKeyword(unsigned int start, int length, const unsigned char* rest, TokenType type) {
-    if(scanner.current - scanner.start == start + length && memcmp(scanner.start + start, rest, length) == 0) {
+    if(isKeyword(start, length, rest, type)) {
         return type;
     }
 
@@ -261,6 +265,12 @@ static TokenType identifierType() {
                 }
             }
         case 'r': return checkKeyword(1, 5, "eturn", TOKEN_RETURN);
+        case 's':
+            if(scanner.current - scanner.start > 1) {
+                if (isKeyword(1, 7, "ubseteq", TOKEN_SUBSETEQ)) return TOKEN_SUBSETEQ;
+                else if (isKeyword(1, 5, "ubset", TOKEN_SUBSET)) return TOKEN_SUBSET;
+                else return TOKEN_IDENTIFIER;
+            }
         case 't': 
             if(scanner.current - scanner.start > 1) {
                 switch(scanner.start[1]) {
@@ -270,7 +280,6 @@ static TokenType identifierType() {
             }
         case 'u': return checkKeyword(1, 4, "nion", TOKEN_UNION);
         case 'w': return checkKeyword(1, 4, "hile", TOKEN_WHILE);
-        case 'S': return checkKeyword(1, 2, "um", TOKEN_SUMMATION);
     }
 
     return TOKEN_IDENTIFIER;
@@ -428,19 +437,22 @@ Token scanToken() {
         case '%': return makeToken(TOKEN_MOD);
         case ';': return makeToken(TOKEN_SEMICOLON);
         case '|': return makeToken(TOKEN_PIPE);
+        case '\\': return makeToken(TOKEN_BACK_SLASH);
         case 0xC2AC: return makeToken(TOKEN_NOT); // '¬' U+00AC, UTF-8: 0xC2AC
         case 0xE28888: return makeToken(TOKEN_IN); // '∈' U+2208, UTF-8: 0xE28888
         case 0xE288A7: return makeToken(TOKEN_AND); // '∧' U+2227, UTF-8: 0xE288A7
         case 0xE288A8: return makeToken(TOKEN_OR); // '∨' U+2228, UTF-8: 0xE288A8
         case 0xE288A9: return makeToken(TOKEN_INTERSECT); // '∩' U+2229, UTF-8: 0xE288A9
         case 0xE288AA: return makeToken(TOKEN_UNION); // '∪' U+222A, UTF-8: 0xE288AA
+        case 0xE28A82: return makeToken(TOKEN_SUBSET); // '⊂' U+2282, UTF-8: 0xE28A82
+        case 0xE28A86: return makeToken(TOKEN_SUBSETEQ); // '⊆' U+2286, UTF-8: 0xE28A86
         case '#': return makeToken(TOKEN_HASHTAG);
         case 0xE289A0: return makeToken(TOKEN_NOT_EQUAL); // '≠' U+2260, UTF-8: 0xE289A0
         case 0xE289A4: return makeToken(TOKEN_LESS_EQUAL); // '≤' U+2264, UTF-8: 0xE289A4
         case 0xE289A5: return makeToken(TOKEN_GREATER_EQUAL); // '≥' U+2265, UTF-8: 0xE289A5
         case 0xE28692: return makeToken(TOKEN_MAPS_TO); // '→' U+2192, UTF-8: 0xE28692
         case 0xE28792: return makeToken(TOKEN_IMPLIES); // '⇒' U+21D2, UTF-8: 0xE28792
-        case 0xE28891: return makeToken(TOKEN_SUMMATION); // '∑' U+2211, UTF-8: 0xE28891
+        // case 0xE28891: return makeToken(TOKEN_SUMMATION); // '∑' U+2211, UTF-8: 0xE28891
         // Switch one or two character symbols
         case '-': return makeToken(match('>') ? TOKEN_MAPS_TO : TOKEN_MINUS);
         case ':': return makeToken(match('=') ? TOKEN_ASSIGN : TOKEN_COLON); 

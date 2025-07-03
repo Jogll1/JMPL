@@ -101,6 +101,51 @@ ObjSet* setUnion(ObjSet* a, ObjSet* b) {
     return result;
 }
 
+ObjSet* setDifference(ObjSet* a, ObjSet* b) {
+    ObjSet* result = newSet();
+
+    for (int i = 0; i < a->elements.capacity; i++) {
+        Value valA = a->elements.entries[i].key;
+        if (IS_NULL(valA)) continue;
+
+        if (!setContains(b, valA)) {
+            setInsert(result, valA);
+        }
+    }
+
+    return result;
+}
+
+bool isProperSubset(ObjSet* a, ObjSet* b) {
+    if (a->elements.count >= b->elements.count) return false;
+
+    for (int i = 0; i < a->elements.capacity; i++) {
+        Value valA = a->elements.entries[i].key;
+        if (IS_NULL(valA)) continue;
+        
+        if (!setContains(b, valA)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool isSubset(ObjSet* a, ObjSet* b) {
+    if (a->elements.count > b->elements.count) return false;
+
+    for (int i = 0; i < a->elements.capacity; i++) {
+        Value valA = a->elements.entries[i].key;
+        if (IS_NULL(valA)) continue;
+        
+        if (!setContains(b, valA)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 /**
  * @brief Hashes a set using the FNV-1a hashing algorithm.
  * 
@@ -133,9 +178,14 @@ unsigned char* setToString(ObjSet* set) {
     int count = 0;
 
     for (int i = 0; i < set->elements.capacity; i++) {
-        ValEntry* entry = &set->elements.entries[i];
-        if (entry->key.type != VAL_NULL && !IS_NULL(entry->key)) {
-            sb_appendf(sb, "%s", valueToString(entry->key)->chars);
+        Value value = set->elements.entries[i].key;
+        if (value.type != VAL_NULL && !IS_NULL(value)) {
+            if (IS_OBJ(value) && IS_STRING(value)) {
+                sb_appendf(sb, "\"%s\"", valueToString(value)->chars);
+            } else {
+                sb_appendf(sb, "%s", valueToString(value)->chars);
+            }
+
             if (count < numElements - 1) sb_append(sb, ", ");
             count++;
         }

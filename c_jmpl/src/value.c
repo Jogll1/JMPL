@@ -68,6 +68,7 @@ ObjString* valueToString(Value value) {
 
     // If its a value
     unsigned char* str;
+    bool shouldFree = false;
     switch (value.type) {
         case VAL_BOOL:
             str = BOOL_TO_STRING(AS_BOOL(value));
@@ -77,6 +78,7 @@ ObjString* valueToString(Value value) {
             break;
         case VAL_NUMBER:
             NUMBER_TO_STRING(AS_NUMBER(value), &str);
+            shouldFree = true;
             break;
         default: 
             str = "CAST_ERROR";
@@ -84,7 +86,8 @@ ObjString* valueToString(Value value) {
     }
 
     ObjString* result = AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
-
+    if (shouldFree) free(str);
+    
     return result;
 }
 

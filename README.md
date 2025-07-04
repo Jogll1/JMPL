@@ -1,19 +1,35 @@
 # <img src="assets/JMPLMascot.png" height="24px"/> JMPL
 
-This repository contains the JMPL interpreter (c_jmpl made in C), example programs, and documentation.
+This repository contains the JMPL interpreter (c_jmpl), example programs, and documentation.
 
 Files that contain non-ASCII character should be encoded in UTF-8. If using a Windows terminal, the code page should be changed to `65001` to properly display any Unicode character that may be outputted.
 
 ## Running the Interpreter
 The current version of the interpreter is c_jmpl v0.2.0.
 
-Currently, to run the interpreter have gcc or another C compiler installed then cd to root of the repo and run the commands:\
-`gcc -I.\c_jmpl\include -o .\build\c_jmpl\v0-2-0 .\c_jmpl\src\*.c` to build the interpreter, \
-`.\build\c_jmpl\v0-2-0.exe` to run the interpreter on a source file.
+### Prerequisites
+- CMake (Tested with version 4.1.0)
+- A C compiler
+
+### Build
+To build the interpreter, cd to the root of this repository and run the commands: \
+`cmake -S . -B ./build/c_jmpl` to set up CMake, and \
+`cmake --build ./build/c_jmpl` to build.
+
+On Windows you may need to specify the generator: \
+`cmake -G "MinGW Makefiles" -S . -B .\build\c_jmpl`
+
+### Run
+To run the interpreter, run the exe: \
+- Windows:
+  `./build/c_jmpl/v0-2-0.exe path/to/file.jmpl`
+- Linux/Mac:
+  `./build/c_jmpl/v0-2-0 path/to/file.jmpl`
 
 Running the interpreter with no source file will start the in-terminal REPL.
 
 ## Third-party code
+List of libraries used in this project:
 - <a href="https://github.com/cavaliercoder/c-stringbuilder?tab=readme-ov-file">c-stringbuilder<a> by cavaliercodernk
 
 ## Credits

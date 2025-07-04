@@ -20,7 +20,7 @@ On Windows you may need to specify the generator: \
 `cmake -G "MinGW Makefiles" -S . -B .\build\c_jmpl`
 
 ### Run
-To run the interpreter, run the exe: \
+To run the interpreter, run the exe:
 - Windows:
   `./build/c_jmpl/v0-2-0.exe path/to/file.jmpl`
 - Linux/Mac:

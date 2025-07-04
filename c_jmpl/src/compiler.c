@@ -217,7 +217,7 @@ static void consumeSeparator() {
     
     if (check(TOKEN_INDENT) || check(TOKEN_DEDENT) || check(TOKEN_EOF)) return;
     
-    error("Expected newline or semicolon between statements");
+    error("Invalid syntax");
 }
 
 static void emitByte(uint8_t byte) {
@@ -516,6 +516,13 @@ static void call(bool canAssign) {
     emitBytes(OP_CALL, argCount);
 }
 
+static void subscript(bool canAssign) {
+    expression(true);
+    consume(TOKEN_RIGHT_SQUARE, "Expected ']' after expression");
+
+    emitByte(OP_SUBSCRIPT);
+}
+
 static void literal(bool canAssign) {
     switch (parser.previous.type) {
         case TOKEN_FALSE: emitByte(OP_FALSE); break;
@@ -638,64 +645,66 @@ static void unary(bool canAssign) {
 
 ParseRule rules[] = {
     // Rules for parsing expressions
-    // Token name            prefix      infix   precedence
-    [TOKEN_LEFT_PAREN]    = {grouping,   call,   PREC_CALL},
-    [TOKEN_RIGHT_PAREN]   = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_LEFT_BRACE]    = {set,        NULL,   PREC_PRIMARY}, 
-    [TOKEN_RIGHT_BRACE]   = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_COMMA]         = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_DOT]           = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_MINUS]         = {unary,      binary, PREC_TERM},
-    [TOKEN_PLUS]          = {unary,      binary, PREC_TERM},
-    [TOKEN_SLASH]         = {NULL,       binary, PREC_FACTOR},
-    [TOKEN_ASTERISK]      = {NULL,       binary, PREC_FACTOR},
-    [TOKEN_BACK_SLASH]    = {NULL,       binary, PREC_TERM},
-    [TOKEN_CARET]         = {NULL,       binary, PREC_EXPONENT},
-    [TOKEN_MOD]           = {NULL,       binary, PREC_TERM},
-    [TOKEN_SEMICOLON]     = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_COLON]         = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_PIPE]          = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_IN]            = {NULL,       binary, PREC_EQUALITY},
-    [TOKEN_HASHTAG]       = {unary,      NULL,   PREC_UNARY},
-    [TOKEN_INTERSECT]     = {NULL,       binary, PREC_TERM},
-    [TOKEN_UNION]         = {NULL,       binary, PREC_TERM},
-    [TOKEN_SUBSET]        = {NULL,       binary, PREC_TERM},
-    [TOKEN_SUBSETEQ]      = {NULL,       binary, PREC_TERM},
-    [TOKEN_EQUAL]         = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_EQUAL_EQUAL]   = {NULL,       binary, PREC_EQUALITY},
-    [TOKEN_ASSIGN]        = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_NOT]           = {unary,      NULL,   PREC_UNARY},
-    [TOKEN_NOT_EQUAL]     = {NULL,       binary, PREC_EQUALITY},
-    [TOKEN_GREATER]       = {NULL,       binary, PREC_COMPARISON},
-    [TOKEN_GREATER_EQUAL] = {NULL,       binary, PREC_COMPARISON},
-    [TOKEN_LESS]          = {NULL,       binary, PREC_COMPARISON},
-    [TOKEN_LESS_EQUAL]    = {NULL,       binary, PREC_COMPARISON},
-    [TOKEN_MAPS_TO]       = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_IMPLIES]       = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_IDENTIFIER]    = {variable,   NULL,   PREC_NONE},
-    [TOKEN_STRING]        = {string,     NULL,   PREC_NONE},
-    [TOKEN_NUMBER]        = {number,     NULL,   PREC_NONE},
-    [TOKEN_AND]           = {NULL,       and_,   PREC_AND},
-    [TOKEN_OR]            = {NULL,       or_,    PREC_OR},
-    [TOKEN_XOR]           = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_TRUE]          = {literal,    NULL,   PREC_NONE},
-    [TOKEN_FALSE]         = {literal,    NULL,   PREC_NONE},
-    [TOKEN_LET]           = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_NULL]          = {literal,    NULL,   PREC_NONE},
-    [TOKEN_IF]            = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_THEN]          = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_ELSE]          = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_WHILE]         = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_DO]            = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_SUMMATION]     = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_OUT]           = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_RETURN]        = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_FUNCTION]      = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_NEWLINE]       = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_INDENT]        = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_DEDENT]        = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_ERROR]         = {NULL,       NULL,   PREC_NONE},
-    [TOKEN_EOF]           = {NULL,       NULL,   PREC_NONE},
+    // Token name            prefix      infix      precedence
+    [TOKEN_LEFT_PAREN]    = {grouping,   call,      PREC_CALL},
+    [TOKEN_RIGHT_PAREN]   = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_LEFT_BRACE]    = {set,        NULL,      PREC_PRIMARY}, 
+    [TOKEN_RIGHT_BRACE]   = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_LEFT_SQUARE]   = {NULL,       subscript, PREC_CALL},
+    [TOKEN_RIGHT_SQUARE]  = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_COMMA]         = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_DOT]           = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_MINUS]         = {unary,      binary,    PREC_TERM},
+    [TOKEN_PLUS]          = {unary,      binary,    PREC_TERM},
+    [TOKEN_SLASH]         = {NULL,       binary,    PREC_FACTOR},
+    [TOKEN_ASTERISK]      = {NULL,       binary,    PREC_FACTOR},
+    [TOKEN_BACK_SLASH]    = {NULL,       binary,    PREC_TERM},
+    [TOKEN_CARET]         = {NULL,       binary,    PREC_EXPONENT},
+    [TOKEN_MOD]           = {NULL,       binary,    PREC_TERM},
+    [TOKEN_SEMICOLON]     = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_COLON]         = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_PIPE]          = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_IN]            = {NULL,       binary,    PREC_EQUALITY},
+    [TOKEN_HASHTAG]       = {unary,      NULL,      PREC_UNARY},
+    [TOKEN_INTERSECT]     = {NULL,       binary,    PREC_TERM},
+    [TOKEN_UNION]         = {NULL,       binary,    PREC_TERM},
+    [TOKEN_SUBSET]        = {NULL,       binary,    PREC_TERM},
+    [TOKEN_SUBSETEQ]      = {NULL,       binary,    PREC_TERM},
+    [TOKEN_EQUAL]         = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_EQUAL_EQUAL]   = {NULL,       binary,    PREC_EQUALITY},
+    [TOKEN_ASSIGN]        = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_NOT]           = {unary,      NULL,      PREC_UNARY},
+    [TOKEN_NOT_EQUAL]     = {NULL,       binary,    PREC_EQUALITY},
+    [TOKEN_GREATER]       = {NULL,       binary,    PREC_COMPARISON},
+    [TOKEN_GREATER_EQUAL] = {NULL,       binary,    PREC_COMPARISON},
+    [TOKEN_LESS]          = {NULL,       binary,    PREC_COMPARISON},
+    [TOKEN_LESS_EQUAL]    = {NULL,       binary,    PREC_COMPARISON},
+    [TOKEN_MAPS_TO]       = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_IMPLIES]       = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_IDENTIFIER]    = {variable,   NULL,      PREC_NONE},
+    [TOKEN_STRING]        = {string,     NULL,      PREC_NONE},
+    [TOKEN_NUMBER]        = {number,     NULL,      PREC_NONE},
+    [TOKEN_AND]           = {NULL,       and_,      PREC_AND},
+    [TOKEN_OR]            = {NULL,       or_,       PREC_OR},
+    [TOKEN_XOR]           = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_TRUE]          = {literal,    NULL,      PREC_NONE},
+    [TOKEN_FALSE]         = {literal,    NULL,      PREC_NONE},
+    [TOKEN_LET]           = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_NULL]          = {literal,    NULL,      PREC_NONE},
+    [TOKEN_IF]            = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_THEN]          = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_ELSE]          = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_WHILE]         = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_DO]            = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_SUMMATION]     = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_OUT]           = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_RETURN]        = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_FUNCTION]      = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_NEWLINE]       = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_INDENT]        = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_DEDENT]        = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_ERROR]         = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_EOF]           = {NULL,       NULL,      PREC_NONE},
 };
 
 static void parsePrecedence(Precedence precendence, bool ignoreNewlines) {

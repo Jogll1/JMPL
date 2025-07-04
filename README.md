@@ -2,7 +2,7 @@
 
 This repository contains the JMPL interpreter (c_jmpl), example programs, and documentation.
 
-Files that contain non-ASCII character should be encoded in UTF-8. If using a Windows terminal, the code page should be changed to `65001` to properly display any Unicode character that may be outputted.
+JMPL has support for UTF-8 encoding and many operators have Unicode alternatives. It is recommended to use a text-editor with Unicode capabilities or a plugin that allows you to easily insert. If using a Windows terminal, the code page should be changed to `65001` to properly display any Unicode character that may be outputted.
 
 ## Running the Interpreter
 The current version of the interpreter is c_jmpl v0.2.0.

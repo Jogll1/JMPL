@@ -1,13 +1,5 @@
-let A = {}
+let a = (1, 2)
 
-func addToA(x) = A := A ∪ {(#A, x)}
-
-addToA("hi")
-addToA("hello")
-addToA("bonjour")
-addToA("hallo")
-addToA("hola")
-
-out A
+out a
 
 out "\nEnd of Line"

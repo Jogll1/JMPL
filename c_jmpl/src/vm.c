@@ -273,7 +273,7 @@ static InterpretResult run() {
     } while (false)
 #define SET_OP(valueType, setFunction) \
     do { \
-        if(!IS_SET(peek(0)) || !IS_SET(peek(1))) { \
+        if (!IS_SET(peek(0)) || !IS_SET(peek(1))) { \
             runtimeError("Operands must be sets"); \
             return INTERPRET_RUNTIME_ERROR; \
         } \
@@ -320,7 +320,7 @@ static InterpretResult run() {
             case OP_GET_GLOBAL: {
                 ObjString* name = READ_STRING();
                 Value value;
-                if(!tableGet(&vm.globals, name, &value)) {
+                if (!tableGet(&vm.globals, name, &value)) {
                     runtimeError("Undefined variable '%s'", name->chars);
                     return INTERPRET_RUNTIME_ERROR;
                 }
@@ -335,7 +335,7 @@ static InterpretResult run() {
             }
             case OP_SET_GLOBAL: {
                 ObjString* name = READ_STRING();
-                if(tableSet(&vm.globals, name, peek(0))) {
+                if (tableSet(&vm.globals, name, peek(0))) {
                     tableDelete(&vm.globals, name);
                     runtimeError("Undefined variable '%s'", name->chars);
                     return INTERPRET_RUNTIME_ERROR;
@@ -355,7 +355,7 @@ static InterpretResult run() {
                 Value b = pop();
                 Value a = pop();
                 
-                if(IS_BOOL(b) || IS_BOOL(a)) {
+                if (IS_BOOL(b) || IS_BOOL(a)) {
                     // Use truth values
                     push(BOOL_VAL(isFalse(b) == isFalse(a)));
                 } else {
@@ -375,10 +375,10 @@ static InterpretResult run() {
             case OP_LESS: BINARY_OP(BOOL_VAL, <); break;
             case OP_LESS_EQUAL: BINARY_OP(BOOL_VAL, <=); break;
             case OP_ADD: {
-                if(IS_STRING(peek(0)) || IS_STRING(peek(1))) {
+                if (IS_STRING(peek(0)) || IS_STRING(peek(1))) {
                     // Concatenate if at least one operand is a string
                     concatenate();
-                } else if(IS_NUMBER(peek(0)) && IS_NUMBER(peek(1))) {
+                } else if (IS_NUMBER(peek(0)) && IS_NUMBER(peek(1))) {
                     // Else, numerically add
                     double b = AS_NUMBER(pop());
                     double a = AS_NUMBER(pop());
@@ -392,7 +392,7 @@ static InterpretResult run() {
             case OP_SUBTRACT: BINARY_OP(NUMBER_VAL, -); break;
             case OP_MULTIPLY: BINARY_OP(NUMBER_VAL, *); break;
             case OP_MOD: {
-                if(!IS_INTEGER(peek(0)) || !IS_INTEGER(peek(1))) {
+                if (!IS_INTEGER(peek(0)) || !IS_INTEGER(peek(1))) {
                     runtimeError("Operands must be integers");
                     return INTERPRET_RUNTIME_ERROR;
                 } else if (IS_NUMBER(peek(0)) && AS_NUMBER(peek(0)) == 0) {
@@ -407,7 +407,7 @@ static InterpretResult run() {
                 break;
             }
             case OP_DIVIDE: {
-                if(!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
+                if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
                     runtimeError("Operands must be numbers");
                     return INTERPRET_RUNTIME_ERROR;
                 } else if (IS_NUMBER(peek(0)) && AS_NUMBER(peek(0)) == 0) {
@@ -421,13 +421,13 @@ static InterpretResult run() {
                 break;
             }
             case OP_EXPONENT: {
-                if(!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) { \
-                    runtimeError("Operands must be numbers"); \
-                    return INTERPRET_RUNTIME_ERROR; \
-                } \
-                double b = AS_NUMBER(pop()); \
-                double a = AS_NUMBER(pop()); \
-                push(NUMBER_VAL(pow(a, b))); \
+                if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
+                    runtimeError("Operands must be numbers");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                double b = AS_NUMBER(pop());
+                double a = AS_NUMBER(pop());
+                push(NUMBER_VAL(pow(a, b)));
                 break;
             }
             case OP_NOT: {   
@@ -435,7 +435,7 @@ static InterpretResult run() {
                 break;
             }
             case OP_NEGATE: {
-                if(!IS_NUMBER(peek(0))) {
+                if (!IS_NUMBER(peek(0))) {
                     runtimeError("Operand must be a number");
                     return INTERPRET_RUNTIME_ERROR;
                 }
@@ -454,7 +454,7 @@ static InterpretResult run() {
             }
             case OP_JUMP_IF_FALSE: {
                 uint16_t offset = READ_SHORT();
-                if(isFalse(peek(0))) frame->ip += offset;
+                if (isFalse(peek(0))) frame->ip += offset;
                 break;
             }
             case OP_LOOP: {
@@ -464,7 +464,7 @@ static InterpretResult run() {
             }
             case OP_CALL: {
                 int argCount = READ_BYTE();
-                if(!callValue(peek(argCount), argCount)) {
+                if (!callValue(peek(argCount), argCount)) {
                     return INTERPRET_RUNTIME_ERROR;
                 }
                 frame = &vm.frames[vm.frameCount - 1];
@@ -474,10 +474,10 @@ static InterpretResult run() {
                 ObjFunction* function = AS_FUNCTION(READ_CONSTANT());
                 ObjClosure* closure = newClosure(function);
                 push(OBJ_VAL(closure));
-                for(int i = 0; i < closure->upvalueCount; i++) {
+                for (int i = 0; i < closure->upvalueCount; i++) {
                     uint8_t isLocal = READ_BYTE();
                     uint8_t index = READ_BYTE();
-                    if(isLocal) {
+                    if (isLocal) {
                         closure->upvalues[i] = captureUpvalue(frame->slots + index);
                     } else {
                         closure->upvalues[i] = frame->closure->upvalues[index];
@@ -494,7 +494,7 @@ static InterpretResult run() {
                 Value result = pop();
                 closeUpvalues(frame->slots);
                 vm.frameCount--;
-                if(vm.frameCount == 0) {
+                if (vm.frameCount == 0) {
                     pop();
                     return INTERPRET_OK;
                 }
@@ -518,7 +518,7 @@ static InterpretResult run() {
                 break;
             }
             case OP_SET_IN: {
-                if(!IS_SET(peek(0))) {
+                if (!IS_SET(peek(0))) {
                     runtimeError("Right hand operands must be a set");
                     return INTERPRET_RUNTIME_ERROR;
                 }
@@ -546,6 +546,9 @@ static InterpretResult run() {
                             case OBJ_SET:
                                 push(NUMBER_VAL(AS_SET(value)->elements.count));
                                 break;
+                            case OBJ_TUPLE:
+                                push(NUMBER_VAL(AS_TUPLE(value)->arity));
+                                break;
                             default:
                                 runtimeError("Invalid operand type");
                                 break;
@@ -566,6 +569,20 @@ static InterpretResult run() {
                     tuple->elements[i] = pop();
                 }
                 push(OBJ_VAL(tuple));
+                break;
+            }
+            case OP_SUBSCRIPT: {
+                if (!IS_INTEGER(peek(0))) {
+                    runtimeError("Tuple index must be an integer");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                int index = (int)AS_NUMBER(pop());
+                ObjTuple* tuple = AS_TUPLE(pop());
+                if (index > tuple->arity - 1 || index < 0) {
+                    runtimeError("Tuple index out of range");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                push(tuple->elements[index]);
                 break;
             }
         }

@@ -345,6 +345,7 @@ static InterpretResult run() {
             case OP_GET_UPVALUE: {
                 uint8_t slot = READ_BYTE();
                 push(*frame->closure->upvalues[slot]->location);
+                break;
             }
             case OP_SET_UPVALUE: {
                 uint8_t slot = READ_BYTE();

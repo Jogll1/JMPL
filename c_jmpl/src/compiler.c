@@ -893,31 +893,39 @@ static void whileStatement() {
 }
 
 static void forStatement() {
-    beginScope();
+    error("For loop not added yet");
 
-    // Parse the local variable that will be the generator
-    parseVariable("Expected identifier");
+    // beginScope();
 
-    // Consume the 'in' token
-    consume(TOKEN_IN, "Expected 'in' or '∈' after identifier");
+    // // Parse the local variable that will be the generator
+    // parseVariable("Expected identifier");
 
-    // Push the set
-    expression(false);
+    // // Consume the 'in' token
+    // consume(TOKEN_IN, "Expected 'in' or '∈' after identifier");
 
-    int loopStart = currentChunk()->count;
-    int exitJump = -1;
+    // // Push the set and a create a set iterator from it 
+    // expression(false);
+    // emitByte(OP_CREATE_ITERATOR);
 
-    // Parse optional predicate
-    if (match(TOKEN_PIPE)) {
-        // Compile the expression
-        expression(true);
-    }
+    // // Start loop
+    // int loopStart = currentChunk()->count;
+    // emitByte(OP_ITER_NEXT); 
 
-    // Parse do token
-    consume(TOKEN_DO, "Expected expression");
+    // // If !hasNext -> jump to after-loop
+    // int exitJump = emitJump(OP_JUMP_IF_FALSE);
+    // emitByte(OP_POP) // Pop hasNext
 
-    // Parse the loop body
-    statement(true, false);
+    // // Parse optional predicate
+    // if (match(TOKEN_PIPE)) {
+    //     // Compile the expression
+    //     expression(true);
+    // }
+
+    // // Parse do token
+    // consume(TOKEN_DO, "Expected expression");
+
+    // // Parse the loop body
+    // statement(true, false);
 }
 
 static void synchronise() {

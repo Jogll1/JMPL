@@ -111,6 +111,11 @@ static void blackenObject(Obj* object) {
             markObject((Obj*)set);
             markSet(set);
             break;
+        case OBJ_SET_ITERATOR:
+            ObjSetIterator* iterator = (ObjSetIterator*)object;
+            markSet(iterator->set);
+            markObject((Obj*)iterator);
+            break;
         case OBJ_TUPLE:
             ObjTuple* tuple = (ObjTuple*)object;
             markObject((Obj*)tuple);
@@ -158,6 +163,10 @@ static void freeObject(Obj* object) {
         }
         case OBJ_SET: {
             freeSet((ObjSet*)object);
+            break;
+        }
+        case OBJ_SET_ITERATOR: {
+            freeSetIterator((ObjSetIterator*)object);
             break;
         }
         case OBJ_TUPLE: {

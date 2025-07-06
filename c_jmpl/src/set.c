@@ -9,6 +9,7 @@
 // Max elements to convert to string in a set
 #define MAX_STRING_SET_ELEMS 10 
 
+// --- Sets --- 
 ObjSet* newSet() {
     ObjSet* set = (ObjSet*)allocateObject(sizeof(ObjSet), OBJ_SET);
     initValTable(&set->elements);
@@ -198,4 +199,50 @@ unsigned char* setToString(ObjSet* set) {
     sb_free(sb);
 
     return str;
+}
+
+// --- Set Iterator --- 
+ObjSetIterator* newSetIterator(ObjSet* set) {
+    ObjSetIterator* iterator = (ObjSetIterator*)allocateObject(sizeof(ObjSetIterator), OBJ_SET_ITERATOR);
+    iterator->set = set;
+    
+    // Find index of first value in set
+    if (set->elements.count > 0) {
+        for (int i = 0; i < set->elements.capacity; i++) {
+            if (IS_NULL(set->elements.entries[i].key)) continue;
+
+            iterator->currentIndex = i;
+            break;
+        }        
+    } else {
+        iterator->currentIndex = -1;
+    }   
+}
+
+bool freeSetIterator(ObjSetIterator* iterator) {
+    FREE(ObjSetIterator, iterator);
+}
+
+Value getSetIteratorCurrent(ObjSetIterator* iterator) {
+    return iterator->set->elements.entries[iterator->currentIndex].key;
+}
+
+bool iterateSetIterator(ObjSetIterator* iterator) {
+    ObjSet* set = iterator->set;
+
+    if (set->elements.capacity == 0) return false;
+
+    // Find the next index of the set
+    for (int i = iterator->currentIndex; i < set->elements.capacity; i++) {
+        Value value = set->elements.entries[i].key;
+        if (IS_NULL(set->elements.entries[i].key)) continue;
+
+        iterator->currentIndex = i;
+
+        // Found a next index
+        return true; 
+    }
+
+    // Didn't find a next index
+    return false; 
 }

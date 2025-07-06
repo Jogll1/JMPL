@@ -533,6 +533,13 @@ static void literal(bool canAssign) {
 }
 
 static void grouping(bool canAssign) {
+    // If its an empty tuple, make an empty tuple
+    if (check(TOKEN_RIGHT_PAREN)) {
+        advance();
+        emitBytes(OP_CREATE_TUPLE, 0);
+        return;
+    }
+
     expression(true);
 
     // Could be a tuple
@@ -833,8 +840,8 @@ static void expressionStatement() {
 
 static void ifStatement() {
     expression(false);
-    consume(TOKEN_THEN, "Expected 'then' after condition");
     skipNewlines();
+    consume(TOKEN_THEN, "Expected 'then' after condition");
 
     int thenJump = emitJump(OP_JUMP_IF_FALSE);
     emitByte(OP_POP);
@@ -885,6 +892,34 @@ static void whileStatement() {
     emitByte(OP_POP);
 }
 
+static void forStatement() {
+    beginScope();
+
+    // Parse the local variable that will be the generator
+    parseVariable("Expected identifier");
+
+    // Consume the 'in' token
+    consume(TOKEN_IN, "Expected 'in' or '∈' after identifier");
+
+    // Push the set
+    expression(false);
+
+    int loopStart = currentChunk()->count;
+    int exitJump = -1;
+
+    // Parse optional predicate
+    if (match(TOKEN_PIPE)) {
+        // Compile the expression
+        expression(true);
+    }
+
+    // Parse do token
+    consume(TOKEN_DO, "Expected expression");
+
+    // Parse the loop body
+    statement(true, false);
+}
+
 static void synchronise() {
     parser.panicMode = false;
 
@@ -895,6 +930,7 @@ static void synchronise() {
             case TOKEN_LET:
             case TOKEN_IF:
             case TOKEN_WHILE:
+            case TOKEN_FOR:
             case TOKEN_OUT:
             case TOKEN_RETURN:
                 return;
@@ -916,7 +952,6 @@ static void declaration() {
 
     if(parser.panicMode) synchronise();
 
-    // consumeSeparator();
     skipNewlines();
 }
 
@@ -933,6 +968,8 @@ static void statement(bool blockAllowed, bool ignoreSeparator) {
         if(!ignoreSeparator) consumeSeparator();
     } else if (match(TOKEN_WHILE)) {
         whileStatement();
+    } else if (match(TOKEN_FOR)) {
+        forStatement();
     } else if(match(TOKEN_INDENT)) {
         if (!blockAllowed) error("Unexpected indent");
 

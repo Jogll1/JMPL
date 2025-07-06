@@ -24,6 +24,16 @@ typedef struct ObjSet {
     ValTable elements;
 } ObjSet;
 
+/**
+ * @brief Object to iterate through a Set.
+ */
+typedef struct {
+    Obj obj;
+    ObjSet* set;      // Set to iterate through
+    int currentIndex; // Index of the current set value
+} ObjSetIterator;
+
+// --- Set ---
 ObjSet* newSet();
 
 bool setInsert(ObjSet* set, Value value);
@@ -40,5 +50,12 @@ bool isSubset(ObjSet* a, ObjSet* b);
 
 uint32_t hashSet(ObjSet* set);
 unsigned char* setToString(ObjSet* set);
+
+// --- Set iterator ---
+ObjSetIterator* newSetIterator(ObjSet* set);
+bool freeSetIterator(ObjSetIterator* iterator);
+
+Value getSetIteratorCurrent(ObjSetIterator* iterator);
+bool iterateSetIterator(ObjSetIterator* iterator);
 
 #endif

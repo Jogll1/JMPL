@@ -38,6 +38,7 @@ typedef enum {
     OBJ_STRING,
     OBJ_UPVALUE,
     OBJ_SET,
+    OBJ_SET_ITERATOR,
     OBJ_TUPLE
 } ObjType;
 

@@ -65,6 +65,7 @@ const unsigned char* getTokenName(TokenType type) {
         case TOKEN_ELSE:           return "ELSE";
         case TOKEN_WHILE:          return "WHILE";
         case TOKEN_DO:             return "DO";
+        case TOKEN_FOR:            return "FOR";
         case TOKEN_SUMMATION:      return "SUMMATION";
         case TOKEN_OUT:            return "OUT";
         case TOKEN_RETURN:         return "RETURN";

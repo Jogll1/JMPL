@@ -1,5 +1,9 @@
-let a = (1, 2)
+let S = {1, 2, 3, 4, 5}
 
-out a
+for x ∈ S | x < 3 do
+    S := S \ {x}
+    out x 
+
+out S
 
 out "\nEnd of Line"

@@ -46,6 +46,7 @@
     - `subseteq` or `⊆` - returns true if a set is a subset of a set
     - `in` or `∈` - returns true if a value is a member of a set
 - Cardinality operator `#` - returns the size of any measurable value (sets, tuples, and numbers)
+- `for ... in` loop notation to iterate through elements of a set without order
 ### Changed
 - `¬=` (not equal operator) to be `/=`
 ### Fixed

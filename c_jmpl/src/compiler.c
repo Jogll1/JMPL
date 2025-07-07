@@ -917,7 +917,6 @@ static void forStatement() {
     emitByte(OP_NULL); // Set it to null initially
     defineVariable(loopVarSlot);
 
-    // Consume the 'in' token
     consume(TOKEN_IN, "Expected 'in' or '∈' after identifier");
 
     // Push the set and a create a set iterator from it (with start for)
@@ -931,7 +930,6 @@ static void forStatement() {
 
     // Assign iterator (on top) to new slot
     emitBytes(OP_SET_LOCAL, iteratorSlot);
-    // emitByte(OP_POP); // Pop iterator
 
     // --- Start loop ---
     int loopStart = currentChunk()->count;
@@ -950,31 +948,22 @@ static void forStatement() {
 
     // Compile optional predicate
     if (match(TOKEN_PIPE)) {
-        // Compile the expression
         expression(true);
-
-        // Parse do token
         consume(TOKEN_DO, "Expected expression");
 
         // Skip statement if predicate is false
         int skipJump = emitJump(OP_JUMP_IF_FALSE);
         emitByte(OP_POP); // Pop predicate
 
-        // Compile the loop body
         statement(true, false);
 
         // Loop and patch
-        emitLoop(loopStart);
         patchJump(skipJump);
-        emitByte(OP_POP);
+        emitLoop(loopStart);
+
     } else {
-        // Parse do token
         consume(TOKEN_DO, "Expected expression");
-
-        // Compile the loop body
         statement(true, false);
-
-        // Loop 
         emitLoop(loopStart);
     }
     // ------

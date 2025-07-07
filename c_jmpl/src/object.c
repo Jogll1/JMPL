@@ -191,13 +191,13 @@ void printObject(Value value) {
             printFunction(AS_FUNCTION(value));
             break;
         case OBJ_NATIVE:
-            printf("native");
+            printf("<native>");
             break;
         case OBJ_STRING:
             printJMPLString(AS_STRING(value));
             break;
         case OBJ_UPVALUE:
-            printf("upvalue");
+            printf("<upvalue>");
             break;
         case OBJ_SET:
             printf("%s", setToString(AS_SET(value)));
@@ -205,6 +205,11 @@ void printObject(Value value) {
         case OBJ_TUPLE:
             printf("%s", tupleToString(AS_TUPLE(value)));
             break;
-        default: return;
+        case OBJ_SET_ITERATOR:
+            printf("<iterator>");
+            break;
+        default: 
+            printf("<unknown>");
+            return;
     }
 }

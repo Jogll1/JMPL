@@ -440,6 +440,14 @@ static void declareVariable() {
     addLocal(*name);
 }
 
+/**
+ * @brief Parse a variable.
+ * 
+ * @param errorMessage Error to return if an identifier is not found
+ * @return             The index of a variable if it is a global
+ * 
+ * Note: local variables live on the stack so are accessed via a stack index
+ */
 static uint8_t parseVariable(const unsigned char* errorMessage) {
     consume(TOKEN_IDENTIFIER, errorMessage);
 
@@ -634,6 +642,13 @@ static void variable(bool canAssign) {
     namedVariable(parser.previous, canAssign);
 }
 
+static Token syntheticToken(const char* text) {
+  Token token;
+  token.start = text;
+  token.length = (int)strlen(text);
+  return token;
+}
+
 static void unary(bool canAssign) {
     TokenType operatorType = parser.previous.type;
 
@@ -703,6 +718,7 @@ ParseRule rules[] = {
     [TOKEN_ELSE]          = {NULL,       NULL,      PREC_NONE},
     [TOKEN_WHILE]         = {NULL,       NULL,      PREC_NONE},
     [TOKEN_DO]            = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_FOR]           = {NULL,       NULL,      PREC_NONE},
     [TOKEN_SUMMATION]     = {NULL,       NULL,      PREC_NONE},
     [TOKEN_OUT]           = {NULL,       NULL,      PREC_NONE},
     [TOKEN_RETURN]        = {NULL,       NULL,      PREC_NONE},
@@ -883,7 +899,7 @@ static void whileStatement() {
     consume(TOKEN_DO, "Expected 'do' after condition");
 
     int exitJump = emitJump(OP_JUMP_IF_FALSE);
-    emitByte(OP_POP);
+    emitByte(OP_POP); // Pop condition to check
     skipNewlines();
     statement(true, false);
     emitLoop(loopStart);
@@ -893,39 +909,79 @@ static void whileStatement() {
 }
 
 static void forStatement() {
-    error("For loop not added yet");
+    beginScope();
 
-    // beginScope();
+    // Parse the local variable that will be the generator
+    uint8_t loopVarSlot = current->localCount;
+    parseVariable("Expected identifier");
+    emitByte(OP_NULL); // Set it to null initially
+    defineVariable(loopVarSlot);
 
-    // // Parse the local variable that will be the generator
-    // parseVariable("Expected identifier");
+    // Consume the 'in' token
+    consume(TOKEN_IN, "Expected 'in' or '∈' after identifier");
 
-    // // Consume the 'in' token
-    // consume(TOKEN_IN, "Expected 'in' or '∈' after identifier");
+    // Push the set and a create a set iterator from it (with start for)
+    expression(false);
+    emitByte(OP_START_FOR); // Push an iterator to the top of the stack
 
-    // // Push the set and a create a set iterator from it 
-    // expression(false);
-    // emitByte(OP_CREATE_ITERATOR);
+    // Store iterator in a local slot
+    uint8_t iteratorSlot = current->localCount;
+    addLocal(syntheticToken("@iter"));
+    markInitialised();
 
-    // // Start loop
-    // int loopStart = currentChunk()->count;
-    // emitByte(OP_ITER_NEXT); 
+    // Assign iterator (on top) to new slot
+    emitBytes(OP_SET_LOCAL, iteratorSlot);
+    // emitByte(OP_POP); // Pop iterator
 
-    // // If !hasNext -> jump to after-loop
-    // int exitJump = emitJump(OP_JUMP_IF_FALSE);
-    // emitByte(OP_POP) // Pop hasNext
+    // --- Start loop ---
+    int loopStart = currentChunk()->count;
 
-    // // Parse optional predicate
-    // if (match(TOKEN_PIPE)) {
-    //     // Compile the expression
-    //     expression(true);
-    // }
+    // Load and iterate the iterator
+    emitBytes(OP_GET_LOCAL, iteratorSlot);
+    emitByte(OP_FOR_NEXT); // Should push next value + check if there is a current value
 
-    // // Parse do token
-    // consume(TOKEN_DO, "Expected expression");
+    // If no current value -> jump to after-loop
+    int exitJump = emitJump(OP_JUMP_IF_FALSE);
+    emitByte(OP_POP); // Pop check
+    
+    // If loop is fine, set iterative variable
+    emitBytes(OP_SET_LOCAL, loopVarSlot);
+    emitByte(OP_POP);
 
-    // // Parse the loop body
-    // statement(true, false);
+    // Compile optional predicate
+    if (match(TOKEN_PIPE)) {
+        // Compile the expression
+        expression(true);
+
+        // Parse do token
+        consume(TOKEN_DO, "Expected expression");
+
+        // Skip statement if predicate is false
+        int skipJump = emitJump(OP_JUMP_IF_FALSE);
+        emitByte(OP_POP); // Pop predicate
+
+        // Compile the loop body
+        statement(true, false);
+
+        // Loop and patch
+        emitLoop(loopStart);
+        patchJump(skipJump);
+        emitByte(OP_POP);
+    } else {
+        // Parse do token
+        consume(TOKEN_DO, "Expected expression");
+
+        // Compile the loop body
+        statement(true, false);
+
+        // Loop 
+        emitLoop(loopStart);
+    }
+    // ------
+
+    patchJump(exitJump);
+    emitByte(OP_POP);
+    endScope();
 }
 
 static void synchronise() {

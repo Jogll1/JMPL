@@ -586,6 +586,28 @@ static InterpretResult run() {
                 push(tuple->elements[index]);
                 break;
             }
+            case OP_START_FOR: {
+                if (!IS_SET(peek(0))) {
+                    runtimeError("For loop must iterate over a set");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                ObjSet* set = AS_SET(pop());
+                ObjSetIterator* iterator = newSetIterator(set);
+                push(OBJ_VAL(iterator));
+                break;
+            }
+            case OP_FOR_NEXT: {
+                if (!IS_SET_ITERATOR(peek(0))) {
+                    runtimeError("Missing iterator");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                ObjSetIterator* iterator = AS_SET_ITERATOR(pop());
+                Value value;
+                bool hasCurrentVal = iterateSetIterator(iterator, &value);
+                if (hasCurrentVal) push(value);
+                push(BOOL_VAL(hasCurrentVal));
+                break;
+            }
         }
     }
 #undef READ_BYTE

@@ -4,6 +4,7 @@
 #include "set.h"
 #include "memory.h"
 #include "object.h"
+#include "debug.h"
 #include "../lib/c-stringbuilder/sb.h"
 
 // Max elements to convert to string in a set
@@ -180,7 +181,7 @@ unsigned char* setToString(ObjSet* set) {
 
     for (int i = 0; i < set->elements.capacity; i++) {
         Value value = set->elements.entries[i].key;
-        if (value.type != VAL_NULL && !IS_NULL(value)) {
+        if (!IS_NULL(value)) {
             if (IS_OBJ(value) && IS_STRING(value)) {
                 sb_appendf(sb, "\"%s\"", valueToString(value)->chars);
             } else {
@@ -205,44 +206,47 @@ unsigned char* setToString(ObjSet* set) {
 ObjSetIterator* newSetIterator(ObjSet* set) {
     ObjSetIterator* iterator = (ObjSetIterator*)allocateObject(sizeof(ObjSetIterator), OBJ_SET_ITERATOR);
     iterator->set = set;
-    
-    // Find index of first value in set
-    if (set->elements.count > 0) {
-        for (int i = 0; i < set->elements.capacity; i++) {
-            if (IS_NULL(set->elements.entries[i].key)) continue;
+    iterator->currentIndex = -1;
 
-            iterator->currentIndex = i;
-            break;
-        }        
-    } else {
-        iterator->currentIndex = -1;
-    }   
+    // Find index of first value in set
+    for (int i = 0; i < set->elements.capacity; i++) {
+        if (IS_NULL(set->elements.entries[i].key)) continue;
+
+        iterator->currentIndex = i;
+        break;
+    }
+
+    return iterator;
 }
 
 bool freeSetIterator(ObjSetIterator* iterator) {
     FREE(ObjSetIterator, iterator);
 }
 
-Value getSetIteratorCurrent(ObjSetIterator* iterator) {
-    return iterator->set->elements.entries[iterator->currentIndex].key;
-}
-
-bool iterateSetIterator(ObjSetIterator* iterator) {
+/**
+ * @brief Iterates the iterator if possible
+ * 
+ * @param iterator A pointer to an iterator object
+ * @param value    A pointer to the current value 
+ * @return         If the current iterator value is valid
+ */
+bool iterateSetIterator(ObjSetIterator* iterator, Value* value) {
     ObjSet* set = iterator->set;
 
-    if (set->elements.capacity == 0) return false;
+    int capacity = set->elements.capacity;
+    int current = iterator->currentIndex;
+    if (current == -1 || capacity == 0 || current >= capacity) return false;
 
-    // Find the next index of the set
-    for (int i = iterator->currentIndex; i < set->elements.capacity; i++) {
-        Value value = set->elements.entries[i].key;
+    // Set value to point to the value pre-iteration
+    *(value) = set->elements.entries[current].key;
+
+    for (int i = current + 1; i < capacity; i++) {
         if (IS_NULL(set->elements.entries[i].key)) continue;
 
         iterator->currentIndex = i;
-
-        // Found a next index
-        return true; 
+        return true;
     }
 
-    // Didn't find a next index
-    return false; 
+    iterator->currentIndex = capacity;
+    return true; 
 }

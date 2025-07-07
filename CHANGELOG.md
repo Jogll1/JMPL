@@ -41,7 +41,7 @@
 - Set operations
     - `intersect` or `∩` - returns the intersection of two sets
     - `union` or `∪` - returns the union of two sets
-    - `/` - returns the relative complement of two sets
+    - `\` - returns the relative complement of two sets
     - `subset` or `⊂` - returns true if a set is a proper subset of a set
     - `subseteq` or `⊆` - returns true if a set is a subset of a set
     - `in` or `∈` - returns true if a value is a member of a set

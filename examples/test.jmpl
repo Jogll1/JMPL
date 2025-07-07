@@ -1,9 +1,6 @@
 let S = {1, 2, 3, 4, 5}
 
-// for x ∈ S | x < 3 do
-//     S := S \ {x}
-//     out x 
-
-out S
+for x ∈ S do
+    out x
 
 out "\nEnd of Line"

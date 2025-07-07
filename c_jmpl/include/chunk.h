@@ -49,7 +49,9 @@ typedef enum {
     OP_SUBSET,
     OP_SUBSETEQ,
     OP_CREATE_TUPLE,
-    OP_SUBSCRIPT
+    OP_SUBSCRIPT,
+    OP_START_FOR,
+    OP_FOR_NEXT
 } OpCode;
 
 typedef struct {

@@ -54,8 +54,6 @@ unsigned char* setToString(ObjSet* set);
 // --- Set iterator ---
 ObjSetIterator* newSetIterator(ObjSet* set);
 bool freeSetIterator(ObjSetIterator* iterator);
-
-Value getSetIteratorCurrent(ObjSetIterator* iterator);
-bool iterateSetIterator(ObjSetIterator* iterator);
+bool iterateSetIterator(ObjSetIterator* iterator, Value* value);
 
 #endif

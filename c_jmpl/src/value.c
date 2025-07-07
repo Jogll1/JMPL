@@ -66,6 +66,11 @@ ObjString* valueToString(Value value) {
         return AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
     }
 
+    if (IS_SET_ITERATOR(value)) {
+        unsigned char* str = "iterator";
+        return AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
+    }
+
     // If its a value
     unsigned char* str;
     bool shouldFree = false;

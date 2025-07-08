@@ -10,7 +10,7 @@
 #define CURRENT_VERSION "0.2.0"
 
 // gcc -I.\c_jmpl\include -o .\build\c_jmpl\v0-2-0 .\c_jmpl\src\*.c
-// .\build\c_jmpl\v0-2-0.exe .\examples\test.jmpl
+// .\build\c_jmpl\v0-2-0.exe .\test.jmpl
 // .\build\c_jmpl\v0-2-0.exe
 
 static void repl() {
@@ -47,7 +47,7 @@ static char* readFile(const char* path) {
     // Allocate a string the size of the file
     unsigned char* buffer = (unsigned char*)malloc(fileSize + 1);
 
-    if(buffer == NULL) {
+    if (buffer == NULL) {
         fprintf(stderr, "Not enough memory to read \"%s\".\n", path);
         exit(IO_ERROR);
     }
@@ -55,7 +55,7 @@ static char* readFile(const char* path) {
     // Read the whole file
     size_t bytesRead = fread(buffer, sizeof(unsigned char), fileSize, file);
 
-    if(bytesRead < fileSize) {
+    if (bytesRead < fileSize) {
         fprintf(stderr, "Could not read file \"%s\".\n", path);
         exit(IO_ERROR);
     }

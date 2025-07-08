@@ -566,19 +566,66 @@ static void grouping(bool canAssign) {
     consume(TOKEN_RIGHT_PAREN, "Expected ')' after expression");
 }
 
+// static void set(bool canAssign) {
+//     emitByte(OP_SET_CREATE);
+
+//     if (!check(TOKEN_RIGHT_BRACE)) {
+//         do {
+//             expression(true);
+
+//             emitByte(OP_SET_INSERT);
+//         } while (match(TOKEN_COMMA));
+//     }
+
+//     consume(TOKEN_RIGHT_BRACE, "Expected '}' after set literal");
+// }
+
+// -------- TEST --------
+/**
+ * @brief Parse a set.
+ * 
+ * Can parse sets in format: {x, y, z},
+ * or:                       {f ... l},
+ * or:                       {f, n, ..., l}
+ */
 static void set(bool canAssign) {
     emitByte(OP_SET_CREATE);
 
     if (!check(TOKEN_RIGHT_BRACE)) {
-        do {
+        expression(true);
+
+        if (check(TOKEN_ELLIPSIS)) {
+            // Omission operation without 'next'
+            advance();
             expression(true);
+            emitBytes(OP_FALSE, OP_OMISSION);
+        } else {
+            if (match(TOKEN_COMMA)) {
+                expression(true);
 
-            emitByte(OP_SET_INSERT);
-        } while (match(TOKEN_COMMA));
+                if (check(TOKEN_ELLIPSIS)) {
+                    // Omission operation with 'next'
+                    advance();
+                    expression(true);
+                    emitBytes(OP_TRUE, OP_OMISSION);
+                } else {
+                    emitByte(OP_SET_INSERT_2);
+
+                    // Normal set construction
+                    while (match(TOKEN_COMMA)) {
+                        expression(true);
+
+                        emitByte(OP_SET_INSERT);
+                    }
+                }
+            } else {
+                emitByte(OP_SET_INSERT);
+            }
+        }
     }
-
     consume(TOKEN_RIGHT_BRACE, "Expected '}' after set literal");
 }
+// ----------------------
 
 static void number(bool canAssign) {
     // Convert string to double
@@ -948,7 +995,7 @@ static void forStatement() {
 
     // Compile optional predicate
     if (match(TOKEN_PIPE)) {
-        expression(true);
+        expression(false);
         consume(TOKEN_DO, "Expected expression");
 
         // Skip statement if predicate is false

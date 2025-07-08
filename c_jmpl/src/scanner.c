@@ -431,7 +431,6 @@ Token scanToken() {
         case '[': scanner.groupingDepth++; return makeToken(TOKEN_LEFT_SQUARE);
         case ']': scanner.groupingDepth--; return makeToken(TOKEN_RIGHT_SQUARE);
         case ',': return makeToken(TOKEN_COMMA);
-        case '.': return makeToken(TOKEN_DOT);
         case '+': return makeToken(TOKEN_PLUS);
         case '*': return makeToken(TOKEN_ASTERISK);
         case '^': return makeToken(TOKEN_CARET);
@@ -461,6 +460,16 @@ Token scanToken() {
         case '/': return makeToken(match('=') ? TOKEN_NOT_EQUAL : TOKEN_SLASH); 
         case '>': return makeToken(match('=') ? TOKEN_GREATER_EQUAL : TOKEN_GREATER);
         case '<': return makeToken(match('=') ? TOKEN_LESS_EQUAL : TOKEN_LESS);
+        // Switch three character symbols
+        case '.':
+            if (match('.')) {
+                if (match('.')) {
+                    return makeToken(TOKEN_ELLIPSIS);
+                } else {
+                    break;
+                }
+            }
+            return makeToken(TOKEN_DOT);
         // Literals
         case '"': return string();
     }

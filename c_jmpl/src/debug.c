@@ -12,73 +12,74 @@
  */
 const unsigned char* getTokenName(TokenType type) {
     switch (type) {
-        case TOKEN_LEFT_PAREN:     return "LEFT_PAREN";
-        case TOKEN_RIGHT_PAREN:    return "RIGHT_PAREN";
-        case TOKEN_LEFT_BRACE:     return "LEFT_BRACE";
-        case TOKEN_RIGHT_BRACE:    return "RIGHT_BRACE";
-        case TOKEN_LEFT_SQUARE:    return "LEFT_SQUARE";
-        case TOKEN_RIGHT_SQUARE:   return "RIGHT_SQUARE";
-        case TOKEN_COMMA:          return "COMMA";
-        case TOKEN_DOT:            return "DOT";
-        case TOKEN_MINUS:          return "MINUS";
-        case TOKEN_PLUS:           return "PLUS";
-        case TOKEN_SLASH:          return "SLASH";
-        case TOKEN_ASTERISK:       return "ASTERISK";
-        case TOKEN_BACK_SLASH:     return "BACK_SLASH";
-        case TOKEN_CARET:          return "CARET";
-        case TOKEN_MOD:            return "MOD";
-        case TOKEN_SEMICOLON:      return "SEMICOLON";
-        case TOKEN_COLON:          return "COLON";
-        case TOKEN_PIPE:           return "PIPE";
-        case TOKEN_IN:             return "IN";
-        case TOKEN_HASHTAG:        return "HASHTAG";
-        case TOKEN_INTERSECT:      return "INTERSECT";
-        case TOKEN_UNION:          return "UNION";
-        case TOKEN_SUBSET:         return "SUBSET";
-        case TOKEN_SUBSETEQ:        return "SUBSETEQ";
+        case TOKEN_LEFT_PAREN:    return "LEFT_PAREN";
+        case TOKEN_RIGHT_PAREN:   return "RIGHT_PAREN";
+        case TOKEN_LEFT_BRACE:    return "LEFT_BRACE";
+        case TOKEN_RIGHT_BRACE:   return "RIGHT_BRACE";
+        case TOKEN_LEFT_SQUARE:   return "LEFT_SQUARE";
+        case TOKEN_RIGHT_SQUARE:  return "RIGHT_SQUARE";
+        case TOKEN_COMMA:         return "COMMA";
+        case TOKEN_DOT:           return "DOT";
+        case TOKEN_ELLIPSIS:      return "ELLIPSIS";
+        case TOKEN_MINUS:         return "MINUS";
+        case TOKEN_PLUS:          return "PLUS";
+        case TOKEN_SLASH:         return "SLASH";
+        case TOKEN_ASTERISK:      return "ASTERISK";
+        case TOKEN_BACK_SLASH:    return "BACK_SLASH";
+        case TOKEN_CARET:         return "CARET";
+        case TOKEN_MOD:           return "MOD";
+        case TOKEN_SEMICOLON:     return "SEMICOLON";
+        case TOKEN_COLON:         return "COLON";
+        case TOKEN_PIPE:          return "PIPE";
+        case TOKEN_IN:            return "IN";
+        case TOKEN_HASHTAG:       return "HASHTAG";
+        case TOKEN_INTERSECT:     return "INTERSECT";
+        case TOKEN_UNION:         return "UNION";
+        case TOKEN_SUBSET:        return "SUBSET";
+        case TOKEN_SUBSETEQ:      return "SUBSETEQ";
 
-        case TOKEN_EQUAL:          return "EQUAL";
-        case TOKEN_EQUAL_EQUAL:    return "EQUAL_EQUAL";
-        case TOKEN_ASSIGN:         return "ASSIGN";
-        case TOKEN_NOT:            return "NOT";
-        case TOKEN_NOT_EQUAL:      return "NOT_EQUAL";
-        case TOKEN_GREATER:        return "GREATER";
-        case TOKEN_GREATER_EQUAL:  return "GREATER_EQUAL";
-        case TOKEN_LESS:           return "LESS";
-        case TOKEN_LESS_EQUAL:     return "LESS_EQUAL";
-        case TOKEN_MAPS_TO:        return "MAPS_TO";
-        case TOKEN_IMPLIES:        return "IMPLIES";
+        case TOKEN_EQUAL:         return "EQUAL";
+        case TOKEN_EQUAL_EQUAL:   return "EQUAL_EQUAL";
+        case TOKEN_ASSIGN:        return "ASSIGN";
+        case TOKEN_NOT:           return "NOT";
+        case TOKEN_NOT_EQUAL:     return "NOT_EQUAL";
+        case TOKEN_GREATER:       return "GREATER";
+        case TOKEN_GREATER_EQUAL: return "GREATER_EQUAL";
+        case TOKEN_LESS:          return "LESS";
+        case TOKEN_LESS_EQUAL:    return "LESS_EQUAL";
+        case TOKEN_MAPS_TO:       return "MAPS_TO";
+        case TOKEN_IMPLIES:       return "IMPLIES";
 
-        case TOKEN_IDENTIFIER:     return "IDENTIFIER";
-        case TOKEN_STRING:         return "STRING";
-        case TOKEN_NUMBER:         return "NUMBER";
+        case TOKEN_IDENTIFIER:    return "IDENTIFIER";
+        case TOKEN_STRING:        return "STRING";
+        case TOKEN_NUMBER:        return "NUMBER";
 
-        case TOKEN_AND:            return "AND";
-        case TOKEN_OR:             return "OR";
-        case TOKEN_XOR:            return "XOR";
-        case TOKEN_TRUE:           return "TRUE";
-        case TOKEN_FALSE:          return "FALSE";
-        case TOKEN_LET:            return "LET";
-        case TOKEN_NULL:           return "NULL";
-        case TOKEN_IF:             return "IF";
-        case TOKEN_THEN:           return "THEN";
-        case TOKEN_ELSE:           return "ELSE";
-        case TOKEN_WHILE:          return "WHILE";
-        case TOKEN_DO:             return "DO";
-        case TOKEN_FOR:            return "FOR";
-        case TOKEN_SUMMATION:      return "SUMMATION";
-        case TOKEN_OUT:            return "OUT";
-        case TOKEN_RETURN:         return "RETURN";
-        case TOKEN_FUNCTION:       return "FUNCTION";
+        case TOKEN_AND:           return "AND";
+        case TOKEN_OR:            return "OR";
+        case TOKEN_XOR:           return "XOR";
+        case TOKEN_TRUE:          return "TRUE";
+        case TOKEN_FALSE:         return "FALSE";
+        case TOKEN_LET:           return "LET";
+        case TOKEN_NULL:          return "NULL";
+        case TOKEN_IF:            return "IF";
+        case TOKEN_THEN:          return "THEN";
+        case TOKEN_ELSE:          return "ELSE";
+        case TOKEN_WHILE:         return "WHILE";
+        case TOKEN_DO:            return "DO";
+        case TOKEN_FOR:           return "FOR";
+        case TOKEN_SUMMATION:     return "SUMMATION";
+        case TOKEN_OUT:           return "OUT";
+        case TOKEN_RETURN:        return "RETURN";
+        case TOKEN_FUNCTION:      return "FUNCTION";
 
-        case TOKEN_NEWLINE:        return "NEWLINE";
-        case TOKEN_INDENT:         return "INDENT";
-        case TOKEN_DEDENT:         return "DEDENT";
+        case TOKEN_NEWLINE:       return "NEWLINE";
+        case TOKEN_INDENT:        return "INDENT";
+        case TOKEN_DEDENT:        return "DEDENT";
         
-        case TOKEN_ERROR:          return "ERROR";
-        case TOKEN_EOF:            return "EOF";
+        case TOKEN_ERROR:         return "ERROR";
+        case TOKEN_EOF:           return "EOF";
 
-        default:                   return "UNKNOWN";
+        default:                  return "UNKNOWN";
     }
 }
 
@@ -187,6 +188,7 @@ int disassembleInstruction(Chunk* chunk, int offset) {
         case OP_RETURN:         return simpleInstruction("OP_RETURN", offset);
         case OP_SET_CREATE:     return simpleInstruction("OP_SET_CREATE", offset);
         case OP_SET_INSERT:     return simpleInstruction("OP_SET_INSERT", offset);
+        case OP_SET_INSERT_2:   return simpleInstruction("OP_SET_INSERT_2", offset);
         case OP_SET_IN:         return simpleInstruction("OP_SET_IN", offset);
         case OP_SET_INTERSECT:  return simpleInstruction("OP_SET_INTERSECT", offset);
         case OP_SET_UNION:      return simpleInstruction("OP_SET_UNION", offset);
@@ -198,6 +200,7 @@ int disassembleInstruction(Chunk* chunk, int offset) {
         case OP_SUBSCRIPT:      return simpleInstruction("OP_SUBSCRIPT", offset);
         case OP_START_FOR:      return simpleInstruction("OP_START_FOR", offset);
         case OP_FOR_NEXT:       return simpleInstruction("OP_FOR_NEXT", offset);
+        case OP_OMISSION:       return simpleInstruction("OP_OMISSION", offset);
         default:
             printf("Unknown opcode %d\n", instruction);
             return offset + 1;

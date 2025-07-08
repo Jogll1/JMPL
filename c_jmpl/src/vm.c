@@ -511,10 +511,20 @@ static InterpretResult run() {
                 break;
             }
             case OP_SET_INSERT: {
-                Value value = pop(); // Pop the value
-                Value setVal = pop(); // Pop the set
+                Value value = pop();
+                Value setVal = pop();
                 ObjSet* set = AS_SET(setVal);
                 setInsert(set, value);
+                push(setVal);
+                break;
+            }
+            case OP_SET_INSERT_2: {
+                Value valueA = pop();
+                Value valueB = pop();
+                Value setVal = pop();
+                ObjSet* set = AS_SET(setVal);
+                setInsert(set, valueB);
+                setInsert(set, valueA);
                 push(setVal);
                 break;
             }
@@ -606,6 +616,66 @@ static InterpretResult run() {
                 bool hasCurrentVal = iterateSetIterator(iterator, &value);
                 if (hasCurrentVal) push(value);
                 push(BOOL_VAL(hasCurrentVal));
+                break;
+            }
+            case OP_OMISSION: {
+                if (!IS_BOOL(peek(0))) {
+                    runtimeError("Expected omission parameter");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+                bool hasNext = AS_BOOL(pop());
+
+                if (hasNext) {
+                    if (!IS_INTEGER(peek(0)) || !IS_NUMBER(peek(1)) || !IS_INTEGER(peek(2)) || !IS_SET(peek(3))) {
+                        runtimeError("Expected: {int, number ... int}");
+                        return INTERPRET_RUNTIME_ERROR; 
+                    }
+
+                    int last = (int)AS_NUMBER(pop());
+                    double next = AS_NUMBER(pop());
+                    int first = (int)AS_NUMBER(pop());
+                    ObjSet* set = AS_SET(pop());
+
+                    double gap = fabs(next - first);
+                    if (gap == 0) {
+                        runtimeError("Set omission gap cannot be zero");
+                        return INTERPRET_RUNTIME_ERROR; 
+                    }
+
+                    if (last > first) {
+                        for (double i = first; i <= last; i += gap) {
+                            setInsert(set, NUMBER_VAL(i));
+                        }   
+                    } else {
+                        for (double i = first; i >= last; i -= gap) {
+                            setInsert(set, NUMBER_VAL(i));
+                        }   
+                    }
+
+                    push(OBJ_VAL(set));
+                } else {
+                    if (!IS_INTEGER(peek(0)) || !IS_INTEGER(peek(1)) || !IS_SET(peek(2))) {
+                        runtimeError("Expected: {int ... int}");
+                        return INTERPRET_RUNTIME_ERROR; 
+                    }
+
+                    int last = (int)AS_NUMBER(pop());
+                    int first = (int)AS_NUMBER(pop());
+                    ObjSet* set = AS_SET(pop());
+
+                    if (last > first) {
+                        for (int i = first; i <= last; i++) {
+                            setInsert(set, NUMBER_VAL(i));
+                        }   
+                    } else {
+                        for (int i = first; i >= last; i--) {
+                            setInsert(set, NUMBER_VAL(i));
+                        }   
+                    }
+
+                    push(OBJ_VAL(set));
+                }
                 break;
             }
         }

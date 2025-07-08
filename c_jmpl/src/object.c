@@ -200,14 +200,14 @@ void printObject(Value value) {
             printf("<upvalue>");
             break;
         case OBJ_SET:
-            unsigned char* str = setToString(AS_SET(value));
-            printf("%s", str);
-            free(str);
+            unsigned char* setString = setToString(AS_SET(value));
+            printf("%s", setString);
+            free(setString);
             break;
         case OBJ_TUPLE:
-            unsigned char* str = tupleToString(AS_SET(value));
-            printf("%s", str);
-            free(str);
+            unsigned char* tupleStr = tupleToString(AS_TUPLE(value));
+            printf("%s", tupleStr);
+            free(tupleStr);
             break;
         case OBJ_SET_ITERATOR:
             printf("<iterator>");

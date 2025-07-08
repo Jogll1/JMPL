@@ -31,12 +31,12 @@ unsigned char* tupleToString(ObjTuple* tuple) {
         Value value = tuple->elements[i];
 
         if (IS_OBJ(value) && IS_STRING(value)) {
-                sb_appendf(sb, "\"%s\"", valueToString(value)->chars);
-            } else {
-                sb_appendf(sb, "%s", valueToString(value)->chars);
-            }
+            sb_appendf(sb, "\"%s\"", valueToString(value)->chars);
+        } else {
+            sb_appendf(sb, "%s", valueToString(value)->chars);
+        }
 
-            if (i < numElements - 1) sb_append(sb, ", ");
+        if (i < numElements - 1) sb_append(sb, ", ");
     }
 
     sb_append(sb, ")");

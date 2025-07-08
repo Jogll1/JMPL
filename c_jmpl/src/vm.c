@@ -234,7 +234,7 @@ static bool isFalse(Value value) {
 static void concatenate() {
     Value b = peek(0); // Peek second String
     Value a = peek(1); // Peek first String
-
+    
     ObjString* aString = valueToString(a);
     ObjString* bString = valueToString(b);
 

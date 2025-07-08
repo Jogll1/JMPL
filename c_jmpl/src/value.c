@@ -58,12 +58,16 @@ ObjString* valueToString(Value value) {
 
     if (IS_SET(value)) {
         unsigned char* str = setToString(AS_SET(value));
-        return AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
+        ObjString* res = AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
+        free(str);
+        return res;
     }
 
     if (IS_TUPLE(value)) {
         unsigned char* str = tupleToString(AS_TUPLE(value));
-        return AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
+        ObjString* res = AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
+        free(str);
+        return res;
     }
 
     if (IS_SET_ITERATOR(value)) {

@@ -9,12 +9,6 @@
 
 #define CURRENT_VERSION "0.2.0"
 
-// gcc -I./c_jmpl/include -o ./build/c_jmpl/v0-2-0 ./c_jmpl/src/*.c
-// ./build/c_jmpl/v0-2-0.exe ./test.jmpl
-// ./build/c_jmpl/v0-2-0 ./examples/maps.jmpl
-// ./build/c_jmpl/v0-2-0.exe
-// -DCMAKE_BUILD_TYPE=Debug
-
 static void repl() {
     char line[1024];
 

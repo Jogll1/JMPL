@@ -200,9 +200,9 @@ void printObject(Value value) {
             printf("<upvalue>");
             break;
         case OBJ_SET:
-            unsigned char* setString = setToString(AS_SET(value));
-            printf("%s", setString);
-            free(setString);
+            unsigned char* setStr = setToString(AS_SET(value));
+            printf("%s", setStr);
+            free(setStr);
             break;
         case OBJ_TUPLE:
             unsigned char* tupleStr = tupleToString(AS_TUPLE(value));

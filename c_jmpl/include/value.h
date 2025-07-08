@@ -53,7 +53,7 @@ typedef struct {
 
 // Convert values to strings
 
-#define BOOL_TO_STRING(value) ((value) ? "true" : "false");
+#define BOOL_TO_STRING(value) ((value) ? "true" : "false")
 #define NULL_TO_STRING ("null")
 #define NUMBER_TO_STRING(value, resultPtr) \
     do { \

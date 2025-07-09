@@ -82,33 +82,6 @@ int addConstant(Chunk* chunk, Value value) {
     return chunk->constants.count - 1;
 }
 
-/**
- * @brief Write a constant to the chunk. Chooses between normal or long constant.
- * 
- * @param chunk The chunk to add the value to
- * @param value Value being added to the chunk
- * @param line  The line of the value
- * 
- * Adds the constant to the array and uses the index to see if it fits into one byte.
- * If not it uses the long opcode with the value split into multiple bytes.
- * Uses little-endian.
- */
-int writeConstant(Chunk* chunk, Value value, int line) {
-    int index = addConstant(chunk, value);
-    
-    if (index < UINT8_MAX + 1) {
-        writeChunk(chunk, OP_CONSTANT, line);
-        writeChunk(chunk, (uint8_t)index, line);
-    } else {
-        writeChunk(chunk, OP_CONSTANT_LONG, line);
-        writeChunk(chunk, (uint8_t)(index & 0xFF), line);
-        writeChunk(chunk, (uint8_t)((index) >> 8 & 0xFF), line);
-        writeChunk(chunk, (uint8_t)((index) >> 16 & 0xFF), line);
-    }
-
-    return index;
-}
-
 int getLine(Chunk* chunk, int instruction) {
     int start = 0;
     int end = chunk->lineCount - 1;

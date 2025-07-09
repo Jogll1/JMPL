@@ -1,0 +1,22 @@
+func map(S, f) = 
+    for x ∈ S do
+        S := S \ {x}
+        S := S ∪ {f(x)}
+    S
+
+func filter(S, f) =
+    for x ∈ S | ¬f(x) do
+        S := S \ {x}
+    S
+
+func fold(S, b, f) = 
+    let temp = b;
+    for x ∈ S do
+        temp := f(temp, x)
+    temp
+
+func add(x, y) = x + y
+
+let S = {1 ... 10}
+out fold(S, 0, add)
+

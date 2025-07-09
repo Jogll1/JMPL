@@ -540,8 +540,45 @@ static void literal(bool canAssign) {
     }
 }
 
+/**
+ * @brief Parses a tuple.
+ * 
+ * Can parse sets in format: (x, y, z, etc),
+ * or:                       (f ... l),
+ * or:                       (f, n, ... l),
+ * but not:                  (x)
+ */
+static void tuple() {
+    if (check(TOKEN_ELLIPSIS)) {
+        // Omission operation without 'next'
+        advance();
+        expression(true);
+        emitBytes(OP_FALSE, OP_TUPLE_OMISSION);
+    } else {
+        if (match(TOKEN_COMMA)) {
+            expression(true);
+
+            if (check(TOKEN_ELLIPSIS)) {
+                // Omission operation with 'next'
+                advance();
+                expression(true);
+                emitBytes(OP_TRUE, OP_TUPLE_OMISSION);
+            } else {
+                // Normal tuple construction
+                int count = 2;
+                do {
+                    expression(true);
+                    count++;
+                } while (match(TOKEN_COMMA));
+
+                emitBytes(OP_CREATE_TUPLE, count);
+            }
+        }
+    }
+}
+
 static void grouping(bool canAssign) {
-    // If its an empty tuple, make an empty tuple
+    // If its an empty parentheses, make an empty tuple
     if (check(TOKEN_RIGHT_PAREN)) {
         advance();
         emitBytes(OP_CREATE_TUPLE, 0);
@@ -551,38 +588,13 @@ static void grouping(bool canAssign) {
     expression(true);
 
     // Could be a tuple
-    if (check(TOKEN_COMMA)) {
-        advance();
-        int count = 1;
-
-        do {
-            expression(true);
-            count++;
-        } while (match(TOKEN_COMMA));
-
-        emitBytes(OP_CREATE_TUPLE, count);
-    }   
+    tuple();  
 
     consume(TOKEN_RIGHT_PAREN, "Expected ')' after expression");
 }
 
-// static void set(bool canAssign) {
-//     emitByte(OP_SET_CREATE);
-
-//     if (!check(TOKEN_RIGHT_BRACE)) {
-//         do {
-//             expression(true);
-
-//             emitByte(OP_SET_INSERT);
-//         } while (match(TOKEN_COMMA));
-//     }
-
-//     consume(TOKEN_RIGHT_BRACE, "Expected '}' after set literal");
-// }
-
-// -------- TEST --------
 /**
- * @brief Parse a set.
+ * @brief Parses a set.
  * 
  * Can parse sets in format: {x, y, z},
  * or:                       {f ... l},
@@ -598,7 +610,7 @@ static void set(bool canAssign) {
             // Omission operation without 'next'
             advance();
             expression(true);
-            emitBytes(OP_FALSE, OP_OMISSION);
+            emitBytes(OP_FALSE, OP_SET_OMISSION);
         } else {
             if (match(TOKEN_COMMA)) {
                 expression(true);
@@ -607,11 +619,11 @@ static void set(bool canAssign) {
                     // Omission operation with 'next'
                     advance();
                     expression(true);
-                    emitBytes(OP_TRUE, OP_OMISSION);
+                    emitBytes(OP_TRUE, OP_SET_OMISSION);
                 } else {
+                    // Normal set construction
                     emitByte(OP_SET_INSERT_2);
 
-                    // Normal set construction
                     while (match(TOKEN_COMMA)) {
                         expression(true);
 
@@ -619,6 +631,7 @@ static void set(bool canAssign) {
                     }
                 }
             } else {
+                // Singleton set
                 emitByte(OP_SET_INSERT);
             }
         }

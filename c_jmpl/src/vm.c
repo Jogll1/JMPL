@@ -209,6 +209,103 @@ static void closeUpvalues(Value* last) {
     }
 }
 
+static int setOmission(bool hasNext) {
+    if (hasNext) {
+        if (!IS_INTEGER(peek(0)) || !IS_INTEGER(peek(1)) || !IS_INTEGER(peek(2)) || !IS_SET(peek(3))) {
+            runtimeError("Expected: {int, int ... int}");
+            return INTERPRET_RUNTIME_ERROR; 
+        }
+    } else {
+        if (!IS_INTEGER(peek(0)) || !IS_INTEGER(peek(1)) || !IS_SET(peek(2))) {
+            runtimeError("Expected: {int ... int}");
+            return INTERPRET_RUNTIME_ERROR; 
+        }
+    }
+
+    int last = (int)AS_NUMBER(pop());
+    int next;
+    if (hasNext) {
+        next = (int)AS_NUMBER(pop());
+    }
+    int first = (int)AS_NUMBER(pop());
+    ObjSet* set = AS_SET(pop());
+
+    int gap = 1;
+    if (hasNext) {
+        gap = abs(next - first);
+
+        if (gap == 0) {
+            runtimeError("Set omission gap cannot be zero");
+            return INTERPRET_RUNTIME_ERROR; 
+        }
+    }
+
+    if (last > first) {
+        for (int i = first; i <= last; i += gap) {
+            setInsert(set, NUMBER_VAL(i));
+        }   
+    } else {
+        for (int i = first; i >= last; i -= gap) {
+            setInsert(set, NUMBER_VAL(i));
+        }   
+    }
+
+    push(OBJ_VAL(set));
+    return INTERPRET_OK;
+}
+
+static int tupleOmission(bool hasNext) {
+    if (hasNext) {
+        if (!IS_INTEGER(peek(0)) || !IS_INTEGER(peek(1)) || !IS_INTEGER(peek(2))) {
+            runtimeError("Expected: (int, int ... int)");
+            return INTERPRET_RUNTIME_ERROR; 
+        }
+    } else {
+        if (!IS_INTEGER(peek(0)) || !IS_INTEGER(peek(1))) {
+            runtimeError("Expected: (int ... int)");
+            return INTERPRET_RUNTIME_ERROR; 
+        }
+    }
+
+    int last = (int)AS_NUMBER(pop());
+    int next;
+    if (hasNext) {
+        next = (int)AS_NUMBER(pop());
+    }
+    int first = (int)AS_NUMBER(pop());
+
+    int gap = 1;
+    if (hasNext) {
+        gap = abs(next - first);
+
+        if (gap == 0) {
+            runtimeError("Tuple omission gap cannot be zero");
+            return INTERPRET_RUNTIME_ERROR; 
+        }
+    }
+
+    int arity = abs(first - last) + 1;
+    if (hasNext) arity = (int)round((double)arity / (double)gap);
+    ObjTuple* tuple = newTuple(arity);
+
+    int i = 0;
+    if (last > first) {
+        int i = 0;
+        for (int j = first; j <= last; j += gap) {
+            tuple->elements[i] = NUMBER_VAL(j);
+            i++;
+        }   
+    } else {
+        for (int j = first; j >= last; j -= gap) {
+            tuple->elements[i] = NUMBER_VAL(j);
+            i++;
+        }   
+    }
+
+    push(OBJ_VAL(tuple));
+    return INTERPRET_OK;
+}
+
 /**
  * @brief Determines if a value is false.
  * 
@@ -528,9 +625,19 @@ static InterpretResult run() {
                 push(setVal);
                 break;
             }
+            case OP_SET_OMISSION: {
+                if (!IS_BOOL(peek(0))) {
+                    runtimeError("(Internal) Expected omission parameter");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                bool hasNext = AS_BOOL(pop());
+                int status = setOmission(hasNext);
+                if (status != INTERPRET_OK) return status;
+                break;
+            }
             case OP_SET_IN: {
                 if (!IS_SET(peek(0))) {
-                    runtimeError("Right hand operands must be a set");
+                    runtimeError("Right hand operand must be a set");
                     return INTERPRET_RUNTIME_ERROR;
                 }
                 ObjSet* set = AS_SET(pop());
@@ -582,6 +689,16 @@ static InterpretResult run() {
                 push(OBJ_VAL(tuple));
                 break;
             }
+            case OP_TUPLE_OMISSION: {
+                if (!IS_BOOL(peek(0))) {
+                    runtimeError("(Internal) Expected omission parameter");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                bool hasNext = AS_BOOL(pop());
+                int status = tupleOmission(hasNext);
+                if (status != INTERPRET_OK) return status;
+                break;
+            }
             case OP_SUBSCRIPT: {
                 if (!IS_INTEGER(peek(0))) {
                     runtimeError("Tuple index must be an integer");
@@ -608,7 +725,7 @@ static InterpretResult run() {
             }
             case OP_FOR_NEXT: {
                 if (!IS_SET_ITERATOR(peek(0))) {
-                    runtimeError("Missing iterator");
+                    runtimeError("(Internal) Missing iterator");
                     return INTERPRET_RUNTIME_ERROR;
                 }
                 ObjSetIterator* iterator = AS_SET_ITERATOR(pop());
@@ -616,66 +733,6 @@ static InterpretResult run() {
                 bool hasCurrentVal = iterateSetIterator(iterator, &value);
                 if (hasCurrentVal) push(value);
                 push(BOOL_VAL(hasCurrentVal));
-                break;
-            }
-            case OP_OMISSION: {
-                if (!IS_BOOL(peek(0))) {
-                    runtimeError("Expected omission parameter");
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-
-                bool hasNext = AS_BOOL(pop());
-
-                if (hasNext) {
-                    if (!IS_INTEGER(peek(0)) || !IS_NUMBER(peek(1)) || !IS_INTEGER(peek(2)) || !IS_SET(peek(3))) {
-                        runtimeError("Expected: {int, number ... int}");
-                        return INTERPRET_RUNTIME_ERROR; 
-                    }
-
-                    int last = (int)AS_NUMBER(pop());
-                    double next = AS_NUMBER(pop());
-                    int first = (int)AS_NUMBER(pop());
-                    ObjSet* set = AS_SET(pop());
-
-                    double gap = fabs(next - first);
-                    if (gap == 0) {
-                        runtimeError("Set omission gap cannot be zero");
-                        return INTERPRET_RUNTIME_ERROR; 
-                    }
-
-                    if (last > first) {
-                        for (double i = first; i <= last; i += gap) {
-                            setInsert(set, NUMBER_VAL(i));
-                        }   
-                    } else {
-                        for (double i = first; i >= last; i -= gap) {
-                            setInsert(set, NUMBER_VAL(i));
-                        }   
-                    }
-
-                    push(OBJ_VAL(set));
-                } else {
-                    if (!IS_INTEGER(peek(0)) || !IS_INTEGER(peek(1)) || !IS_SET(peek(2))) {
-                        runtimeError("Expected: {int ... int}");
-                        return INTERPRET_RUNTIME_ERROR; 
-                    }
-
-                    int last = (int)AS_NUMBER(pop());
-                    int first = (int)AS_NUMBER(pop());
-                    ObjSet* set = AS_SET(pop());
-
-                    if (last > first) {
-                        for (int i = first; i <= last; i++) {
-                            setInsert(set, NUMBER_VAL(i));
-                        }   
-                    } else {
-                        for (int i = first; i >= last; i--) {
-                            setInsert(set, NUMBER_VAL(i));
-                        }   
-                    }
-
-                    push(OBJ_VAL(set));
-                }
                 break;
             }
         }

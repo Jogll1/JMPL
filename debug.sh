@@ -6,6 +6,6 @@ valgrind --leak-check=full \
          --track-origins=yes \
          --verbose \
          --log-file=valgrind-out.txt \
-         ./build/c_jmpl/v0-2-0 ./examples/fibonacci.jmpl \
-&& clear \
-&& cat valgrind-out.txt
+         ./build/c_jmpl/v0-2-0 ./examples/fibonacci.jmpl 
+clear 
+cat valgrind-out.txt

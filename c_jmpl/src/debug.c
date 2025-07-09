@@ -189,6 +189,7 @@ int disassembleInstruction(Chunk* chunk, int offset) {
         case OP_SET_CREATE:     return simpleInstruction("OP_SET_CREATE", offset);
         case OP_SET_INSERT:     return simpleInstruction("OP_SET_INSERT", offset);
         case OP_SET_INSERT_2:   return simpleInstruction("OP_SET_INSERT_2", offset);
+        case OP_SET_OMISSION:   return simpleInstruction("OP_SET_OMISSION", offset);
         case OP_SET_IN:         return simpleInstruction("OP_SET_IN", offset);
         case OP_SET_INTERSECT:  return simpleInstruction("OP_SET_INTERSECT", offset);
         case OP_SET_UNION:      return simpleInstruction("OP_SET_UNION", offset);
@@ -197,10 +198,10 @@ int disassembleInstruction(Chunk* chunk, int offset) {
         case OP_SUBSET:         return simpleInstruction("OP_SUBSET", offset);
         case OP_SUBSETEQ:       return simpleInstruction("OP_SUBSETEQ", offset);
         case OP_CREATE_TUPLE:   return simpleInstruction("OP_CREATE_TUPLE", offset);
+        case OP_TUPLE_OMISSION: return simpleInstruction("OP_TUPLE_OMISSION", offset);
         case OP_SUBSCRIPT:      return simpleInstruction("OP_SUBSCRIPT", offset);
         case OP_START_FOR:      return simpleInstruction("OP_START_FOR", offset);
         case OP_FOR_NEXT:       return simpleInstruction("OP_FOR_NEXT", offset);
-        case OP_OMISSION:       return simpleInstruction("OP_OMISSION", offset);
         default:
             printf("Unknown opcode %d\n", instruction);
             return offset + 1;

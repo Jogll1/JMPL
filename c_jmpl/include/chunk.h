@@ -42,6 +42,7 @@ typedef enum {
     OP_SET_CREATE,
     OP_SET_INSERT,
     OP_SET_INSERT_2,
+    OP_SET_OMISSION,
     OP_SET_IN,
     OP_SET_INTERSECT,
     OP_SET_UNION,
@@ -50,10 +51,10 @@ typedef enum {
     OP_SUBSET,
     OP_SUBSETEQ,
     OP_CREATE_TUPLE,
+    OP_TUPLE_OMISSION,
     OP_SUBSCRIPT,
     OP_START_FOR,
-    OP_FOR_NEXT,
-    OP_OMISSION
+    OP_FOR_NEXT
 } OpCode;
 
 typedef struct {

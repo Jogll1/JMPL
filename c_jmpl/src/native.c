@@ -9,6 +9,9 @@
 #include "value.h"
 #include "native.h"
 
+#define JMPL_PI 3.14159265358979323846
+#define JMPL_EPSILON 1e-10
+
 // --- General purpose ---
 
 /**

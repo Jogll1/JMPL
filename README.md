@@ -28,9 +28,12 @@ To run the interpreter, run the exe:
 
 Running the interpreter with no source file will start the in-terminal REPL.
 
-## Third-party code
+## Third-Party Code
 List of libraries used in this project:
 - <a href="https://github.com/cavaliercoder/c-stringbuilder?tab=readme-ov-file">c-stringbuilder<a> by cavaliercodernk
 
 ## Credits
 Implementation of the v0.1.0 interpreter was based off the book Crafting Interpreters by Bob Nystrom.
+
+## See Also
+Check out my <a href="https://jogll1.github.io/blog.html">blog</a> for updates and news about JMPL.

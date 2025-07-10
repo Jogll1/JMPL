@@ -58,8 +58,8 @@ typedef enum {
 } OpCode;
 
 typedef struct {
-    int offset; // Line number instances (for RLE)
-    int line;   // Line number
+    int offset;
+    int line;   
 } LineStart;
 
 typedef struct {

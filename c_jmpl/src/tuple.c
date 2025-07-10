@@ -18,6 +18,14 @@ ObjTuple* newTuple(int size) {
     return tuple;
 }
 
+/**
+ * @brief Converts a tuple object to a string.
+ * 
+ * @param tuple Pointer to the tuple
+ * @return      A list of characters
+ * 
+ * Must be freed.
+ */
 unsigned char* tupleToString(ObjTuple* tuple) {
     // Create an empty string builder
     StringBuilder* sb = sb_create();

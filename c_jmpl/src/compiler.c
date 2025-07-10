@@ -571,14 +571,14 @@ static void tuple() {
             } else {
                 // Normal tuple construction
                 int count = 2;
-                do {
+                while (match(TOKEN_COMMA)) {
                     expression(true);
                     if (count < UINT8_MAX) {
                         count++;
                     } else {
                         error("(Internal) Can't have more than 255 elements in a tuple literal");
                     }
-                } while (match(TOKEN_COMMA));
+                }
 
                 emitBytes(OP_CREATE_TUPLE, count);
             }
@@ -699,11 +699,18 @@ static void namedVariable(Token name, bool canAssign) {
     }
 
     if (canAssign && match(TOKEN_ASSIGN)) {
-        // Assign to variable if found ':='
         expression(false);
-        emitOpShort(setOp, (uint16_t)arg);
+        if (setOp == OP_SET_GLOBAL) {
+            emitOpShort(setOp, (uint16_t)arg);
+        } else {
+            emitBytes(setOp, (uint8_t)arg);
+        }
     } else {
-        emitOpShort(getOp, (uint16_t)arg);
+        if (getOp == OP_GET_GLOBAL) {
+            emitOpShort(getOp, (uint16_t)arg);
+        } else {
+            emitBytes(getOp, (uint8_t)arg);
+        }
     }
 }
 

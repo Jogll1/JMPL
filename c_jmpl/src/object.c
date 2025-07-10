@@ -142,6 +142,7 @@ static unsigned char decodeEscape(unsigned char esc) {
         case 'n': return '\n';
         case 't': return '\t';
         case 'r': return '\r';
+        case '"': return '\"';
         case '\\': return '\\';
         default: return esc;
     }

@@ -272,6 +272,10 @@ static int tupleOmission(bool hasNext) {
     int next;
     if (hasNext) {
         next = (int)AS_NUMBER(pop());
+
+        // if () {
+
+        // }
     }
     int first = (int)AS_NUMBER(pop());
 
@@ -285,10 +289,13 @@ static int tupleOmission(bool hasNext) {
         }
     }
 
-    int arity = abs(first - last) + 1;
-    if (hasNext) arity = (int)round((double)arity / (double)gap);
+    int arity = abs(first - last);
+    if (hasNext) {
+        arity = (int)floorl((double)arity / (double)gap);
+    } 
+    arity++;
+    
     ObjTuple* tuple = newTuple(arity);
-
     int i = 0;
     if (last > first) {
         int i = 0;
@@ -631,8 +638,7 @@ static InterpretResult run() {
                     runtimeError("(Internal) Expected omission parameter");
                     return INTERPRET_RUNTIME_ERROR;
                 }
-                bool hasNext = AS_BOOL(pop());
-                int status = setOmission(hasNext);
+                int status = setOmission(AS_BOOL(pop()));
                 if (status != INTERPRET_OK) return status;
                 break;
             }
@@ -695,8 +701,7 @@ static InterpretResult run() {
                     runtimeError("(Internal) Expected omission parameter");
                     return INTERPRET_RUNTIME_ERROR;
                 }
-                bool hasNext = AS_BOOL(pop());
-                int status = tupleOmission(hasNext);
+                int status = tupleOmission(AS_BOOL(pop()));
                 if (status != INTERPRET_OK) return status;
                 break;
             }

@@ -51,22 +51,6 @@ struct Obj {
     struct Obj* next;
 };
 
-/**
- * @brief Efficient object header.
- * 
- * Replaces old header which had:
- * ObjType type, bool isMarked, struct Obj* next
- * 
- * New structure:
- * 8 bits - type enum, 8 bits for isMarked and
- * 48 bits for the next object pointer.
- * 
- * 
- */
-struct sObj {
-    uint64_t header;
-};
-
 // --- Object Types --- 
 
 typedef struct {

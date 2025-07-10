@@ -15,6 +15,8 @@ typedef struct {
     Token previous;
     bool hadError;
     bool panicMode;
+
+    Table stringConstants;
 } Parser;
 
 /**
@@ -346,7 +348,16 @@ static ParseRule* getRule(TokenType type);
 static void parsePrecedence(Precedence precendence, bool ignoreNewlines);
 
 static uint8_t identifierConstant(Token* name) {
-    return makeConstant(OBJ_VAL(copyString(name->start, name->length)));
+    // See if identifier is in the table
+    ObjString* string = copyString(name->start, name->length);
+    Value indexVal;
+    if (tableGet(&parser.stringConstants, string, &indexVal)) {
+        return (uint8_t)AS_NUMBER(indexVal);
+    }
+
+    uint8_t index = makeConstant(OBJ_VAL(string));
+    tableSet(&parser.stringConstants, string, NUMBER_VAL((double)index));
+    return index;
 }
 
 static bool identifiersEqual(Token* a, Token* b) {
@@ -1106,7 +1117,7 @@ ObjFunction* compile(const unsigned char* source) {
 
     parser.hadError = false;
     parser.panicMode = false;
-
+    initTable(&parser.stringConstants);
     advance();
     
     // Consume statements
@@ -1118,6 +1129,7 @@ ObjFunction* compile(const unsigned char* source) {
     }
 
     ObjFunction* function = endCompiler();
+    freeTable(&parser.stringConstants);
     return parser.hadError ? NULL : function;
 }
 

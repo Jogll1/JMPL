@@ -17,6 +17,15 @@
 
 #define UINT8_COUNT (UINT8_MAX + 1)
 
+#ifndef COMPUTED_GOTO
+  #ifdef _MSC_VER
+    // No computed gotos in Visual Studio.
+    #define COMPUTED_GOTO 0
+  #else
+    #define COMPUTED_GOTO 1
+  #endif
+#endif
+
 // ANSI Colours
 
 #define ANSI_RESET "\033[0m"

@@ -388,41 +388,71 @@ static InterpretResult run() {
     } while (false)
 // ---
 
-    while(true) {
+// --- Debug ---
 #ifdef DEBUG_TRACE_EXECUTION
-        printf("          ");
-        for(Value* slot = vm.stack; slot < vm.stackTop; slot++) {
-            printf("[ ");
-            printValue(*slot);
-            printf(" ]");
-        }
-        printf("\n");
-        
-        disassembleInstruction(&frame->closure->function->chunk, (int)(frame->ip - frame->closure->function->chunk.code));
+#define TRACE_EXECUTION() \
+    do { \
+        printf("          "); \
+        for (Value* slot = vm.stack; slot < vm.stackTop; slot++) { \
+            printf("[ "); \
+            printValue(*slot); \
+            printf(" ]"); \
+        } \
+        printf("\n"); \
+        disassembleInstruction(&frame->closure->function->chunk, (int)(frame->ip - frame->closure->function->chunk.code)); \
+    } while (false)
+#else
+#define TRACE_EXECUTION() do {} while (false)
 #endif
+// ------
 
-        uint8_t instruction;
-        switch(instruction = READ_BYTE()) {
-            case OP_CONSTANT: {
-                Value constant = READ_CONSTANT();
-                push(constant);
-                break;
+// --- Computed Gotos ---
+#if COMPUTED_GOTO
+    static void* dispatchTable[] = {
+        #define OPCODE(op) &&code_##op,
+        #include "opcodes.h"
+        #undef OPCODE
+    };
+
+#define INTERPRET_LOOP DISPATCH();
+#define CASE_CODE(name) code_##name
+#define DISPATCH() \
+    do { \
+        TRACE_EXECUTION(); \
+        goto *dispatchTable[instruction = (OpCode)READ_BYTE()]; \
+    } while (false)
+#else
+#define INTERPRET_LOOP \
+    loop: \
+        TRACE_EXECUTION(); \
+        switch(instruction = (OpCode)READ_BYTE())
+#define CASE_CODE(name) case OP_##name
+#define DISPATCH()      goto loop
+#endif 
+// ------
+
+    while(true) {
+        OpCode instruction;
+        INTERPRET_LOOP {
+            CASE_CODE(CONSTANT): {
+                push(READ_CONSTANT());
+                DISPATCH();
             }
-            case OP_NULL: push(NULL_VAL); break;
-            case OP_TRUE: push(BOOL_VAL(true)); break;
-            case OP_FALSE: push(BOOL_VAL(false)); break;
-            case OP_POP: pop(); break;
-            case OP_GET_LOCAL: {
+            CASE_CODE(NULL): push(NULL_VAL); DISPATCH();
+            CASE_CODE(TRUE): push(BOOL_VAL(true)); DISPATCH();
+            CASE_CODE(FALSE): push(BOOL_VAL(false)); DISPATCH();
+            CASE_CODE(POP): pop(); DISPATCH();
+            CASE_CODE(GET_LOCAL): {
                 uint8_t slot = READ_BYTE();
                 push(frame->slots[slot]);
-                break;
+                DISPATCH();
             }
-            case OP_SET_LOCAL: {
+            CASE_CODE(SET_LOCAL): {
                 uint8_t slot = READ_BYTE();
                 frame->slots[slot] = peek(0);
-                break;
+                DISPATCH();
             }
-            case OP_GET_GLOBAL: {
+            CASE_CODE(GET_GLOBAL): {
                 ObjString* name = READ_STRING();
                 Value value;
                 if (!tableGet(&vm.globals, name, &value)) {
@@ -430,34 +460,34 @@ static InterpretResult run() {
                     return INTERPRET_RUNTIME_ERROR;
                 }
                 push(value);
-                break;
+                DISPATCH();
             }
-            case OP_DEFINE_GLOBAL: {
+            CASE_CODE(DEFINE_GLOBAL): {
                 ObjString* name = READ_STRING();
                 tableSet(&vm.globals, name, peek(0));
                 pop();
-                break;
+                DISPATCH();
             }
-            case OP_SET_GLOBAL: {
+            CASE_CODE(SET_GLOBAL): {
                 ObjString* name = READ_STRING();
                 if (tableSet(&vm.globals, name, peek(0))) {
                     tableDelete(&vm.globals, name);
                     runtimeError("Undefined variable '%s'", name->chars);
                     return INTERPRET_RUNTIME_ERROR;
                 }
-                break;
+                DISPATCH();
             }
-            case OP_GET_UPVALUE: {
+            CASE_CODE(GET_UPVALUE): {
                 uint8_t slot = READ_BYTE();
                 push(*frame->closure->upvalues[slot]->location);
-                break;
+                DISPATCH();
             }
-            case OP_SET_UPVALUE: {
+            CASE_CODE(SET_UPVALUE): {
                 uint8_t slot = READ_BYTE();
                 *frame->closure->upvalues[slot]->location = peek(0);
-                break;
+                DISPATCH();
             }
-            case OP_EQUAL: {
+            CASE_CODE(EQUAL): {
                 Value b = pop();
                 Value a = pop();
                 
@@ -468,19 +498,19 @@ static InterpretResult run() {
                     push(BOOL_VAL(valuesEqual(a, b)));
                 }
 
-                break;
+                DISPATCH();
             }
-            case OP_NOT_EQUAL: {
+            CASE_CODE(NOT_EQUAL): {
                 Value b = pop();
                 Value a = pop();
                 push(BOOL_VAL(!valuesEqual(a, b)));
-                break;
+                DISPATCH();
             }
-            case OP_GREATER: BINARY_OP(BOOL_VAL, >); break;
-            case OP_GREATER_EQUAL: BINARY_OP(BOOL_VAL, >=); break;
-            case OP_LESS: BINARY_OP(BOOL_VAL, <); break;
-            case OP_LESS_EQUAL: BINARY_OP(BOOL_VAL, <=); break;
-            case OP_ADD: {
+            CASE_CODE(GREATER): BINARY_OP(BOOL_VAL, >); DISPATCH();
+            CASE_CODE(GREATER_EQUAL): BINARY_OP(BOOL_VAL, >=); DISPATCH();
+            CASE_CODE(LESS): BINARY_OP(BOOL_VAL, <); DISPATCH();
+            CASE_CODE(LESS_EQUAL): BINARY_OP(BOOL_VAL, <=); DISPATCH();
+            CASE_CODE(ADD): {
                 if (IS_STRING(peek(0)) || IS_STRING(peek(1))) {
                     // Concatenate if at least one operand is a string
                     concatenate();
@@ -493,11 +523,11 @@ static InterpretResult run() {
                     runtimeError("Invalid operand type(s)");
                     return INTERPRET_RUNTIME_ERROR;
                 }
-                break;
+                DISPATCH();
             }
-            case OP_SUBTRACT: BINARY_OP(NUMBER_VAL, -); break;
-            case OP_MULTIPLY: BINARY_OP(NUMBER_VAL, *); break;
-            case OP_MOD: {
+            CASE_CODE(SUBTRACT): BINARY_OP(NUMBER_VAL, -); DISPATCH();
+            CASE_CODE(MULTIPLY): BINARY_OP(NUMBER_VAL, *); DISPATCH();
+            CASE_CODE(MOD): {
                 if (!IS_INTEGER(peek(0)) || !IS_INTEGER(peek(1))) {
                     runtimeError("Operands must be integers");
                     return INTERPRET_RUNTIME_ERROR;
@@ -510,9 +540,9 @@ static InterpretResult run() {
                 int b = AS_NUMBER(pop());
                 int a = AS_NUMBER(pop());
                 push(NUMBER_VAL(a % b));
-                break;
+                DISPATCH();
             }
-            case OP_DIVIDE: {
+            CASE_CODE(DIVIDE): {
                 if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
                     runtimeError("Operands must be numbers");
                     return INTERPRET_RUNTIME_ERROR;
@@ -524,9 +554,9 @@ static InterpretResult run() {
                 double b = AS_NUMBER(pop());
                 double a = AS_NUMBER(pop());
                 push(NUMBER_VAL(a / b));
-                break;
+                DISPATCH();
             }
-            case OP_EXPONENT: {
+            CASE_CODE(EXPONENT): {
                 if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
                     runtimeError("Operands must be numbers");
                     return INTERPRET_RUNTIME_ERROR;
@@ -534,49 +564,49 @@ static InterpretResult run() {
                 double b = AS_NUMBER(pop());
                 double a = AS_NUMBER(pop());
                 push(NUMBER_VAL(pow(a, b)));
-                break;
+                DISPATCH();
             }
-            case OP_NOT: {   
+            CASE_CODE(NOT): {   
                 push(BOOL_VAL(isFalse(pop()))); 
-                break;
+                DISPATCH();
             }
-            case OP_NEGATE: {
+            CASE_CODE(NEGATE): {
                 if (!IS_NUMBER(peek(0))) {
                     runtimeError("Operand must be a number");
                     return INTERPRET_RUNTIME_ERROR;
                 }
                 push(NUMBER_VAL(-AS_NUMBER(pop())));
-                break;
+                DISPATCH();
             }
-            case OP_OUT: {
+            CASE_CODE(OUT): {
                 printValue(pop());
                 printf("\n");
-                break;
+                DISPATCH();
             }
-            case OP_JUMP: {
+            CASE_CODE(JUMP): {
                 uint16_t offset = READ_SHORT();
                 frame->ip += offset;
-                break;
+                DISPATCH();
             }
-            case OP_JUMP_IF_FALSE: {
+            CASE_CODE(JUMP_IF_FALSE): {
                 uint16_t offset = READ_SHORT();
                 if (isFalse(peek(0))) frame->ip += offset;
-                break;
+                DISPATCH();
             }
-            case OP_LOOP: {
+            CASE_CODE(LOOP): {
                 uint16_t offset = READ_SHORT();
                 frame->ip -= offset;
-                break;
+                DISPATCH();
             }
-            case OP_CALL: {
+            CASE_CODE(CALL): {
                 int argCount = READ_BYTE();
                 if (!callValue(peek(argCount), argCount)) {
                     return INTERPRET_RUNTIME_ERROR;
                 }
                 frame = &vm.frames[vm.frameCount - 1];
-                break;
+                DISPATCH();
             }
-            case OP_CLOSURE: {
+            CASE_CODE(CLOSURE): {
                 ObjFunction* function = AS_FUNCTION(READ_CONSTANT());
                 ObjClosure* closure = newClosure(function);
                 push(OBJ_VAL(closure));
@@ -589,14 +619,14 @@ static InterpretResult run() {
                         closure->upvalues[i] = frame->closure->upvalues[index];
                     }
                 }
-                break;
+                DISPATCH();
             }
-            case OP_CLOSE_UPVALUE: {
+            CASE_CODE(CLOSE_UPVALUE): {
                 closeUpvalues(vm.stackTop - 1);
                 pop();
-                break;
+                DISPATCH();
             }
-            case OP_RETURN: {
+            CASE_CODE(RETURN): {
                 Value result = pop();
                 closeUpvalues(frame->slots);
                 vm.frameCount--;
@@ -608,22 +638,22 @@ static InterpretResult run() {
                 vm.stackTop = frame->slots;
                 push(result);
                 frame = &vm.frames[vm.frameCount - 1];
-                break;
+                DISPATCH();
             }
-            case OP_SET_CREATE: {
+            CASE_CODE(SET_CREATE): {
                 ObjSet* set = newSet();
                 push(OBJ_VAL(set));
-                break;
+                DISPATCH();
             }
-            case OP_SET_INSERT: {
+            CASE_CODE(SET_INSERT): {
                 Value value = pop();
                 Value setVal = pop();
                 ObjSet* set = AS_SET(setVal);
                 setInsert(set, value);
                 push(setVal);
-                break;
+                DISPATCH();
             }
-            case OP_SET_INSERT_2: {
+            CASE_CODE(SET_INSERT_2): {
                 Value valueA = pop();
                 Value valueB = pop();
                 Value setVal = pop();
@@ -631,18 +661,18 @@ static InterpretResult run() {
                 setInsert(set, valueB);
                 setInsert(set, valueA);
                 push(setVal);
-                break;
+                DISPATCH();
             }
-            case OP_SET_OMISSION: {
+            CASE_CODE(SET_OMISSION): {
                 if (!IS_BOOL(peek(0))) {
                     runtimeError("(Internal) Expected omission parameter");
                     return INTERPRET_RUNTIME_ERROR;
                 }
                 int status = setOmission(AS_BOOL(pop()));
                 if (status != INTERPRET_OK) return status;
-                break;
+                DISPATCH();
             }
-            case OP_SET_IN: {
+            CASE_CODE(SET_IN): {
                 if (!IS_SET(peek(0))) {
                     runtimeError("Right hand operand must be a set");
                     return INTERPRET_RUNTIME_ERROR;
@@ -650,62 +680,62 @@ static InterpretResult run() {
                 ObjSet* set = AS_SET(pop());
                 Value value = pop();
                 push(BOOL_VAL(setContains(set, value)));
-                break;
+                DISPATCH();
             }
-            case OP_SET_INTERSECT: SET_OP(OBJ_VAL, setIntersect); break;
-            case OP_SET_UNION: SET_OP(OBJ_VAL, setUnion); break;
-            case OP_SET_DIFFERENCE: SET_OP(OBJ_VAL, setDifference); break;
-            case OP_SUBSET: SET_OP(BOOL_VAL, isProperSubset); break;
-            case OP_SUBSETEQ: SET_OP(BOOL_VAL, isSubset); break;
-            case OP_SIZE: {
+            CASE_CODE(SET_INTERSECT): SET_OP(OBJ_VAL, setIntersect); DISPATCH();
+            CASE_CODE(SET_UNION): SET_OP(OBJ_VAL, setUnion); DISPATCH();
+            CASE_CODE(SET_DIFFERENCE): SET_OP(OBJ_VAL, setDifference); DISPATCH();
+            CASE_CODE(SUBSET): SET_OP(BOOL_VAL, isProperSubset); DISPATCH();
+            CASE_CODE(SUBSETEQ): SET_OP(BOOL_VAL, isSubset); DISPATCH();
+            CASE_CODE(SIZE): {
                 Value value = pop();
                 switch (value.type) {
                     case VAL_NUMBER:
                         push(NUMBER_VAL(fabs(AS_NUMBER(value))));
-                        break;
+                        DISPATCH();
                     case VAL_OBJ:
                         switch (AS_OBJ(value)->type) {
                             case OBJ_STRING:
                                 push(NUMBER_VAL(AS_STRING(value)->length));
-                                break;
+                                DISPATCH();
                             case OBJ_SET:
                                 push(NUMBER_VAL(AS_SET(value)->elements.count));
-                                break;
+                                DISPATCH();
                             case OBJ_TUPLE:
                                 push(NUMBER_VAL(AS_TUPLE(value)->arity));
-                                break;
+                                DISPATCH();
                             default:
                                 runtimeError("Invalid operand type");
-                                break;
+                                DISPATCH();
                         }
-                        break;
+                        DISPATCH();
                     case VAL_NULL:
                     case VAL_BOOL:
                         runtimeError("Invalid operand type");
-                        break;
-                    default: break;
+                        DISPATCH();
+                    default: DISPATCH();
                 }
-                break;
+                DISPATCH();
             }
-            case OP_CREATE_TUPLE: {
+            CASE_CODE(CREATE_TUPLE): {
                 int arity = READ_BYTE();
                 ObjTuple* tuple = newTuple(arity);
                 for (int i = arity - 1; i >= 0; i--) {
                     tuple->elements[i] = pop();
                 }
                 push(OBJ_VAL(tuple));
-                break;
+                DISPATCH();
             }
-            case OP_TUPLE_OMISSION: {
+            CASE_CODE(TUPLE_OMISSION): {
                 if (!IS_BOOL(peek(0))) {
                     runtimeError("(Internal) Expected omission parameter");
                     return INTERPRET_RUNTIME_ERROR;
                 }
                 int status = tupleOmission(AS_BOOL(pop()));
                 if (status != INTERPRET_OK) return status;
-                break;
+                DISPATCH();
             }
-            case OP_SUBSCRIPT: {
+            CASE_CODE(SUBSCRIPT): {
                 if (!IS_INTEGER(peek(0))) {
                     runtimeError("Tuple index must be an integer");
                     return INTERPRET_RUNTIME_ERROR;
@@ -717,9 +747,9 @@ static InterpretResult run() {
                     return INTERPRET_RUNTIME_ERROR;
                 }
                 push(tuple->elements[index]);
-                break;
+                DISPATCH();
             }
-            case OP_START_FOR: {
+            CASE_CODE(START_FOR): {
                 if (!IS_SET(peek(0))) {
                     runtimeError("(Internal) For loop must iterate over a set");
                     return INTERPRET_RUNTIME_ERROR;
@@ -727,9 +757,9 @@ static InterpretResult run() {
                 ObjSet* set = AS_SET(pop());
                 ObjSetIterator* iterator = newSetIterator(set);
                 push(OBJ_VAL(iterator));
-                break;
+                DISPATCH();
             }
-            case OP_FOR_NEXT: {
+            CASE_CODE(FOR_NEXT): {
                 if (!IS_SET_ITERATOR(peek(0))) {
                     runtimeError("(Internal) Missing iterator");
                     return INTERPRET_RUNTIME_ERROR;
@@ -739,7 +769,7 @@ static InterpretResult run() {
                 bool hasCurrentVal = iterateSetIterator(iterator, &value);
                 if (hasCurrentVal) push(value);
                 push(BOOL_VAL(hasCurrentVal));
-                break;
+                DISPATCH();
             }
         }
     }

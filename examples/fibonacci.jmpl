@@ -1,5 +1,5 @@
 func fib(n) = if n < 2 then n else fib(n - 2) + fib(n - 1)
 
 let start = clock()
-out "Fib(33) = " + fib(33)
+out "Fib(34) = " + fib(34)
 out "Time: " + (clock() - start)

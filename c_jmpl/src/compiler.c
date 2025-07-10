@@ -226,6 +226,11 @@ static void emitBytes(uint8_t byte1, uint8_t byte2) {
     emitByte(byte2);
 }
 
+static void emitOpShort(uint8_t byte, uint16_t u16) {
+    emitByte(byte);
+    emitBytes((uint8_t)(u16 >> 8), (uint8_t)(u16 & 0xFF)); // Split the u16 into two bytes
+}
+
 static void emitLoop(int loopStart) {
     emitByte(OP_LOOP);
 
@@ -255,19 +260,23 @@ static void emitReturn() {
     emitByte(OP_RETURN);
 }
 
-static uint8_t makeConstant(Value value) {
-    int constant = addConstant(currentChunk(), value);
+static uint16_t makeConstant(Value value) {
+    int constant = findConstant(currentChunk(), value);
+    if (constant == -1) {
+        constant = addConstant(currentChunk(), value);
+    }
 
-    if (constant > UINT8_MAX) {
+    if (constant > UINT16_MAX) {
         error("(Internal) Too many constants in one chunk");
         return 0;
     }
 
-    return (uint8_t)constant;
+    return (uint16_t)constant;
 }
 
 static void emitConstant(Value value) {
-    emitBytes(OP_CONSTANT, makeConstant(value));
+    // emitBytes(OP_CONSTANT, makeConstant(value));
+    emitOpShort(OP_CONSTANT, makeConstant(value));
 }
 
 static void patchJump(int offset) {
@@ -314,7 +323,6 @@ static ObjFunction* endCompiler() {
 #endif
 
     current = current->enclosing;
-    
     return function;
 }
 
@@ -342,7 +350,7 @@ static void declaration();
 static ParseRule* getRule(TokenType type);
 static void parsePrecedence(Precedence precendence, bool ignoreNewlines);
 
-static uint8_t identifierConstant(Token* name) {
+static uint16_t identifierConstant(Token* name) {
     return makeConstant(OBJ_VAL(copyString(name->start, name->length)));
 }
 
@@ -445,7 +453,7 @@ static void declareVariable() {
  * 
  * Note: local variables live on the stack so are accessed via a stack index
  */
-static uint8_t parseVariable(const unsigned char* errorMessage) {
+static uint16_t parseVariable(const unsigned char* errorMessage) {
     consume(TOKEN_IDENTIFIER, errorMessage);
 
     declareVariable();
@@ -459,13 +467,13 @@ static void markInitialised() {
     current->locals[current->localCount - 1].depth = current->scopeDepth;
 }
 
-static void defineVariable(uint8_t global) {
+static void defineVariable(uint16_t global) {
     if (current->scopeDepth > 0) {
         markInitialised();
         return;
     }
 
-    emitBytes(OP_DEFINE_GLOBAL, global);
+    emitOpShort(OP_DEFINE_GLOBAL, global);
 }
 
 static uint8_t argumentList() {
@@ -565,7 +573,11 @@ static void tuple() {
                 int count = 2;
                 do {
                     expression(true);
-                    count++;
+                    if (count < UINT8_MAX) {
+                        count++;
+                    } else {
+                        error("(Internal) Can't have more than 255 elements in a tuple literal");
+                    }
                 } while (match(TOKEN_COMMA));
 
                 emitBytes(OP_CREATE_TUPLE, count);
@@ -689,9 +701,9 @@ static void namedVariable(Token name, bool canAssign) {
     if (canAssign && match(TOKEN_ASSIGN)) {
         // Assign to variable if found ':='
         expression(false);
-        emitBytes(setOp, (uint8_t)arg);
+        emitOpShort(setOp, (uint16_t)arg);
     } else {
-        emitBytes(getOp, (uint8_t)arg);
+        emitOpShort(getOp, (uint16_t)arg);
     }
 }
 
@@ -719,7 +731,7 @@ static void unary(bool canAssign) {
         case TOKEN_PLUS:    break;
         case TOKEN_HASHTAG: emitByte(OP_SIZE);   break;
         default: return;
-    }
+    } 
 }
 
 ParseRule rules[] = {
@@ -862,7 +874,7 @@ static void function(FunctionType type) {
                 errorAtCurrent("Can't have more than 255 parameters");
             }
 
-            uint8_t constant = parseVariable("Expected parameter name");
+            uint16_t constant = parseVariable("Expected parameter name");
             defineVariable(constant);
         } while (match(TOKEN_COMMA));
     }
@@ -875,7 +887,7 @@ static void function(FunctionType type) {
     statement(true, false);
 
     ObjFunction* function = endCompiler();
-    emitBytes(OP_CLOSURE, makeConstant(OBJ_VAL(function)));
+    emitOpShort(OP_CLOSURE, makeConstant(OBJ_VAL(function)));
 
     for (int i = 0; i < function->upvalueCount; i++) {
         emitByte(compiler.upvalues[i].isLocal ? 1 : 0);
@@ -884,14 +896,14 @@ static void function(FunctionType type) {
 }
 
 static void functionDeclaration() {
-    uint8_t global = parseVariable("Expected function name");
+    uint16_t global = parseVariable("Expected function name");
     markInitialised();
     function(TYPE_FUNCTION);
     defineVariable(global);
 }
 
 static void letDeclaration() {
-    uint8_t global = parseVariable("Expected variable name");
+    uint16_t global = parseVariable("Expected variable name");
 
     if (match(TOKEN_EQUAL)) {
         // Declare a variable with an expression as its initial value

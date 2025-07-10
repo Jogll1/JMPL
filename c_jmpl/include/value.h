@@ -74,12 +74,14 @@ typedef struct {
     Value* values;
 } ValueArray;
 
-bool valuesEqual(Value a, Value b);
 void initValueArray(ValueArray* array);
 void writeValueArray(ValueArray* array, Value value);
 void freeValueArray(ValueArray* array);
-void printValue(Value value);
+int findInValueArray(ValueArray* array, Value value);
+
+bool valuesEqual(Value a, Value b);
 
 ObjString* valueToString(Value value);
+void printValue(Value value);
 
 #endif

@@ -31,6 +31,34 @@ void freeValueArray(ValueArray* array) {
     initValueArray(array);
 }
 
+int findInValueArray(ValueArray* array, Value value) {
+    for (int i = 0; i < array->count; i++) {
+        if (valuesEqual(value, array->values[i])) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+bool valuesEqual(Value a, Value b) {
+    if(a.type != b.type) return false;
+
+    switch(a.type) {
+        case VAL_BOOL:   return AS_BOOL(a) == AS_BOOL(b);
+        case VAL_NULL:   return true;
+        case VAL_NUMBER: return AS_NUMBER(a) == AS_NUMBER(b);
+        case VAL_OBJ:    
+            switch(AS_OBJ(a)->type) {
+                case OBJ_SET:   return setsEqual(AS_SET(a), AS_SET(b));
+                case OBJ_TUPLE: return tuplesEqual(AS_TUPLE(a), AS_TUPLE(b));
+                default:        return AS_OBJ(a) == AS_OBJ(b);
+            }
+
+        default: return false;
+    }
+}
+
 /**
  * @brief Converts a value to an ObjString.
  * 
@@ -107,23 +135,5 @@ void printValue(Value value) {
         case VAL_NUMBER: printf("%g", AS_NUMBER(value)); break;
         case VAL_OBJ:    printObject(value); break;
         default: return;
-    }
-}
-
-bool valuesEqual(Value a, Value b) {
-    if(a.type != b.type) return false;
-
-    switch(a.type) {
-        case VAL_BOOL:   return AS_BOOL(a) == AS_BOOL(b);
-        case VAL_NULL:   return true;
-        case VAL_NUMBER: return AS_NUMBER(a) == AS_NUMBER(b);
-        case VAL_OBJ:    
-            switch(AS_OBJ(a)->type) {
-                case OBJ_SET:   return setsEqual(AS_SET(a), AS_SET(b));
-                case OBJ_TUPLE: return tuplesEqual(AS_TUPLE(a), AS_TUPLE(b));
-                default:        return AS_OBJ(a) == AS_OBJ(b);
-            }
-
-        default: return false;
     }
 }

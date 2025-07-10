@@ -100,3 +100,7 @@ int getLine(Chunk* chunk, int instruction) {
         }
     }
 }
+
+int findConstant(Chunk* chunk, Value value) {
+    return findInValueArray(&chunk->constants, value);
+}

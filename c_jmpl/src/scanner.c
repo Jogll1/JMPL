@@ -236,6 +236,7 @@ static TokenType identifierType() {
                     case 'u': return checkKeyword(2, 2, "nc", TOKEN_FUNCTION);
                 }
             }
+            break;
         case 'i': 
             if(scanner.current - scanner.start > 1) {
                 switch(scanner.start[1]) {
@@ -249,6 +250,7 @@ static TokenType identifierType() {
                         return checkKeyword(2, 0, "", TOKEN_IN);
                 }
             }
+            break;
         case 'l': return checkKeyword(1, 2, "et", TOKEN_LET);
         case 'm': return checkKeyword(1, 2, "od", TOKEN_MOD);
         case 'n': 
@@ -258,6 +260,7 @@ static TokenType identifierType() {
                     case 'u': return checkKeyword(2, 2, "ll", TOKEN_NULL);
                 }
             }
+            break;
         case 'o': 
             if(scanner.current - scanner.start > 1) {
                 switch(scanner.start[1]) {
@@ -265,6 +268,7 @@ static TokenType identifierType() {
                     case 'r': return checkKeyword(2, 0, "", TOKEN_OR);
                 }
             }
+            break;
         case 'r': return checkKeyword(1, 5, "eturn", TOKEN_RETURN);
         case 's':
             if(scanner.current - scanner.start > 1) {
@@ -272,6 +276,7 @@ static TokenType identifierType() {
                 else if (isKeyword(1, 5, "ubset", TOKEN_SUBSET)) return TOKEN_SUBSET;
                 else return TOKEN_IDENTIFIER;
             }
+            break;
         case 't': 
             if(scanner.current - scanner.start > 1) {
                 switch(scanner.start[1]) {
@@ -279,6 +284,7 @@ static TokenType identifierType() {
                     case 'r': return checkKeyword(2, 2, "ue", TOKEN_TRUE);
                 }
             }
+            break;
         case 'u': return checkKeyword(1, 4, "nion", TOKEN_UNION);
         case 'w': return checkKeyword(1, 4, "hile", TOKEN_WHILE);
     }

@@ -15,8 +15,6 @@ typedef struct {
     Token previous;
     bool hadError;
     bool panicMode;
-
-    Table stringConstants;
 } Parser;
 
 /**
@@ -124,7 +122,6 @@ static void errorAt(Token* token, const unsigned char* message) {
     if(parser.panicMode) return;
     parser.panicMode = true;
     
-    // TODO: error types such as syntax error, software error, etc
     fprintf(stderr, "[line %d] " ANSI_RED "Error" ANSI_RESET, token->line);
 
     if(token->type == TOKEN_EOF) {
@@ -190,8 +187,6 @@ static void consume(TokenType type, const unsigned char* message) {
 
 /**
  * @brief Skip zero or more newlines.
- * 
- * @param skipBlocks Flag to skip indents and dedents too
  */
 static void skipNewlines() {
     while (parser.current.type == TOKEN_NEWLINE) {
@@ -235,7 +230,7 @@ static void emitLoop(int loopStart) {
     emitByte(OP_LOOP);
 
     int offset = currentChunk()->count - loopStart + 2;
-    if (offset > UINT16_MAX) error("Loop body too large");
+    if (offset > UINT16_MAX) error("(Internal) Loop body too large");
 
     emitByte((offset >> 8) & 0xFF);
     emitByte(offset & 0xFF);
@@ -264,7 +259,7 @@ static uint8_t makeConstant(Value value) {
     int constant = addConstant(currentChunk(), value);
 
     if (constant > UINT8_MAX) {
-        error("Too many constants in one chunk");
+        error("(Internal) Too many constants in one chunk");
         return 0;
     }
 
@@ -280,7 +275,7 @@ static void patchJump(int offset) {
     int jump = currentChunk()->count - offset - 2;
 
     if (jump > UINT16_MAX) {
-        error("Too much code to jump over");
+        error("(Internal) Too much code to jump over");
     }
 
     currentChunk()->code[offset] = (jump >> 8) & 0xFF;
@@ -348,16 +343,7 @@ static ParseRule* getRule(TokenType type);
 static void parsePrecedence(Precedence precendence, bool ignoreNewlines);
 
 static uint8_t identifierConstant(Token* name) {
-    // See if identifier is in the table
-    ObjString* string = copyString(name->start, name->length);
-    Value indexVal;
-    if (tableGet(&parser.stringConstants, string, &indexVal)) {
-        return (uint8_t)AS_NUMBER(indexVal);
-    }
-
-    uint8_t index = makeConstant(OBJ_VAL(string));
-    tableSet(&parser.stringConstants, string, NUMBER_VAL((double)index));
-    return index;
+    return makeConstant(OBJ_VAL(copyString(name->start, name->length)));
 }
 
 static bool identifiersEqual(Token* a, Token* b) {
@@ -392,7 +378,7 @@ static int addUpvalue(Compiler* compiler, uint8_t index, bool isLocal) {
     }
 
     if (upvalueCount == UINT8_COUNT) {
-        error("Too many closure variables in function");
+        error("(Internal) Too many closure variables in function");
         return 0;
     }
 
@@ -421,7 +407,7 @@ static int resolveUpvalue(Compiler* compiler, Token* name) {
 
 static void addLocal(Token name) {
     if (current->localCount == UINT8_COUNT) {
-        error("Too many local variables in current scope");
+        error("(Internal) Too many local variables in current scope");
         return;
     }
 
@@ -490,7 +476,7 @@ static uint8_t argumentList() {
             expression(true);
 
             if(argCount == 255) {
-                error("Can't have more than 255 arguments");
+                error("(Internal) Can't have more than 255 arguments");
             }
             argCount++;
         } while (match(TOKEN_COMMA));
@@ -1117,7 +1103,7 @@ ObjFunction* compile(const unsigned char* source) {
 
     parser.hadError = false;
     parser.panicMode = false;
-    initTable(&parser.stringConstants);
+
     advance();
     
     // Consume statements
@@ -1129,7 +1115,6 @@ ObjFunction* compile(const unsigned char* source) {
     }
 
     ObjFunction* function = endCompiler();
-    freeTable(&parser.stringConstants);
     return parser.hadError ? NULL : function;
 }
 

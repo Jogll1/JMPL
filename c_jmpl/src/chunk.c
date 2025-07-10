@@ -52,12 +52,13 @@ void writeChunk(Chunk* chunk, uint8_t byte, int line) {
     chunk->code[chunk->count] = byte;
     chunk->count++;
 
-    // If we're still on the same line
+    // RLE the line numbers
+    // See if we're still on the same line
     if (chunk->lineCount > 0 && chunk->lines[chunk->lineCount - 1].line == line) {
         return;
     }
 
-    // Append a new LineStart - compression
+    // Append a new LineStart
     if (chunk->lineCapacity < chunk->lineCount + 1) {
         int oldCapacity = chunk->lineCapacity;
         chunk->lineCapacity = GROW_CAPACITY(oldCapacity);
@@ -86,6 +87,7 @@ int getLine(Chunk* chunk, int instruction) {
     int start = 0;
     int end = chunk->lineCount - 1;
 
+    // Binary search LineStarts - assumes sorted line info
     while (true) {
         int mid = (start + end) / 2;
         LineStart* line = &chunk->lines[mid];

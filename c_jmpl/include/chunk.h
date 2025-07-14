@@ -53,7 +53,7 @@ typedef enum {
     OP_CREATE_TUPLE,
     OP_TUPLE_OMISSION,
     OP_SUBSCRIPT,
-    OP_START_FOR,
+    OP_CREATE_ITERATOR,
     OP_FOR_NEXT
 } OpCode;
 

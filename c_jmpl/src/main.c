@@ -7,7 +7,7 @@
 #include "debug.h"
 #include "vm.h"
 
-#define CURRENT_VERSION "0.2.0"
+#define CURRENT_VERSION "0.2.1"
 
 static void repl() {
     char line[1024];

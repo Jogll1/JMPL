@@ -719,7 +719,7 @@ static InterpretResult run() {
                 push(tuple->elements[index]);
                 break;
             }
-            case OP_START_FOR: {
+            case OP_CREATE_ITERATOR: {
                 if (!IS_SET(peek(0))) {
                     runtimeError("(Internal) For loop must iterate over a set");
                     return INTERPRET_RUNTIME_ERROR;

@@ -47,8 +47,11 @@
     - `in` or `∈` - returns true if a value is a member of a set
 - Cardinality operator `#` - returns the size of any measurable value (sets, tuples, and numbers)
 - `for ... in` loop notation to iterate through elements of a set without order
+- Omission operation to form sets and tuples 
+    - uses format {first, next ... last} where next is optional and all values are integers
 ### Changed
 - `¬=` (not equal operator) to be `/=`
+- Max constants in a code chunk changed from 255 to 65535
 ### Fixed
 - Casting numbers to string no longer creates a memory leak
 - Indentation bugs

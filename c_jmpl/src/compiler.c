@@ -11,6 +11,8 @@
 #include "debug.h"
 
 typedef struct {
+    Scanner scanner;
+
     Token current;
     Token previous;
     bool hadError;
@@ -151,7 +153,7 @@ static void advance() {
     parser.previous = parser.current;
     
     while (true) {
-        parser.current = scanToken();
+        parser.current = scanToken(&parser.scanner);
 #ifdef DEBUG_PRINT_TOKENS
         // Debug tokens
         printf("%s", getTokenName(parser.current.type));
@@ -476,6 +478,56 @@ static void defineVariable(uint16_t global) {
     emitOpShort(OP_DEFINE_GLOBAL, global);
 }
 
+static Token syntheticToken(const char* text) {
+  Token token;
+  token.start = text;
+  token.length = (int)strlen(text);
+  return token;
+}
+
+/**
+ * @brief Parse a generator in the form 'x in Set'.
+ * 
+ * @return The slot of the generator
+ * 
+ * Pushes: a local variable and a null value initialiser
+ */
+static uint8_t parseGenerator() {
+    // Parse the local variable that will be the generator
+    uint8_t localVarSlot = current->localCount;
+    parseVariable("Expected identifier");
+    emitByte(OP_NULL); // Set it to null initially
+    defineVariable(localVarSlot);
+
+    consume(TOKEN_IN, "Expected 'in' or '∈' after identifier");
+
+    // Push the set (to create an iterator)
+    expression(false);
+
+    return localVarSlot;
+}
+
+/**
+ * @brief Create a set iterator.
+ * 
+ * @return The slot of the iterator
+ * 
+ * Assumes a set has been pushed to the top of the stack.
+ */
+static uint8_t createSetIterator() {
+    emitByte(OP_CREATE_ITERATOR);
+
+    // Store iterator in a local slot
+    uint8_t iteratorSlot = current->localCount;
+    addLocal(syntheticToken("@iter"));
+    markInitialised();
+
+    // Assign iterator (on top) to new slot
+    emitBytes(OP_SET_LOCAL, iteratorSlot);
+
+    return iteratorSlot;
+}
+
 static uint8_t argumentList() {
     uint8_t argCount = 0;
     if (!check(TOKEN_RIGHT_PAREN)) {
@@ -603,6 +655,68 @@ static void grouping(bool canAssign) {
 }
 
 /**
+ * @brief Parse a set builder.
+ * 
+ * @return Whether we are in a set-builder
+ */
+static bool setBuilder() {
+    // Assume open left brace
+    Parser initialParser = parser;
+    int braceDepth = 1; // Currently in an open brace
+
+    // Find the pipe (to show we are in a set builder)
+    while (parser.current.type != TOKEN_PIPE && parser.current.type != TOKEN_EOF && braceDepth != 0) {
+        if (parser.current.type == TOKEN_LEFT_BRACE) braceDepth++;
+        if (parser.current.type == TOKEN_RIGHT_BRACE) braceDepth--;
+
+        advance();
+    }
+
+    if (parser.current.type != TOKEN_PIPE) {
+        parser = initialParser;
+        return false;
+    }
+
+    advance(); // Advance the pipe
+    beginScope();
+
+    // NOTE: At this point of this functions calling
+    // we should've have skipped the set expression
+
+    Parser afterPipeParser = parser;
+    parser = initialParser;
+    // Check there is a generator on the left side of the '|'
+    advance(); // Advance what should be an identifier
+    if (parser.current.type == TOKEN_IN) {
+        // There is a LHS generator, so parse generator
+        parser = initialParser;
+    } else {
+        // There isn't a LHS generator, so go back to afterPipeParser
+        parser = afterPipeParser;
+    }
+
+    // Parse after pipe
+
+    // printf("\n================\n");
+    // printf("Parser.previous: %s\nParser.current: %s\n", getTokenName(parser.previous.type), getTokenName(parser.current.type));
+    // printf("Scanner: ");
+    // fprintfRawString(stderr, parser.scanner.start, (int)(parser.scanner.current - parser.scanner.start));
+    // printf("\n");
+    // printf("================\n");
+
+    return true;
+}
+
+/**
+ * @brief Check if we are in set-builder notation.
+ * 
+ * @return If the current syntax is in set-builder notation
+ */
+static bool isSetBuilder() {
+
+}
+
+/**
  * @brief Parses a set.
  * 
  * Can parse sets in format: {x, y, z},
@@ -613,6 +727,9 @@ static void set(bool canAssign) {
     emitByte(OP_SET_CREATE);
 
     if (!check(TOKEN_RIGHT_BRACE)) {
+        // Check if its a set builder
+        if (setBuilder()) return;
+        
         expression(true);
 
         if (check(TOKEN_ELLIPSIS)) {
@@ -645,6 +762,7 @@ static void set(bool canAssign) {
             }
         }
     }
+    
     consume(TOKEN_RIGHT_BRACE, "Expected '}' after set literal");
 }
 // ----------------------
@@ -716,13 +834,6 @@ static void namedVariable(Token name, bool canAssign) {
 
 static void variable(bool canAssign) {
     namedVariable(parser.previous, canAssign);
-}
-
-static Token syntheticToken(const char* text) {
-  Token token;
-  token.start = text;
-  token.length = (int)strlen(text);
-  return token;
 }
 
 static void unary(bool canAssign) {
@@ -988,24 +1099,10 @@ static void forStatement() {
     beginScope();
 
     // Parse the local variable that will be the generator
-    uint8_t loopVarSlot = current->localCount;
-    parseVariable("Expected identifier");
-    emitByte(OP_NULL); // Set it to null initially
-    defineVariable(loopVarSlot);
+    uint8_t loopVarSlot = parseGenerator();
 
-    consume(TOKEN_IN, "Expected 'in' or '∈' after identifier");
-
-    // Push the set and a create a set iterator from it (with start for)
-    expression(false);
-    emitByte(OP_START_FOR); // Push an iterator to the top of the stack
-
-    // Store iterator in a local slot
-    uint8_t iteratorSlot = current->localCount;
-    addLocal(syntheticToken("@iter"));
-    markInitialised();
-
-    // Assign iterator (on top) to new slot
-    emitBytes(OP_SET_LOCAL, iteratorSlot);
+    // Create an iterator for the loopVar
+    uint8_t iteratorSlot = createSetIterator();
 
     // --- Start loop ---
     int loopStart = currentChunk()->count;
@@ -1116,7 +1213,7 @@ static void statement(bool blockAllowed, bool ignoreSeparator) {
 }
 
 ObjFunction* compile(const unsigned char* source) {
-    initScanner(source);
+    initScanner(&parser.scanner, source);
     Compiler compiler;
     initCompiler(&compiler, TYPE_SCRIPT);
 
@@ -1124,7 +1221,7 @@ ObjFunction* compile(const unsigned char* source) {
     parser.panicMode = false;
 
     advance();
-    
+
     // Consume statements
     while(!match(TOKEN_EOF)) {
         // Ignore lines that are just newlines or semicolons 

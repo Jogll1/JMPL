@@ -4,47 +4,19 @@
 #include "common.h"
 #include "scanner.h"
 
-#define MAX_INDENT_SIZE 16
-#define TOKEN_QUEUE_SIZE 16
+void initScanner(Scanner* scanner, const unsigned char* source) {
+    scanner->start = source;
+    scanner->current = source;
 
-// --- Scanner and TokenQueue ---
-
-// Circular queue for pending tokens
-typedef struct {
-    Token tokens[TOKEN_QUEUE_SIZE];
-    int head;
-    int tail;
-} TokenQueue;
-
-typedef struct {
-    const unsigned char* start;
-    const unsigned char* current;
-
-    int indentStack[MAX_INDENT_SIZE];
-    int* indentTop;
+    scanner->indentStack[0] = 0; // Base indent level
+    scanner->indentTop = scanner->indentStack; // Top of indent stack
     
-    TokenQueue tokenQueue;
+    scanner->tokenQueue.head = 0;
+    scanner->tokenQueue.tail = 0;
 
-    int groupingDepth;
+    scanner->groupingDepth = 0; // Shouldn't create indent tokens when in a grouping
 
-    int line;
-} Scanner;
-
-Scanner scanner;
-
-void initScanner(const unsigned char* source) {
-    scanner.start = source;
-    scanner.current = source;
-
-    scanner.indentStack[0] = 0; // Base indent level
-    scanner.indentTop = scanner.indentStack; // Top of indent stack
-    
-    scanner.tokenQueue.head = 0;
-    scanner.tokenQueue.tail = 0;
-
-    scanner.groupingDepth = 0; // Shouldn't create indent tokens when in a grouping
-
-    scanner.line = 1;
+    scanner->line = 1;
 }
 
 bool isTokenQueueEmpty(TokenQueue* queue) {
@@ -54,8 +26,6 @@ bool isTokenQueueEmpty(TokenQueue* queue) {
 bool isTokenQueueFull(TokenQueue* queue) {
     return (queue->tail + 1) % TOKEN_QUEUE_SIZE == queue->head;
 }
-
-// ------
 
 /**
  * @brief Determine the length of a character in bytes that is encoded with UTF-8.
@@ -96,66 +66,66 @@ static bool isDigit(unsigned int c) {
     return c >= '0' && c <= '9';
 }
 
-static bool isAtEnd() {
-    return *scanner.current == '\0';
+static bool isAtEnd(Scanner* scanner) {
+    return *scanner->current == '\0';
 }
 
-static int advance() {
-    scanner.current++;
+static int advance(Scanner* scanner) {
+    scanner->current++;
 
     // Get the length of the character's byte sequence
-    int byteLength = getCharByteCount(scanner.current[-1]);
+    int byteLength = getCharByteCount(scanner->current[-1]);
 
     // Initialise c as current byte
-    int c = (int)scanner.current[-1];
+    int c = (int)scanner->current[-1];
     
     // Loop through the rest of the bytes if needed, increment current, and add to result
     for (int i = 0; i < byteLength - 1; i++)
     {
-        scanner.current++;
-        c = (c << 8) | (int)scanner.current[-1];
+        scanner->current++;
+        c = (c << 8) | (int)scanner->current[-1];
     }
 
     return c;
 }
 
-static char peek() {
-    return *scanner.current;
+static char peek(Scanner* scanner) {
+    return *scanner->current;
 }
 
-static char peekNext() {
-    if(isAtEnd()) return '\0';
-    return scanner.current[1];
+static char peekNext(Scanner* scanner) {
+    if(isAtEnd(scanner)) return '\0';
+    return scanner->current[1];
 }
 
-static bool match(unsigned char expected) {
-    if(isAtEnd()) return false;
-    if(*scanner.current != expected) return false;
+static bool match(Scanner* scanner, unsigned char expected) {
+    if(isAtEnd(scanner)) return false;
+    if(*scanner->current != expected) return false;
 
-    scanner.current++;
+    scanner->current++;
     return true;
 }
 
-static Token makeToken(TokenType type) {
+static Token makeToken(Scanner* scanner, TokenType type) {
     Token token;
     token.type = type;
-    token.start = scanner.start;
-    token.length = (int)(scanner.current - scanner.start);
-    token.line = scanner.line;
+    token.start = scanner->start;
+    token.length = (int)(scanner->current - scanner->start);
+    token.line = scanner->line;
     return token;
 }
 
-static Token errorToken(const unsigned char* message) {
+static Token errorToken(Scanner* scanner, const unsigned char* message) {
     Token token;
     token.type = TOKEN_ERROR;
     token.start = message;
     token.length = (int)strlen(message);
-    token.line = scanner.line;
+    token.line = scanner->line;
     return token;
 }
 
-bool enqueueToken(Token token) {
-    TokenQueue* queue = &scanner.tokenQueue;
+bool enqueueToken(Scanner* scanner, Token token) {
+    TokenQueue* queue = &scanner->tokenQueue;
 
     if (isTokenQueueFull(queue)) return false;
 
@@ -164,41 +134,41 @@ bool enqueueToken(Token token) {
     return true;
 }
 
-Token dequeueToken() {
-    TokenQueue* queue = &scanner.tokenQueue;
+Token dequeueToken(Scanner* scanner) {
+    TokenQueue* queue = &scanner->tokenQueue;
 
-    if (isTokenQueueEmpty(queue)) return errorToken("Token queue empty");
+    if (isTokenQueueEmpty(queue)) return errorToken(scanner, "Token queue empty");
 
     Token token = queue->tokens[queue->head];
     queue->head = (queue->head + 1) % TOKEN_QUEUE_SIZE;
     return token;
 }
 
-static void skipWhitespace() {
+static void skipWhitespace(Scanner* scanner) {
     while (true) {
-        unsigned int c = peek();
+        unsigned int c = peek(scanner);
 
         switch(c) {
             case ' ':
             case '\r':
             case '\t':
-                advance();
+                advance(scanner);
                 break;
             case '/':
-                if (peekNext() == '/') {
+                if (peekNext(scanner) == '/') {
                     // If it is a comment, keep consuming until end of the line
-                    while (peek() != '\n' && !isAtEnd()) advance();
-                } else if (peekNext() =='*') {
-                    advance(); // Skip the '/'
-                    advance(); // Skip the '*'
+                    while (peek(scanner) != '\n' && !isAtEnd(scanner)) advance(scanner);
+                } else if (peekNext(scanner) =='*') {
+                    advance(scanner); // Skip the '/'
+                    advance(scanner); // Skip the '*'
                     // If it is a multi-line comment, keep consuming until closed off
-                    while (peek() != '*' && peekNext() != '/' && !isAtEnd()) {
+                    while (peek(scanner) != '*' && peekNext(scanner) != '/' && !isAtEnd(scanner)) {
                         // Increment line counter manually when scanning multi-line comments
-                        if(peek() == '\n') scanner.line++;
-                        advance();
+                        if(peek(scanner) == '\n') scanner->line++;
+                        advance(scanner);
                     }
-                    advance(); // Skip the '*'
-                    advance(); // Skip the '/'
+                    advance(scanner); // Skip the '*'
+                    advance(scanner); // Skip the '/'
                 } else {
                     return;
                 }
@@ -208,12 +178,12 @@ static void skipWhitespace() {
     }
 }
 
-static bool isKeyword(unsigned int start, int length, const unsigned char* rest, TokenType type) {
-    return scanner.current - scanner.start == start + length && memcmp(scanner.start + start, rest, length) == 0;
+static bool isKeyword(Scanner* scanner, unsigned int start, int length, const unsigned char* rest, TokenType type) {
+    return scanner->current - scanner->start == start + length && memcmp(scanner->start + start, rest, length) == 0;
 }
 
-static TokenType checkKeyword(unsigned int start, int length, const unsigned char* rest, TokenType type) {
-    if(isKeyword(start, length, rest, type)) {
+static TokenType checkKeyword(Scanner* scanner, unsigned int start, int length, const unsigned char* rest, TokenType type) {
+    if(isKeyword(scanner, start, length, rest, type)) {
         return type;
     }
 
@@ -223,105 +193,105 @@ static TokenType checkKeyword(unsigned int start, int length, const unsigned cha
 /**
  * @brief Switch identifier to possibly match it to a keyword.
  */
-static TokenType identifierType() {
-    switch(scanner.start[0]) {
-        case 'a': return checkKeyword(1, 2, "nd", TOKEN_AND);
-        case 'd': return checkKeyword(1, 1, "o", TOKEN_DO);
-        case 'e': return checkKeyword(1, 3, "lse", TOKEN_ELSE);
+static TokenType identifierType(Scanner* scanner) {
+    switch(scanner->start[0]) {
+        case 'a': return checkKeyword(scanner, 1, 2, "nd", TOKEN_AND);
+        case 'd': return checkKeyword(scanner, 1, 1, "o", TOKEN_DO);
+        case 'e': return checkKeyword(scanner, 1, 3, "lse", TOKEN_ELSE);
         case 'f': 
-            if(scanner.current - scanner.start > 1) {
-                switch(scanner.start[1]) {
-                    case 'a': return checkKeyword(2, 3, "lse", TOKEN_FALSE);
-                    case 'o': return checkKeyword(2, 1, "r", TOKEN_FOR);
-                    case 'u': return checkKeyword(2, 2, "nc", TOKEN_FUNCTION);
+            if(scanner->current - scanner->start > 1) {
+                switch(scanner->start[1]) {
+                    case 'a': return checkKeyword(scanner, 2, 3, "lse", TOKEN_FALSE);
+                    case 'o': return checkKeyword(scanner, 2, 1, "r", TOKEN_FOR);
+                    case 'u': return checkKeyword(scanner, 2, 2, "nc", TOKEN_FUNCTION);
                 }
             }
             break;
         case 'i': 
-            if(scanner.current - scanner.start > 1) {
-                switch(scanner.start[1]) {
-                    case 'f': return checkKeyword(2, 0, "", TOKEN_IF);
+            if(scanner->current - scanner->start > 1) {
+                switch(scanner->start[1]) {
+                    case 'f': return checkKeyword(scanner, 2, 0, "", TOKEN_IF);
                     case 'n': 
-                        if(scanner.current - scanner.start > 2) {
-                            switch(scanner.start[2]) {
-                                case 't': return checkKeyword(3, 6, "ersect", TOKEN_INTERSECT);
+                        if(scanner->current - scanner->start > 2) {
+                            switch(scanner->start[2]) {
+                                case 't': return checkKeyword(scanner, 3, 6, "ersect", TOKEN_INTERSECT);
                             }
                         }
-                        return checkKeyword(2, 0, "", TOKEN_IN);
+                        return checkKeyword(scanner, 2, 0, "", TOKEN_IN);
                 }
             }
             break;
-        case 'l': return checkKeyword(1, 2, "et", TOKEN_LET);
-        case 'm': return checkKeyword(1, 2, "od", TOKEN_MOD);
+        case 'l': return checkKeyword(scanner, 1, 2, "et", TOKEN_LET);
+        case 'm': return checkKeyword(scanner, 1, 2, "od", TOKEN_MOD);
         case 'n': 
-            if(scanner.current - scanner.start > 1) {
-                switch(scanner.start[1]) {
-                    case 'o': return checkKeyword(2, 1, "t", TOKEN_NOT);
-                    case 'u': return checkKeyword(2, 2, "ll", TOKEN_NULL);
+            if(scanner->current - scanner->start > 1) {
+                switch(scanner->start[1]) {
+                    case 'o': return checkKeyword(scanner, 2, 1, "t", TOKEN_NOT);
+                    case 'u': return checkKeyword(scanner, 2, 2, "ll", TOKEN_NULL);
                 }
             }
             break;
         case 'o': 
-            if(scanner.current - scanner.start > 1) {
-                switch(scanner.start[1]) {
-                    case 'u': return checkKeyword(2, 1, "t", TOKEN_OUT);
-                    case 'r': return checkKeyword(2, 0, "", TOKEN_OR);
+            if(scanner->current - scanner->start > 1) {
+                switch(scanner->start[1]) {
+                    case 'u': return checkKeyword(scanner, 2, 1, "t", TOKEN_OUT);
+                    case 'r': return checkKeyword(scanner, 2, 0, "", TOKEN_OR);
                 }
             }
             break;
-        case 'r': return checkKeyword(1, 5, "eturn", TOKEN_RETURN);
+        case 'r': return checkKeyword(scanner, 1, 5, "eturn", TOKEN_RETURN);
         case 's':
-            if(scanner.current - scanner.start > 1) {
-                if (isKeyword(1, 7, "ubseteq", TOKEN_SUBSETEQ)) return TOKEN_SUBSETEQ;
-                else if (isKeyword(1, 5, "ubset", TOKEN_SUBSET)) return TOKEN_SUBSET;
+            if(scanner->current - scanner->start > 1) {
+                if (isKeyword(scanner, 1, 7, "ubseteq", TOKEN_SUBSETEQ)) return TOKEN_SUBSETEQ;
+                else if (isKeyword(scanner, 1, 5, "ubset", TOKEN_SUBSET)) return TOKEN_SUBSET;
                 else return TOKEN_IDENTIFIER;
             }
             break;
         case 't': 
-            if(scanner.current - scanner.start > 1) {
-                switch(scanner.start[1]) {
-                    case 'h': return checkKeyword(2, 2, "en", TOKEN_THEN);
-                    case 'r': return checkKeyword(2, 2, "ue", TOKEN_TRUE);
+            if(scanner->current - scanner->start > 1) {
+                switch(scanner->start[1]) {
+                    case 'h': return checkKeyword(scanner, 2, 2, "en", TOKEN_THEN);
+                    case 'r': return checkKeyword(scanner, 2, 2, "ue", TOKEN_TRUE);
                 }
             }
             break;
-        case 'u': return checkKeyword(1, 4, "nion", TOKEN_UNION);
-        case 'w': return checkKeyword(1, 4, "hile", TOKEN_WHILE);
+        case 'u': return checkKeyword(scanner, 1, 4, "nion", TOKEN_UNION);
+        case 'w': return checkKeyword(scanner, 1, 4, "hile", TOKEN_WHILE);
     }
 
     return TOKEN_IDENTIFIER;
 }
 
-static Token identifier() {
-    while(isAlpha(peek()) || isDigit(peek())) advance();
+static Token identifier(Scanner* scanner) {
+    while(isAlpha(peek(scanner)) || isDigit(peek(scanner))) advance(scanner);
 
-    return makeToken(identifierType());
+    return makeToken(scanner, identifierType(scanner));
 }
 
-static Token number() {
-    while(isDigit(peek())) advance();
+static Token number(Scanner* scanner) {
+    while(isDigit(peek(scanner))) advance(scanner);
 
     // Look for fractional part
-    if(peek() == '.' && isDigit(peekNext())) {
+    if(peek(scanner) == '.' && isDigit(peekNext(scanner))) {
         // Consume the '.'
-        advance();
+        advance(scanner);
 
-        while(isDigit(peek())) advance();
+        while(isDigit(peek(scanner))) advance(scanner);
     }
 
-    return makeToken(TOKEN_NUMBER);
+    return makeToken(scanner, TOKEN_NUMBER);
 }
 
-static Token string() {
-    while(peek() != '"' && !isAtEnd()) {
-        if(peek() == '\n') scanner.line++;
-        advance();
+static Token string(Scanner* scanner) {
+    while(peek(scanner) != '"' && !isAtEnd(scanner)) {
+        if(peek(scanner) == '\n') scanner->line++;
+        advance(scanner);
     }
 
-    if(isAtEnd()) return errorToken("Unterminated string.");
+    if(isAtEnd(scanner)) return errorToken(scanner, "Unterminated string.");
 
-    advance(); // The closing quote
-    return makeToken(TOKEN_STRING);
+    advance(scanner); // The closing quote
+    return makeToken(scanner, TOKEN_STRING);
 }
 
 /**
@@ -329,41 +299,41 @@ static Token string() {
  * 
  * @return Whether the process completed. Returning false indicates the queue is full
  */
-static bool scanAfterNewline() {
+static bool scanAfterNewline(Scanner* scanner) {
     // Count spaces after line starts
     int currentIndent = 0;
-    while (peek() == ' ')
+    while (peek(scanner) == ' ')
     {
-        advance();
+        advance(scanner);
         currentIndent++;
     }
 
     // Skip completely empty lines
-    skipWhitespace();
-    if (peek() == '\n' || peek() == '\0') {
+    skipWhitespace(scanner);
+    if (peek(scanner) == '\n' || peek(scanner) == '\0') {
         return true;
     }
 
     // Queue relevant tokens
-    if (currentIndent > *scanner.indentTop) {
+    if (currentIndent > *scanner->indentTop) {
         // Indent - Push a new indent level
-        if (scanner.indentTop - scanner.indentStack >= MAX_INDENT_SIZE - 1) {
-            return enqueueToken(errorToken("Too many nested indents"));
+        if (scanner->indentTop - scanner->indentStack >= MAX_INDENT_SIZE - 1) {
+            return enqueueToken(scanner, errorToken(scanner, "Too many nested indents"));
         }
 
-        *(++scanner.indentTop) = currentIndent;
-        return enqueueToken(makeToken(TOKEN_INDENT));
+        *(++scanner->indentTop) = currentIndent;
+        return enqueueToken(scanner, makeToken(scanner, TOKEN_INDENT));
     } else {
         // Dedent - Push dedents until it reaches the current indent
-        while (scanner.indentTop > scanner.indentStack && currentIndent < *scanner.indentTop) {
-            scanner.indentTop--;
+        while (scanner->indentTop > scanner->indentStack && currentIndent < *scanner->indentTop) {
+            scanner->indentTop--;
 
             // Otherwise return a dedent token
-            if(!enqueueToken(makeToken(TOKEN_DEDENT))) return false;
+            if(!enqueueToken(scanner, makeToken(scanner, TOKEN_DEDENT))) return false;
         }
 
         // Error if top of indent stack does not match the current indent
-        if(*scanner.indentTop != currentIndent) enqueueToken(errorToken("Unexpected indent"));
+        if(*scanner->indentTop != currentIndent) enqueueToken(scanner, errorToken(scanner, "Unexpected indent"));
 
         // Return true as there has been no queue overflow
         return true;    
@@ -375,11 +345,11 @@ static bool scanAfterNewline() {
  * 
  * @return If there is room for all the dedent tokens
  */
-static bool flushDedents() {
-    while (scanner.indentTop > scanner.indentStack) {
-        scanner.indentTop--;
+static bool flushDedents(Scanner* scanner) {
+    while (scanner->indentTop > scanner->indentStack) {
+        scanner->indentTop--;
 
-        if (!enqueueToken(makeToken(TOKEN_DEDENT))) {
+        if (!enqueueToken(scanner, makeToken(scanner, TOKEN_DEDENT))) {
             return false;
         }   
     }
@@ -387,98 +357,98 @@ static bool flushDedents() {
     return true;
 }
 
-Token scanToken() {
+Token scanToken(Scanner* scanner) {
     // Return any queued tokens
-    if (!isTokenQueueEmpty(&scanner.tokenQueue)) return dequeueToken();
+    if (!isTokenQueueEmpty(&scanner->tokenQueue)) return dequeueToken(scanner);
 
-    skipWhitespace();
-    scanner.start = scanner.current;
+    skipWhitespace(scanner);
+    scanner->start = scanner->current;
 
-    if(isAtEnd()) {
+    if(isAtEnd(scanner)) {
         // If at end and there are unclosed indents, make dedents
-        if(!flushDedents()) return errorToken("Pending token queue full");
-        if (!isTokenQueueEmpty(&scanner.tokenQueue)) return dequeueToken();
+        if(!flushDedents(scanner)) return errorToken(scanner, "Pending token queue full");
+        if (!isTokenQueueEmpty(&scanner->tokenQueue)) return dequeueToken(scanner);
         
         // Otherwise return an EOF token
-        return makeToken(TOKEN_EOF);
+        return makeToken(scanner, TOKEN_EOF);
     }
 
     // Handle newlines
-    if (peek() == '\n') {
-        advance();
-        scanner.line++;
+    if (peek(scanner) == '\n') {
+        advance(scanner);
+        scanner->line++;
 
         // Only return a token if grouping depth is 0
-        if (scanner.groupingDepth == 0) {
+        if (scanner->groupingDepth == 0) {
             // Enqueue indent or dedent tokens if necessary and possible
-            if (!scanAfterNewline()) return errorToken("Pending token queue full");
+            if (!scanAfterNewline(scanner)) return errorToken(scanner, "Pending token queue full");
 
             // Enqueue a newline (if the token wasn't an indent) then return top of queue
-            enqueueToken(makeToken(TOKEN_NEWLINE));
+            enqueueToken(scanner, makeToken(scanner, TOKEN_NEWLINE));
             
-            return dequeueToken();
+            return dequeueToken(scanner);
         } else {
             // Re-skip whitespace if in a grouping
-            skipWhitespace();
+            skipWhitespace(scanner);
         }
     }
 
-    unsigned int c = advance();
+    unsigned int c = advance(scanner);
 
-    if(isAlpha(c)) return identifier();
-    if(isDigit(c)) return number();
+    if(isAlpha(c)) return identifier(scanner);
+    if(isDigit(c)) return number(scanner);
 
     switch(c) {
         // Switch single characters
-        case '(': scanner.groupingDepth++; return makeToken(TOKEN_LEFT_PAREN);
-        case ')': scanner.groupingDepth--; return makeToken(TOKEN_RIGHT_PAREN);
-        case '{': scanner.groupingDepth++; return makeToken(TOKEN_LEFT_BRACE);
-        case '}': scanner.groupingDepth--; return makeToken(TOKEN_RIGHT_BRACE);
-        case '[': scanner.groupingDepth++; return makeToken(TOKEN_LEFT_SQUARE);
-        case ']': scanner.groupingDepth--; return makeToken(TOKEN_RIGHT_SQUARE);
-        case ',': return makeToken(TOKEN_COMMA);
-        case '+': return makeToken(TOKEN_PLUS);
-        case '*': return makeToken(TOKEN_ASTERISK);
-        case '^': return makeToken(TOKEN_CARET);
-        case '%': return makeToken(TOKEN_MOD);
-        case ';': return makeToken(TOKEN_SEMICOLON);
-        case '|': return makeToken(TOKEN_PIPE);
-        case '\\': return makeToken(TOKEN_BACK_SLASH);
-        case 0xC2AC: return makeToken(TOKEN_NOT); // '¬' U+00AC, UTF-8: 0xC2AC
-        case 0xE28888: return makeToken(TOKEN_IN); // '∈' U+2208, UTF-8: 0xE28888
-        case 0xE288A7: return makeToken(TOKEN_AND); // '∧' U+2227, UTF-8: 0xE288A7
-        case 0xE288A8: return makeToken(TOKEN_OR); // '∨' U+2228, UTF-8: 0xE288A8
-        case 0xE288A9: return makeToken(TOKEN_INTERSECT); // '∩' U+2229, UTF-8: 0xE288A9
-        case 0xE288AA: return makeToken(TOKEN_UNION); // '∪' U+222A, UTF-8: 0xE288AA
-        case 0xE28A82: return makeToken(TOKEN_SUBSET); // '⊂' U+2282, UTF-8: 0xE28A82
-        case 0xE28A86: return makeToken(TOKEN_SUBSETEQ); // '⊆' U+2286, UTF-8: 0xE28A86
-        case '#': return makeToken(TOKEN_HASHTAG);
-        case 0xE289A0: return makeToken(TOKEN_NOT_EQUAL); // '≠' U+2260, UTF-8: 0xE289A0
-        case 0xE289A4: return makeToken(TOKEN_LESS_EQUAL); // '≤' U+2264, UTF-8: 0xE289A4
-        case 0xE289A5: return makeToken(TOKEN_GREATER_EQUAL); // '≥' U+2265, UTF-8: 0xE289A5
-        case 0xE28692: return makeToken(TOKEN_MAPS_TO); // '→' U+2192, UTF-8: 0xE28692
-        case 0xE28792: return makeToken(TOKEN_IMPLIES); // '⇒' U+21D2, UTF-8: 0xE28792
-        // case 0xE28891: return makeToken(TOKEN_SUMMATION); // '∑' U+2211, UTF-8: 0xE28891
+        case '(': scanner->groupingDepth++; return makeToken(scanner, TOKEN_LEFT_PAREN);
+        case ')': scanner->groupingDepth--; return makeToken(scanner, TOKEN_RIGHT_PAREN);
+        case '{': scanner->groupingDepth++; return makeToken(scanner, TOKEN_LEFT_BRACE);
+        case '}': scanner->groupingDepth--; return makeToken(scanner, TOKEN_RIGHT_BRACE);
+        case '[': scanner->groupingDepth++; return makeToken(scanner, TOKEN_LEFT_SQUARE);
+        case ']': scanner->groupingDepth--; return makeToken(scanner, TOKEN_RIGHT_SQUARE);
+        case ',': return makeToken(scanner, TOKEN_COMMA);
+        case '+': return makeToken(scanner, TOKEN_PLUS);
+        case '*': return makeToken(scanner, TOKEN_ASTERISK);
+        case '^': return makeToken(scanner, TOKEN_CARET);
+        case '%': return makeToken(scanner, TOKEN_MOD);
+        case ';': return makeToken(scanner, TOKEN_SEMICOLON);
+        case '|': return makeToken(scanner, TOKEN_PIPE);
+        case '\\': return makeToken(scanner, TOKEN_BACK_SLASH);
+        case 0xC2AC: return makeToken(scanner, TOKEN_NOT); // '¬' U+00AC, UTF-8: 0xC2AC
+        case 0xE28888: return makeToken(scanner, TOKEN_IN); // '∈' U+2208, UTF-8: 0xE28888
+        case 0xE288A7: return makeToken(scanner, TOKEN_AND); // '∧' U+2227, UTF-8: 0xE288A7
+        case 0xE288A8: return makeToken(scanner, TOKEN_OR); // '∨' U+2228, UTF-8: 0xE288A8
+        case 0xE288A9: return makeToken(scanner, TOKEN_INTERSECT); // '∩' U+2229, UTF-8: 0xE288A9
+        case 0xE288AA: return makeToken(scanner, TOKEN_UNION); // '∪' U+222A, UTF-8: 0xE288AA
+        case 0xE28A82: return makeToken(scanner, TOKEN_SUBSET); // '⊂' U+2282, UTF-8: 0xE28A82
+        case 0xE28A86: return makeToken(scanner, TOKEN_SUBSETEQ); // '⊆' U+2286, UTF-8: 0xE28A86
+        case '#': return makeToken(scanner, TOKEN_HASHTAG);
+        case 0xE289A0: return makeToken(scanner, TOKEN_NOT_EQUAL); // '≠' U+2260, UTF-8: 0xE289A0
+        case 0xE289A4: return makeToken(scanner, TOKEN_LESS_EQUAL); // '≤' U+2264, UTF-8: 0xE289A4
+        case 0xE289A5: return makeToken(scanner, TOKEN_GREATER_EQUAL); // '≥' U+2265, UTF-8: 0xE289A5
+        case 0xE28692: return makeToken(scanner, TOKEN_MAPS_TO); // '→' U+2192, UTF-8: 0xE28692
+        case 0xE28792: return makeToken(scanner, TOKEN_IMPLIES); // '⇒' U+21D2, UTF-8: 0xE28792
+        // case 0xE28891: return makeToken(scanner, TOKEN_SUMMATION); // '∑' U+2211, UTF-8: 0xE28891
         // Switch one or two character symbols
-        case '-': return makeToken(match('>') ? TOKEN_MAPS_TO : TOKEN_MINUS);
-        case ':': return makeToken(match('=') ? TOKEN_ASSIGN : TOKEN_COLON); 
-        case '=': return makeToken(match('=') ? TOKEN_EQUAL_EQUAL : TOKEN_EQUAL);
-        case '/': return makeToken(match('=') ? TOKEN_NOT_EQUAL : TOKEN_SLASH); 
-        case '>': return makeToken(match('=') ? TOKEN_GREATER_EQUAL : TOKEN_GREATER);
-        case '<': return makeToken(match('=') ? TOKEN_LESS_EQUAL : TOKEN_LESS);
+        case '-': return makeToken(scanner, match(scanner, '>') ? TOKEN_MAPS_TO : TOKEN_MINUS);
+        case ':': return makeToken(scanner, match(scanner, '=') ? TOKEN_ASSIGN : TOKEN_COLON); 
+        case '=': return makeToken(scanner, match(scanner, '=') ? TOKEN_EQUAL_EQUAL : TOKEN_EQUAL);
+        case '/': return makeToken(scanner, match(scanner, '=') ? TOKEN_NOT_EQUAL : TOKEN_SLASH); 
+        case '>': return makeToken(scanner, match(scanner, '=') ? TOKEN_GREATER_EQUAL : TOKEN_GREATER);
+        case '<': return makeToken(scanner, match(scanner, '=') ? TOKEN_LESS_EQUAL : TOKEN_LESS);
         // Switch three character symbols
         case '.':
-            if (match('.')) {
-                if (match('.')) {
-                    return makeToken(TOKEN_ELLIPSIS);
+            if (match(scanner, '.')) {
+                if (match(scanner, '.')) {
+                    return makeToken(scanner, TOKEN_ELLIPSIS);
                 } else {
                     break;
                 }
             }
-            return makeToken(TOKEN_DOT);
+            return makeToken(scanner, TOKEN_DOT);
         // Literals
-        case '"': return string();
+        case '"': return string(scanner);
     }
 
-    return errorToken("Unexpected character");
+    return errorToken(scanner, "Unexpected character");
 }

@@ -1,6 +1,9 @@
 #ifndef c_jmpl_scanner_h
 #define c_jmpl_scanner_h
 
+#define MAX_INDENT_SIZE 16
+#define TOKEN_QUEUE_SIZE 16
+
 typedef enum {
     // Single-character tokens - some can be represented by words
     TOKEN_LEFT_PAREN, TOKEN_RIGHT_PAREN,    // ( )
@@ -47,7 +50,26 @@ typedef struct {
     int line;
 } Token;
 
-void initScanner(const unsigned char* source);
-Token scanToken();
+// Circular queue for pending tokens
+typedef struct {
+    Token tokens[TOKEN_QUEUE_SIZE];
+    int head;
+    int tail;
+} TokenQueue;
+
+typedef struct {
+    const unsigned char* start;
+    const unsigned char* current;
+
+    int indentStack[MAX_INDENT_SIZE];
+    int* indentTop;
+    
+    TokenQueue tokenQueue;
+    int groupingDepth;
+    int line;
+} Scanner;
+
+void initScanner(Scanner* scanner, const unsigned char* source);
+Token scanToken(Scanner* scanner);
 
 #endif

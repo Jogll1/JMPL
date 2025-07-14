@@ -721,7 +721,7 @@ static InterpretResult run() {
             }
             case OP_CREATE_ITERATOR: {
                 if (!IS_SET(peek(0))) {
-                    runtimeError("(Internal) For loop must iterate over a set");
+                    runtimeError("Generator must iterate over a set");
                     return INTERPRET_RUNTIME_ERROR;
                 }
                 ObjSet* set = AS_SET(pop());
@@ -729,7 +729,7 @@ static InterpretResult run() {
                 push(OBJ_VAL(iterator));
                 break;
             }
-            case OP_FOR_NEXT: {
+            case OP_ITERATE: {
                 if (!IS_SET_ITERATOR(peek(0))) {
                     runtimeError("(Internal) Missing iterator");
                     return INTERPRET_RUNTIME_ERROR;

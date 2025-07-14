@@ -33,6 +33,10 @@ typedef struct {
     int currentIndex; // Index of the current set value
 } ObjSetIterator;
 
+// --- Set-builder ---
+
+// ------
+
 // --- Set ---
 ObjSet* newSet();
 

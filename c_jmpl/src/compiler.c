@@ -619,62 +619,6 @@ static void grouping(bool canAssign) {
 // =====================       Set builder notation        =================
 // =========================================================================
 /**
- * @brief Helper function to parse set-builder generators
- * 
- * @param hasLhsGenerator Whether we parse one LHS generator
- *                        or n RHS generators
- * @param generatorSlots  Pointer to generator slots
- * @param iteratorSlots   Pointer to iterator slots
- * @return                The number of generators
- */
-static int parseSetBuilderGenerators(bool hasLhsGenerator, uint8_t* generatorSlots, uint8_t* iteratorSlots) {
-    // int generatorCount = 0;
-
-    // if (hasLhsGenerator) {
-    //     generatorCount = 1;
-
-    //     generatorSlots = GROW_ARRAY(uint8_t, generatorSlots, 0, 1);
-    //     iteratorSlots = GROW_ARRAY(uint8_t, iteratorSlots, 0, 1);
-    //     generatorSlots[0] = parseGenerator();
-    //     iteratorSlots[0] = createSetIterator();
-
-    //     printf("\nParsed LHS generator\n");
-    // }
-
-    // // Parse RHS generator(s)
-    // Parser initialParser = parser;
-    // while (!check(TOKEN_RIGHT_BRACE) && check(TOKEN_COMMA)) {
-    //     Parser temp = parser;
-
-    //     // Check if it is a generator
-    //     // STORE IDENTIFIER AND SEE IF IT IS A LOCAL
-    //     advance(); // Advance what should be an identifier
-    //     if (match(TOKEN_IN)) {
-    //         parser = temp;
-
-    //         // Check the identifier is not already stored
-    //         if (resolveLocal(current, &parser.current) == -1) {
-    //             generatorSlots = GROW_ARRAY(uint8_t, generatorSlots, generatorCount, generatorCount + 1);
-    //             iteratorSlots = GROW_ARRAY(uint8_t, iteratorSlots, generatorCount, generatorCount + 1);
-    //             generatorSlots[generatorCount] = parseGenerator();
-    //             iteratorSlots[generatorCount] = createSetIterator();
-
-    //             generatorCount++;
-    //             printf("\nParsed a RHS generator\n");
-    //             continue;
-    //         }
-    //     }
-
-    //     // Advance remaining tokens until comma or right brace token
-    //     while (!check(TOKEN_COMMA) && !check(TOKEN_RIGHT_BRACE)) {
-    //         advance();
-    //     }
-    // } 
-
-    // return generatorCount;
-}
-
-/**
  * @brief Parse a set builder.
  * 
  * @return Whether we are in a set-builder
@@ -693,74 +637,106 @@ static bool setBuilder() {
         advance();
     }
 
-    if (parser.current.type != TOKEN_PIPE) {
+    if (!check(TOKEN_PIPE)) {
         parser = initialParser;
-        printf("\nFALSE\n");
         return false;
     }
-    
-    // printf("\n===START SB===\n");
-    // advance(); // Advance the pipe
-    // emitByte(OP_SET_BUILDER);
-    // beginScope();
 
-    // Parser afterPipeParser = parser;
-    // parser = initialParser;
-    // // Check there is a generator on the left side of the '|'
-    // advance(); // Advance what should be an identifier
+    beginScope();
 
-    // bool hasLhsGenerator = false;
-    // uint8_t* generatorSlots = NULL;
-    // uint8_t* iteratorSlots = NULL;
-    // int generatorCount = 0;    
+    // Store the opened set as a local
+    uint8_t setSlot = current->localCount;
+    addLocal(syntheticToken("@set"));
+    markInitialised();
+    // Assign set (on top) to new slot
+    emitBytes(OP_SET_LOCAL, setSlot);
 
-    // if (parser.current.type == TOKEN_IN) {
-    //     hasLhsGenerator = true;
-    //     // There is a LHS generator, so parse generator
-    //     parser = initialParser;
-    //     printf("\nHas LHS generator\n");
+    uint8_t* loopStarts = NULL;
+    uint8_t* exitJumps = NULL;
+    uint8_t* generatorSlots = NULL;
+    uint8_t* iteratorSlots = NULL;
+    int generatorCount = 0;
 
-    // } else {
-    //     // There isn't a LHS generator, so parse after pipe generators
-    //     parser = afterPipeParser;
-    // }
+    uint8_t* skipJumps = NULL;
+    int skipCount = 0;
 
-    // printf("Getting generators\n");
-    // generatorCount = parseSetBuilderGenerators(hasLhsGenerator, generatorSlots, iteratorSlots);
-    // if (generatorCount == 0) errorAtCurrent("Set-builder must have at least one generator");
+    consume(TOKEN_PIPE, "Expected '|' after expression");
 
-    // printf("\nGenerators: %d\n", generatorCount);
-    // errorAtCurrent("END TEST");
-    // // --- Start loop ---
-    // int loopStart = *currentChunk().count;
+    // Parse qualifiers: generators and filters
+    do {
+        if (check(TOKEN_RIGHT_BRACE)) break;
 
-    // // Load and iterate the iterators
-    // for (int i = 0; i < generatorCount; i++) {
-    //     emitBytes(OP_GET_LOCAL, iteratorSlots[i]);
-    //     emitByte(OP_ITERATE); // Should push next value + check if there is a current value
-    // }
+        // Check if its a generator 'x ∈'
+        Parser temp = parser;
+        if (match(TOKEN_IDENTIFIER) && match(TOKEN_IN)) {
+            parser = temp;
+            int newCount = generatorCount + 1;
 
-    // // If no current value -> jump to after-loop
-    // int exitJump = emitJump(OP_JUMP_IF_FALSE);
-    // emitByte(OP_POP); // Pop check
+            uint8_t generatorSlot = parseGenerator();
+            uint8_t iteratorSlot = createSetIterator();
 
-    // // If loop is fine, set iterative variables
-    // for (int i = 0; i < generatorCount; i++) {
-    //     emitBytes(OP_SET_LOCAL, generatorSlots[0]);
-    //     emitByte(OP_POP);
-    // }
+            generatorSlots = GROW_ARRAY(uint8_t, generatorSlots, generatorCount, newCount);
+            generatorSlots[generatorCount] = generatorSlot;
+            iteratorSlots = GROW_ARRAY(uint8_t, iteratorSlots, generatorCount, newCount);
+            iteratorSlots[generatorCount] = iteratorSlot;
 
-    // // Compile optional predicate
-    // if (!check(TOKEN_RIGHT_BRACE)) {
-    //     expression(false);
+            // Generate loop
+            int loopStart = currentChunk()->count;
+            emitBytes(OP_GET_LOCAL, iteratorSlot);
+            emitByte(OP_ITERATE);
 
-    //     // Go back to expression
-    // }
-    // // ------
+            int exitJump = emitJump(OP_JUMP_IF_FALSE);
+            emitByte(OP_POP); // Pop check
 
-    // endScope();
-    // consume(TOKEN_RIGHT_BRACE, "Expected '}' after set-builder");
+            emitBytes(OP_SET_LOCAL, generatorSlot);
+            emitByte(OP_POP);
 
+            loopStarts = GROW_ARRAY(uint8_t, loopStarts, generatorCount, newCount);
+            loopStarts[generatorCount] = loopStart;
+            exitJumps = GROW_ARRAY(uint8_t, exitJumps, generatorCount, newCount);
+            exitJumps[generatorCount] = exitJump;
+
+            generatorCount++;
+        } else {
+            parser = temp;
+
+            // Not a generator, so a predicate
+            expression(false);
+            int skipJump = emitJump(OP_JUMP_IF_FALSE);
+            emitByte(OP_POP);
+
+            skipJumps = GROW_ARRAY(uint8_t, skipJumps, skipCount, skipCount + 1);
+            skipJumps[skipCount] = skipJump;
+            skipCount++;
+        }
+    } while (match(TOKEN_COMMA));
+
+    Parser endParser = parser;
+    parser = initialParser;
+
+    // Load set and insert expression
+    emitBytes(OP_GET_LOCAL, setSlot);
+    expression(false);
+    emitByte(OP_SET_INSERT);
+
+    for (int i = skipCount - 1; i >= 0; i--) {
+        patchJump(skipJumps[i]);
+        emitByte(OP_POP);
+    }
+
+    // Patch jumps and emit loops
+    for (int i = generatorCount - 1; i >= 0; i--) {
+        emitLoop(loopStarts[i]);
+        patchJump(exitJumps[i]);
+        emitByte(OP_POP);
+    }
+
+    endScope();
+    parser = endParser;
+    consume(TOKEN_RIGHT_BRACE, "Expected '}' after set-builder");
+
+    // Push the completed set
+    emitBytes(OP_GET_LOCAL, setSlot);
     return true;
 }
 // =========================================================================

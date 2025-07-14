@@ -205,7 +205,6 @@ int disassembleInstruction(Chunk* chunk, int offset) {
         case OP_SUBSCRIPT:       return simpleInstruction("OP_SUBSCRIPT", offset);
         case OP_CREATE_ITERATOR: return simpleInstruction("OP_CREATE_ITERATOR", offset);
         case OP_ITERATE:         return simpleInstruction("OP_ITERATE", offset);
-        case OP_SET_BUILDER:     return simpleInstruction("OP_SET_BUILDER", offset);
         default:
             printf("Unknown opcode %d\n", instruction);
             return offset + 1;

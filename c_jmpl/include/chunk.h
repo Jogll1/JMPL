@@ -54,8 +54,7 @@ typedef enum {
     OP_TUPLE_OMISSION,
     OP_SUBSCRIPT,
     OP_CREATE_ITERATOR,
-    OP_ITERATE,
-    OP_SET_BUILDER
+    OP_ITERATE
 } OpCode;
 
 typedef struct {

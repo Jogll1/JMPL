@@ -677,10 +677,14 @@ static bool setBuilder() {
 
     beginScope();
 
-    // Store the opened set as a local
+    // SOMETHING IS WRONG.
+    // When set-builder is not first item after <script>, it ignores the top of the stack
+
+    // Store the opened set as a local (needs to be incremented first???)
     uint8_t setSlot = current->localCount;
     addLocal(syntheticToken("@set"));
     markInitialised();
+
     // Assign set (on top) to new slot
     emitBytes(OP_SET_LOCAL, setSlot);
 
@@ -1206,6 +1210,7 @@ static void forStatement() {
         statement(true, false);
     }
 
+    // emitByte(OP_POP); // Sketchy? - pops the iterative value?
     emitLoop(loopStart);
     // ------
 

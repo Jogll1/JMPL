@@ -34,6 +34,7 @@ typedef enum {
     OP_OUT,
     OP_JUMP,
     OP_JUMP_IF_FALSE,
+    OP_JUMP_IF_FALSE_2, // Pops condition if false
     OP_LOOP,
     OP_CALL,
     OP_CLOSURE,

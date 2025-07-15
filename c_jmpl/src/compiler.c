@@ -615,9 +615,42 @@ static void grouping(bool canAssign) {
     consume(TOKEN_RIGHT_PAREN, "Expected ')' after expression");
 }
 
-// =========================================================================
-// =====================       Set builder notation        =================
-// =========================================================================
+// ======================================================================
+// =================        Set builder notation        =================
+// ======================================================================
+
+static void growArray(uint8_t** array, size_t currentSize, uint8_t newVal) {
+    uint8_t* newArray = realloc(*array, (currentSize + 1) * sizeof(uint8_t));
+    if (newArray == NULL) {
+        exit(INTERNAL_SOFTWARE_ERROR);
+    }
+
+    newArray[currentSize] = newVal;
+    *array = newArray;
+}
+
+static void parseSetBuilderGenerator(int oldCount, uint8_t** generatorSlots, uint8_t** iteratorSlots, uint8_t** loopStarts, uint8_t** exitJumps) {
+    uint8_t generatorSlot = parseGenerator();
+    uint8_t iteratorSlot = createSetIterator();
+
+    growArray(generatorSlots, oldCount, generatorSlot);
+    growArray(iteratorSlots, oldCount, iteratorSlot);
+
+    // Generate loop
+    int loopStart = currentChunk()->count;
+    emitBytes(OP_GET_LOCAL, iteratorSlot);
+    emitByte(OP_ITERATE);
+
+    int exitJump = emitJump(OP_JUMP_IF_FALSE);
+    emitByte(OP_POP); // Pop check
+
+    emitBytes(OP_SET_LOCAL, generatorSlot);
+    emitByte(OP_POP);
+
+    growArray(loopStarts, oldCount, loopStart);
+    growArray(exitJumps, oldCount, exitJump);
+}
+
 /**
  * @brief Parse a set builder.
  * 
@@ -662,54 +695,46 @@ static bool setBuilder() {
 
     consume(TOKEN_PIPE, "Expected '|' after expression");
 
-    // Parse qualifiers: generators and filters
+    //=========================
+    // Check if expression is a generator
+    // Parser afterPipe = parser;
+    // parser = initialParser;
+    // bool hasLHSGenerator = false;
+    // if (match(TOKEN_IDENTIFIER) && match(TOKEN_IN)) {
+    //     printf("\nparsed in here\n");
+    //     parser = initialParser;
+    //     generatorCount = parseSetBuilderGenerator(generatorCount, &generatorSlots, &iteratorSlots, &loopStarts, &exitJumps);
+    //     hasLHSGenerator = true;
+    // }
+    // parser = afterPipe;
+    //=========================
+
+    // Parse other qualifiers (generators and filters)
     do {
         if (check(TOKEN_RIGHT_BRACE)) break;
 
-        // Check if its a generator 'x ∈'
         Parser temp = parser;
+        // Check if its a generator 'x ∈'
         if (match(TOKEN_IDENTIFIER) && match(TOKEN_IN)) {
             parser = temp;
-            int newCount = generatorCount + 1;
+            beginScope(); // Open subscope
 
-            uint8_t generatorSlot = parseGenerator();
-            uint8_t iteratorSlot = createSetIterator();
-
-            generatorSlots = GROW_ARRAY(uint8_t, generatorSlots, generatorCount, newCount);
-            generatorSlots[generatorCount] = generatorSlot;
-            iteratorSlots = GROW_ARRAY(uint8_t, iteratorSlots, generatorCount, newCount);
-            iteratorSlots[generatorCount] = iteratorSlot;
-
-            // Generate loop
-            int loopStart = currentChunk()->count;
-            emitBytes(OP_GET_LOCAL, iteratorSlot);
-            emitByte(OP_ITERATE);
-
-            int exitJump = emitJump(OP_JUMP_IF_FALSE);
-            emitByte(OP_POP); // Pop check
-
-            emitBytes(OP_SET_LOCAL, generatorSlot);
-            emitByte(OP_POP);
-
-            loopStarts = GROW_ARRAY(uint8_t, loopStarts, generatorCount, newCount);
-            loopStarts[generatorCount] = loopStart;
-            exitJumps = GROW_ARRAY(uint8_t, exitJumps, generatorCount, newCount);
-            exitJumps[generatorCount] = exitJump;
-
+            parseSetBuilderGenerator(generatorCount, &generatorSlots, & iteratorSlots, &loopStarts, &exitJumps);
             generatorCount++;
         } else {
             parser = temp;
 
             // Not a generator, so a predicate
             expression(false);
-            int skipJump = emitJump(OP_JUMP_IF_FALSE);
+            int skipJump = emitJump(OP_JUMP_IF_FALSE_2);
             emitByte(OP_POP);
 
-            skipJumps = GROW_ARRAY(uint8_t, skipJumps, skipCount, skipCount + 1);
-            skipJumps[skipCount] = skipJump;
+            growArray(&skipJumps, skipCount, skipJump);
             skipCount++;
         }
     } while (match(TOKEN_COMMA));
+
+    if (generatorCount == 0) errorAtCurrent("Set-builder must have at least one generator");
 
     Parser endParser = parser;
     parser = initialParser;
@@ -717,18 +742,28 @@ static bool setBuilder() {
     // Load set and insert expression
     emitBytes(OP_GET_LOCAL, setSlot);
     expression(false);
-    emitByte(OP_SET_INSERT);
 
-    for (int i = skipCount - 1; i >= 0; i--) {
-        patchJump(skipJumps[i]);
-        emitByte(OP_POP);
-    }
+    //=========================
+    // if (!hasLHSGenerator) {
+    //     expression(false);
+    // } else {
+    //     emitBytes(OP_GET_LOCAL, generatorSlots[0]); // BIT HACKY ??
+    // }
+    //=========================
+
+    emitByte(OP_SET_INSERT); // This seems to update without OP_SET_LOCAL - pointer fault?
+    emitByte(OP_POP);
 
     // Patch jumps and emit loops
+    for (int i = skipCount - 1; i >= 0; i--) {
+        patchJump(skipJumps[i]);
+    }
+
     for (int i = generatorCount - 1; i >= 0; i--) {
         emitLoop(loopStarts[i]);
         patchJump(exitJumps[i]);
         emitByte(OP_POP);
+        endScope(); // Close subscope
     }
 
     endScope();
@@ -737,11 +772,18 @@ static bool setBuilder() {
 
     // Push the completed set
     emitBytes(OP_GET_LOCAL, setSlot);
+
+    free(generatorSlots);
+    free(iteratorSlots);
+    free(loopStarts);
+    free(exitJumps);
+    free(skipJumps);
     return true;
 }
-// =========================================================================
-// =========================================================================
-// =========================================================================
+
+// ======================================================================
+// ======================================================================
+// ======================================================================
 
 /**
  * @brief Parses a set.
@@ -1151,20 +1193,20 @@ static void forStatement() {
         consume(TOKEN_DO, "Expected expression");
 
         // Skip statement if predicate is false
-        int skipJump = emitJump(OP_JUMP_IF_FALSE);
+        int skipJump = emitJump(OP_JUMP_IF_FALSE_2);
         emitByte(OP_POP); // Pop predicate
 
         statement(true, false);
 
         // Loop and patch
         patchJump(skipJump);
-        emitLoop(loopStart);
 
     } else {
         consume(TOKEN_DO, "Expected expression");
         statement(true, false);
-        emitLoop(loopStart);
     }
+
+    emitLoop(loopStart);
     // ------
 
     patchJump(exitJump);

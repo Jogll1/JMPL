@@ -13,18 +13,18 @@ The current version of the interpreter is c_jmpl v0.2.0.
 
 ### Build
 To build the interpreter, cd to the root of this repository and run the commands: \
-`cmake -S . -B ./build/c_jmpl` to set up CMake, and \
-`cmake --build ./build/c_jmpl` to build.
+`cmake -S . -B ./build` to set up CMake, and \
+`cmake --build ./build` to build.
 
 On Windows you may need to specify the generator: \
-`cmake -G "MinGW Makefiles" -S . -B .\build\c_jmpl`
+`cmake -G "MinGW Makefiles" -S . -B .\build`
 
 ### Run
 To run the interpreter, run the exe:
 - Windows:
-  `./build/c_jmpl/v0-2-0.exe path/to/file.jmpl`
+  `./build/v0-2-0.exe path/to/file.jmpl`
 - Linux/Mac:
-  `./build/c_jmpl/v0-2-0 path/to/file.jmpl`
+  `./build/v0-2-0 path/to/file.jmpl`
 
 Running the interpreter with no source file will start the in-terminal REPL.
 

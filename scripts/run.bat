@@ -1,4 +1,4 @@
 cls
-cmake --build .\build\c_jmpl
-@REM .\build\c_jmpl\v0-2-1.exe .\examples\features.jmpl
-.\build\c_jmpl\v0-2-1.exe .\test.jmpl
+cmake --build .\build
+@REM .\build\v0-2-1.exe .\examples\features.jmpl
+.\build\v0-2-1.exe .\test.jmpl

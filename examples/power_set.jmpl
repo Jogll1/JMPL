@@ -1,0 +1,13 @@
+func arb(S) = for x ∈ S do return x
+
+func power(S) = 
+    if S == {} then 
+        {{}}
+    else
+        let e = arb(S)
+        let T = S \ {e}
+        power(T) ∪ {t ∪ {e} | t ∈ power(T)}
+
+let S = {0, 1, 2, 3, 4}
+let pS = power(S)
+out pS + ", # = " + (#pS)

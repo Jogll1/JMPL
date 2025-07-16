@@ -446,11 +446,28 @@ static void defineVariable(uint16_t global) {
     emitOpShort(OP_DEFINE_GLOBAL, global);
 }
 
-static Token syntheticToken(const char* text) {
+static Token syntheticToken(const char* name) {
   Token token;
-  token.start = text;
-  token.length = (int)strlen(text);
+  token.start = name;
+  token.length = (int)strlen(name);
   return token;
+}
+
+/**
+ * @brief Create a synthetic local variables from top of stack for internal use.
+ * 
+ * @param code An opcode that pushes a value to the top of the stack
+ * @param name The name of the synthetic variable
+ */
+static uint8_t syntheticLocal(OpCode code, const char* name) {
+    emitByte(code);
+    
+    uint8_t varSlot = current->localCount;
+    addLocal(syntheticToken(name));
+    markInitialised();
+    emitBytes(OP_SET_LOCAL, varSlot);
+
+    return varSlot;
 }
 
 /**
@@ -494,27 +511,6 @@ static uint8_t parseGenerator() {
     return localVarSlot;
 }
 
-/**
- * @brief Create a set iterator.
- * 
- * @return The slot of the iterator
- * 
- * Assumes a set has been pushed to the top of the stack.
- */
-static uint8_t createSetIterator() {
-    emitByte(OP_CREATE_ITERATOR);
-
-    // Store iterator in a local slot
-    uint8_t iteratorSlot = current->localCount;
-    addLocal(syntheticToken("@iter"));
-    markInitialised();
-
-    // Assign iterator (on top) to new slot
-    emitBytes(OP_SET_LOCAL, iteratorSlot);
-
-    return iteratorSlot;
-}
-
 static uint8_t argumentList() {
     uint8_t argCount = 0;
     if (!check(TOKEN_RIGHT_PAREN)) {
@@ -534,35 +530,6 @@ static uint8_t argumentList() {
     consume(TOKEN_RIGHT_PAREN, "Expected ')' after arguments");
     return argCount;
 }
-
-/**
- * @brief Wrap a C function to execute as an anonymous function.
- * 
- * @param name     Name of the anonymous function
- * @param function A pointer to a function
- */
-// static void anonymousWrapper(const unsigned char* name, void (*functionPtr)()) {
-//     // Create a new compiler/function
-//     Compiler compiler;
-//     initCompiler(&compiler, TYPE_FUNCTION);
-//     current->function->name = copyString(name, strlen(name));
-//     current->implicitReturn = true;
-//     beginScope();
-
-//     // Call function
-//     functionPtr();
-
-//     // Complete the function and call instantly
-//     ObjFunction* function = endCompiler();
-//     emitOpShort(OP_CLOSURE, makeConstant(OBJ_VAL(function)));
-
-//     for (int i = 0; i < function->upvalueCount; i++) {
-//         emitByte(compiler.upvalues[i].isLocal ? 1 : 0);
-//         emitByte(compiler.upvalues[i].index);
-//     }
-
-//     emitBytes(OP_CALL, 0);
-// }
 
 static void binary(bool canAssign) {
     TokenType operatorType = parser.previous.type;
@@ -686,9 +653,9 @@ static void growArray(uint8_t** array, size_t currentSize, uint8_t newVal) {
 
 static bool parseSetBuilderGenerator(int oldCount, uint8_t** generatorSlots, uint8_t** iteratorSlots, uint8_t** loopStarts, uint8_t** exitJumps) {
     uint8_t generatorSlot = parseGenerator();
-    if (generatorSlot == 0) return false ;
+    if (generatorSlot == 0) return false;
 
-    uint8_t iteratorSlot = createSetIterator();
+    uint8_t iteratorSlot = syntheticLocal(OP_CREATE_ITERATOR, "@iter");
 
     growArray(generatorSlots, oldCount, generatorSlot);
     growArray(iteratorSlots, oldCount, iteratorSlot);
@@ -715,25 +682,7 @@ static bool parseSetBuilderGenerator(int oldCount, uint8_t** generatorSlots, uin
  * 
  * @return Whether we are in a set-builder
  */
-static bool setBuilder() {
-    // Assume open left brace
-    Parser initialParser = parser;
-    int braceDepth = 1; // Currently in an open brace
-
-    // Find the pipe (to show we are in a set builder)
-    while (parser.current.type != TOKEN_PIPE && parser.current.type != TOKEN_EOF) {
-        if (parser.current.type == TOKEN_LEFT_BRACE) braceDepth++;
-        if (parser.current.type == TOKEN_RIGHT_BRACE) braceDepth--;
-        if (braceDepth == 0) break;
-
-        advance();
-    }
-
-    if (!check(TOKEN_PIPE)) {
-        parser = initialParser;
-        return false;
-    }
-
+static bool setBuilder(Parser* initialParser) {
     // === Pretend this is a function ===
     Compiler compiler;
     initCompiler(&compiler, TYPE_FUNCTION);
@@ -743,13 +692,7 @@ static bool setBuilder() {
     // ================================== 
 
     // Store an opened set as a local
-    emitByte(OP_SET_CREATE);
-    uint8_t setSlot = current->localCount;
-    addLocal(syntheticToken("@set"));
-    markInitialised();
-
-    // Assign set (on top) to new slot
-    emitBytes(OP_SET_LOCAL, setSlot);
+    uint8_t setSlot = syntheticLocal(OP_SET_CREATE, "@set");
 
     uint8_t* loopStarts = NULL;
     uint8_t* exitJumps = NULL;
@@ -770,15 +713,12 @@ static bool setBuilder() {
         // Check if its a generator 'x ∈'
         if (match(TOKEN_IDENTIFIER) && match(TOKEN_IN)) {
             parser = temp;
-            // beginScope(); // Open subscope
-
             bool success = parseSetBuilderGenerator(generatorCount, &generatorSlots, & iteratorSlots, &loopStarts, &exitJumps);
             if (success) {
                 generatorCount++;
                 continue;
             } 
         }
-
         parser = temp;
 
         // Not a generator, so a predicate
@@ -793,7 +733,7 @@ static bool setBuilder() {
     if (generatorCount == 0) errorAtCurrent("Set-builder must have at least one generator");
 
     Parser endParser = parser;
-    parser = initialParser;
+    parser = *initialParser;
 
     // Load set and insert expression
     emitBytes(OP_GET_LOCAL, setSlot);
@@ -811,10 +751,7 @@ static bool setBuilder() {
         emitLoop(loopStarts[i]);
         patchJump(exitJumps[i]);
         emitByte(OP_POP);
-        // endScope(); // Close subscopes
     }
-
-    endScope();
     
     parser = endParser;
     consume(TOKEN_RIGHT_BRACE, "Expected '}' after set-builder");
@@ -839,6 +776,33 @@ static bool setBuilder() {
     free(loopStarts);
     free(exitJumps);
     free(skipJumps);
+}
+
+/**
+ * @brief Wrapper to setBuilder to call it only if a '|' is found.
+ *
+ * Assumes a left brace has been opened.
+ */
+static bool isSetBuilder() {
+    Parser initialParser = parser;
+    // Currently in an open brace, braceDepth should end at 1 or less in case of nested sets
+    int braceDepth = 1; 
+
+    // Find the pipe (to show we are in a set builder)
+    while (parser.current.type != TOKEN_PIPE && parser.current.type != TOKEN_EOF) {
+        if (parser.current.type == TOKEN_LEFT_BRACE) braceDepth++;
+        if (parser.current.type == TOKEN_RIGHT_BRACE) braceDepth--;
+        if (braceDepth == 0) break;
+
+        advance();
+    }
+
+    if (!check(TOKEN_PIPE)) {
+        parser = initialParser;
+        return false;
+    }
+
+    setBuilder(&initialParser);
 
     return true;
 }
@@ -857,7 +821,7 @@ static bool setBuilder() {
 static void set(bool canAssign) {
     if (!check(TOKEN_RIGHT_BRACE)) {
         // Check if its a set builder
-        // if (setBuilder()) return;
+        if (isSetBuilder()) return;
         
         emitByte(OP_SET_CREATE);
         expression(true);
@@ -951,6 +915,7 @@ static void namedVariable(Token name, bool canAssign) {
 
     if (canAssign && match(TOKEN_ASSIGN)) {
         expression(false);
+
         if (setOp == OP_SET_GLOBAL) {
             emitOpShort(setOp, (uint16_t)arg);
         } else {
@@ -1059,7 +1024,7 @@ static void parsePrecedence(Precedence precendence, bool ignoreNewlines) {
     // Get which function to call for the prefix as the first token of an expression is always a prefix (inc. numbers)
     ParseFn prefixRule = getRule(parser.previous.type)->prefix;
 
-    if(prefixRule == NULL) {
+    if (prefixRule == NULL) {
         error("Expected expression");
         return;
     }
@@ -1067,14 +1032,18 @@ static void parsePrecedence(Precedence precendence, bool ignoreNewlines) {
     // Call the prefix function
     bool canAssign = precendence <= PREC_ASSIGNMENT;
     prefixRule(canAssign);
-
+    
     while (precendence <= getRule(parser.current.type)->precedence) {
         advance();
 
         // Ignore newline tokens if the flag is set
         if (ignoreNewlines) skipNewlines();
-
         ParseFn infixRule = getRule(parser.previous.type)->infix;
+
+        if (infixRule == NULL) {
+            error("Invalid syntax");
+            return;
+        }
 
         // Call the function for the infix operation
         infixRule(canAssign);
@@ -1235,9 +1204,8 @@ static void forStatement() {
     uint8_t loopVarSlot = parseGenerator();
     if (loopVarSlot == 0) error("Variable with this identifier already defined in this scope");
     // Create an iterator for the loopVar
-    uint8_t iteratorSlot = createSetIterator();
+    uint8_t iteratorSlot = syntheticLocal(OP_CREATE_ITERATOR, "@iter");
 
-    // --- Start loop ---
     int loopStart = currentChunk()->count;
 
     // Load and iterate the iterator
@@ -1273,7 +1241,6 @@ static void forStatement() {
 
     // emitByte(OP_POP); // Sketchy? - pops the iterative value?
     emitLoop(loopStart);
-    // ------
 
     patchJump(exitJump);
     emitByte(OP_POP);

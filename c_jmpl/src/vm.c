@@ -563,7 +563,7 @@ static InterpretResult run() {
                 if (isFalse(peek(0))) frame->ip += offset;
                 break;
             }
-            case OP_JUMP_IF_FALSE_2: {
+            case OP_JUMP_IF_FALSE_2: { // Pops the condition always. Couldn't think of anything better
                 uint16_t offset = READ_SHORT();
                 if (isFalse(peek(0))) {
                     frame->ip += offset;
@@ -631,7 +631,7 @@ static InterpretResult run() {
                 push(setVal);
                 break;
             }
-            case OP_SET_INSERT_2: {
+            case OP_SET_INSERT_2: { // Inserts two values off the stack - not great and should probably be the same as OP_SET_INSERT
                 Value valueA = pop();
                 Value valueB = pop();
                 Value setVal = pop();
@@ -748,6 +748,10 @@ static InterpretResult run() {
                 if (hasCurrentVal) push(value);
                 push(BOOL_VAL(hasCurrentVal));
                 break;
+            }
+            default: {
+                runtimeError("(Internal) Invalid Opcode");
+                return INTERPRET_RUNTIME_ERROR;
             }
         }
     }

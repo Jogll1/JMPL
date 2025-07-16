@@ -675,12 +675,18 @@ static bool setBuilder() {
         return false;
     }
 
+    // === Pretend this is a function ===
+    emitByte(OP_POP); // Pop the opened set (HACK)
+
+    Compiler compiler;
+    initCompiler(&compiler, TYPE_FUNCTION);
+    current->function->name = copyString("@setb", 5);
+    current->implicitReturn = true;
     beginScope();
+    // ================================== 
 
-    // SOMETHING IS WRONG.
-    // When set-builder is not first item after <script>, it ignores the top of the stack
-
-    // Store the opened set as a local (needs to be incremented first???)
+    // Store an opened set as a local
+    emitByte(OP_SET_CREATE);
     uint8_t setSlot = current->localCount;
     addLocal(syntheticToken("@set"));
     markInitialised();
@@ -771,17 +777,25 @@ static bool setBuilder() {
     }
 
     endScope();
+    
     parser = endParser;
     consume(TOKEN_RIGHT_BRACE, "Expected '}' after set-builder");
 
     // Push the completed set
     emitBytes(OP_GET_LOCAL, setSlot);
 
+    // === End the anonymous function and call it ===
+    ObjFunction* function = endCompiler();
+    emitOpShort(OP_CLOSURE, makeConstant(OBJ_VAL(function)));
+    emitBytes(OP_CALL, 0);
+    // ==============================================
+
     free(generatorSlots);
     free(iteratorSlots);
     free(loopStarts);
     free(exitJumps);
     free(skipJumps);
+
     return true;
 }
 
@@ -801,7 +815,7 @@ static void set(bool canAssign) {
 
     if (!check(TOKEN_RIGHT_BRACE)) {
         // Check if its a set builder
-        if (setBuilder()) return;
+        // if (setBuilder()) return;
         
         expression(true);
 

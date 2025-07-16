@@ -135,7 +135,6 @@ static int closureInstruction(const char* name, Chunk* chunk, int offset) {
         int index = chunk->code[offset++];
         printf("%04d      |                   %s %d\n", offset - 2, isLocal ? "local" : "upvalue", index);
     }
-    
 
     return offset;
 }

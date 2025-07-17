@@ -333,9 +333,9 @@ static bool isFalse(Value value) {
  * Pops two strings from the stack and pushes the concatenated
  * string to the stack.
  */
-static void concatenate() {
-    Value b = peek(0); // Peek second String
-    Value a = peek(1); // Peek first String
+static void concatenateString() {
+    Value b = pop();
+    Value a = pop();
     
     ObjString* aString = valueToString(a);
     ObjString* bString = valueToString(b);
@@ -350,8 +350,6 @@ static void concatenate() {
     chars[length] = '\0'; // Null terminator
 
     ObjString* result = takeString(chars, length);
-    pop();
-    pop();
     push(OBJ_VAL(result));
 }
 
@@ -365,7 +363,7 @@ static int subscript() {
     Value value = pop();
     if (IS_TUPLE(value)) {
         ObjTuple* tuple = AS_TUPLE(value);
-        if (index > tuple->arity - 1 || index < 0) {
+        if (index > tuple->size - 1 || index < 0) {
             runtimeError("Tuple index out of range");
             return INTERPRET_RUNTIME_ERROR;
         }
@@ -380,7 +378,7 @@ static int subscript() {
 
         // Probably make this a function
         int len = 1;
-        unsigned char* chars = (char*)malloc(len);
+        unsigned char* chars = (char*)malloc(len + 1);
         if (!chars) {
             runtimeError("Out of memory :(");
             return INTERNAL_SOFTWARE_ERROR;
@@ -524,7 +522,11 @@ static InterpretResult run() {
             case OP_ADD: {
                 if (IS_STRING(peek(0)) || IS_STRING(peek(1))) {
                     // Concatenate if at least one operand is a string
-                    concatenate();
+                    concatenateString();
+                } else if (IS_TUPLE(peek(0)) && IS_TUPLE(peek(1))) {
+                    ObjTuple* b = AS_TUPLE(pop());
+                    ObjTuple* a = AS_TUPLE(pop());
+                    push(OBJ_VAL(concatenateTuple(a, b)));
                 } else if (IS_NUMBER(peek(0)) && IS_NUMBER(peek(1))) {
                     // Else, numerically add
                     double b = AS_NUMBER(pop());
@@ -590,8 +592,8 @@ static InterpretResult run() {
                 break;
             }
             case OP_OUT: {
-                printValue(pop());
-                printf("\n");
+                printValue(pop()); 
+                if (AS_BOOL(pop())) printf("\n");
                 break;
             }
             case OP_JUMP: {
@@ -721,7 +723,7 @@ static InterpretResult run() {
                                 push(NUMBER_VAL(AS_SET(value)->elements.count));
                                 break;
                             case OBJ_TUPLE:
-                                push(NUMBER_VAL(AS_TUPLE(value)->arity));
+                                push(NUMBER_VAL(AS_TUPLE(value)->size));
                                 break;
                             default:
                                 runtimeError("Invalid operand type");

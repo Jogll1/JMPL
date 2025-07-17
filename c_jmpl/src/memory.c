@@ -119,7 +119,7 @@ static void blackenObject(Obj* object) {
         case OBJ_TUPLE:
             ObjTuple* tuple = (ObjTuple*)object;
             markObject((Obj*)tuple);
-            for(int i = 0; i < tuple->arity; i++) {
+            for(int i = 0; i < tuple->size; i++) {
                 markValue(tuple->elements[i]);
             }
         case OBJ_NATIVE:
@@ -171,7 +171,7 @@ static void freeObject(Obj* object) {
         }
         case OBJ_TUPLE: {
             ObjTuple* tuple = (ObjTuple*)object;
-            FREE_ARRAY(Value, tuple->elements, tuple->arity);
+            FREE_ARRAY(Value, tuple->elements, tuple->size);
             FREE(ObjTuple, object);
             break;
         }

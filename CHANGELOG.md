@@ -60,6 +60,9 @@
 ### Added
 - Added set-builder notation
 - `round(x)` native
+- Strings can be indexed
+- Tuples can be concatenated
+- Added `put` keyword that prints output to the console without a newline
 ### Changed
 - `==` (equality operation) to be `=`
 ### Fixed

@@ -281,7 +281,7 @@ static ObjFunction* endCompiler() {
 
 #ifdef DEBUG_PRINT_CODE
     if (!parser.hadError) {
-        disassembleChunk(currentChunk(), function->name != NULL ? function->name->chars : "<script>");
+        disassembleChunk(currentChunk(), function->name != NULL ? (const char*)function->name->chars : "<script>");
     }
 #endif
 
@@ -557,6 +557,25 @@ static void binary(bool canAssign) {
         case TOKEN_SUBSETEQ:      emitByte(OP_SUBSETEQ);       break;
         default: return;
     }
+}
+
+/**
+ * @brief Creates an implicit multiplication.
+ * 
+ * Called when an identifier comes directly after another token (i.e. 2n).
+ * Compiles the identifier then emits a multiply.
+ */
+static void implMult(bool canAssign) {
+    ParseFn prefixRule = getRule(parser.previous.type)->prefix;
+
+    if (prefixRule == NULL) {
+        error("Expected expression");
+        return;
+    }
+    
+    prefixRule(canAssign);
+
+    emitByte(OP_MULTIPLY);
 }
 
 static void call(bool canAssign) {
@@ -977,6 +996,7 @@ ParseRule rules[] = {
     [TOKEN_RIGHT_SQUARE]  = {NULL,       NULL,      PREC_NONE},
     [TOKEN_COMMA]         = {NULL,       NULL,      PREC_NONE},
     [TOKEN_DOT]           = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_ELLIPSIS]      = {NULL,       NULL,      PREC_NONE},
     [TOKEN_MINUS]         = {unary,      binary,    PREC_TERM},
     [TOKEN_PLUS]          = {unary,      binary,    PREC_TERM},
     [TOKEN_SLASH]         = {NULL,       binary,    PREC_FACTOR},
@@ -1003,7 +1023,7 @@ ParseRule rules[] = {
     [TOKEN_LESS_EQUAL]    = {NULL,       binary,    PREC_COMPARISON},
     [TOKEN_MAPS_TO]       = {NULL,       NULL,      PREC_NONE},
     [TOKEN_IMPLIES]       = {NULL,       NULL,      PREC_NONE},
-    [TOKEN_IDENTIFIER]    = {variable,   NULL,      PREC_NONE},
+    [TOKEN_IDENTIFIER]    = {variable,   implMult,  PREC_TERM},
     [TOKEN_STRING]        = {string,     NULL,      PREC_NONE},
     [TOKEN_NUMBER]        = {number,     NULL,      PREC_NONE},
     [TOKEN_AND]           = {NULL,       and_,      PREC_AND},
@@ -1021,6 +1041,7 @@ ParseRule rules[] = {
     [TOKEN_FOR]           = {NULL,       NULL,      PREC_NONE},
     [TOKEN_SUMMATION]     = {NULL,       NULL,      PREC_NONE},
     [TOKEN_OUT]           = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_PUT]           = {NULL,       NULL,      PREC_NONE},
     [TOKEN_RETURN]        = {NULL,       NULL,      PREC_NONE},
     [TOKEN_FUNCTION]      = {NULL,       NULL,      PREC_NONE},
     [TOKEN_NEWLINE]       = {NULL,       NULL,      PREC_NONE},
@@ -1180,6 +1201,8 @@ static void ifStatement() {
 }
 
 static void outStatement() {
+    emitByte(parser.previous.type == TOKEN_OUT ? OP_TRUE : OP_FALSE);
+
     expression(false);
     emitByte(OP_OUT);
 }
@@ -1273,6 +1296,7 @@ static void synchronise() {
             case TOKEN_WHILE:
             case TOKEN_FOR:
             case TOKEN_OUT:
+            case TOKEN_PUT:
             case TOKEN_RETURN:
                 return;
             default:; // Do nothing
@@ -1299,7 +1323,7 @@ static void declaration() {
 static void statement(bool blockAllowed, bool ignoreSeparator) {
     if(current->type == TYPE_SCRIPT) current->implicitReturn = false;
     
-    if (match(TOKEN_OUT)) {
+    if (match(TOKEN_OUT) || match(TOKEN_PUT)) {
         outStatement();
         if(!ignoreSeparator) consumeSeparator();
     } else if (match(TOKEN_IF)) {

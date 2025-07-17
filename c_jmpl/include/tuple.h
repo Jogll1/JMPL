@@ -10,13 +10,14 @@
  */
 typedef struct {
     Obj obj;
-    int arity;
+    int size;
     Value* elements;
 } ObjTuple;
 
 ObjTuple* newTuple(int size);
 bool tuplesEqual(ObjTuple* a, ObjTuple* b);
 unsigned char* tupleToString(ObjTuple* tuple);
+ObjTuple* concatenateTuple(ObjTuple* a, ObjTuple* b);
 uint32_t hashTuple(ObjTuple* tuple);
 
 #endif

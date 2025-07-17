@@ -39,7 +39,6 @@ const unsigned char* getTokenName(TokenType type) {
         case TOKEN_SUBSETEQ:      return "SUBSETEQ";
 
         case TOKEN_EQUAL:         return "EQUAL";
-        case TOKEN_EQUAL_EQUAL:   return "EQUAL_EQUAL";
         case TOKEN_ASSIGN:        return "ASSIGN";
         case TOKEN_NOT:           return "NOT";
         case TOKEN_NOT_EQUAL:     return "NOT_EQUAL";

@@ -409,6 +409,7 @@ Token scanToken(Scanner* scanner) {
         case ',': return makeToken(scanner, TOKEN_COMMA);
         case '+': return makeToken(scanner, TOKEN_PLUS);
         case '*': return makeToken(scanner, TOKEN_ASTERISK);
+        case '=': return makeToken(scanner, TOKEN_EQUAL);
         case '^': return makeToken(scanner, TOKEN_CARET);
         case '%': return makeToken(scanner, TOKEN_MOD);
         case ';': return makeToken(scanner, TOKEN_SEMICOLON);
@@ -432,7 +433,6 @@ Token scanToken(Scanner* scanner) {
         // Switch one or two character symbols
         case '-': return makeToken(scanner, match(scanner, '>') ? TOKEN_MAPS_TO : TOKEN_MINUS);
         case ':': return makeToken(scanner, match(scanner, '=') ? TOKEN_ASSIGN : TOKEN_COLON); 
-        case '=': return makeToken(scanner, match(scanner, '=') ? TOKEN_EQUAL_EQUAL : TOKEN_EQUAL);
         case '/': return makeToken(scanner, match(scanner, '=') ? TOKEN_NOT_EQUAL : TOKEN_SLASH); 
         case '>': return makeToken(scanner, match(scanner, '=') ? TOKEN_GREATER_EQUAL : TOKEN_GREATER);
         case '<': return makeToken(scanner, match(scanner, '=') ? TOKEN_LESS_EQUAL : TOKEN_LESS);

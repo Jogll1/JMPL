@@ -12,7 +12,7 @@ typedef enum {
     TOKEN_COMMA, TOKEN_DOT, TOKEN_ELLIPSIS, // , . ...
     TOKEN_MINUS, TOKEN_PLUS,                // - +
     TOKEN_SLASH, TOKEN_ASTERISK,            // / *
-    TOKEN_BACK_SLASH,                       // '\'
+    TOKEN_EQUAL, TOKEN_BACK_SLASH,          // = '\'
     TOKEN_CARET, TOKEN_MOD,                 // ^ %
     TOKEN_SEMICOLON, TOKEN_COLON,           // ; :
     TOKEN_PIPE, TOKEN_IN, TOKEN_HASHTAG,    // | ∈ #
@@ -21,7 +21,7 @@ typedef enum {
  
     // One or two character tokens 
     // This is when a common character can be followed by another
-    TOKEN_EQUAL, TOKEN_EQUAL_EQUAL, TOKEN_ASSIGN, // = == := (≡?)
+    TOKEN_ASSIGN,                                 // :=
     TOKEN_NOT, TOKEN_NOT_EQUAL,                   // ¬ ¬= (≠)
     TOKEN_GREATER, TOKEN_GREATER_EQUAL,           // > >= (≥)
     TOKEN_LESS, TOKEN_LESS_EQUAL,                 // < <= (≤)

@@ -538,7 +538,7 @@ static void binary(bool canAssign) {
 
     switch (operatorType) {
         case TOKEN_NOT_EQUAL:     emitByte(OP_NOT_EQUAL);      break;
-        case TOKEN_EQUAL_EQUAL:   emitByte(OP_EQUAL);          break;
+        case TOKEN_EQUAL:         emitByte(OP_EQUAL);          break;
         case TOKEN_GREATER:       emitByte(OP_GREATER);        break;
         case TOKEN_GREATER_EQUAL: emitByte(OP_GREATER_EQUAL);  break;
         case TOKEN_LESS:          emitByte(OP_LESS);           break;
@@ -694,10 +694,10 @@ static bool setBuilder(Parser* initialParser) {
     // Store an opened set as a local
     uint8_t setSlot = syntheticLocal(OP_SET_CREATE, "@set");
 
-    uint8_t* loopStarts = NULL;
-    uint8_t* exitJumps = NULL;
     uint8_t* generatorSlots = NULL;
     uint8_t* iteratorSlots = NULL;
+    uint8_t* loopStarts = NULL;
+    uint8_t* exitJumps = NULL;
     int generatorCount = 0;
 
     uint8_t* skipJumps = NULL;
@@ -705,7 +705,7 @@ static bool setBuilder(Parser* initialParser) {
 
     consume(TOKEN_PIPE, "Expected '|' after expression");
 
-    // Parse other qualifiers (generators and filters)
+    // Parse qualifiers (generators and filters)
     do {
         if (check(TOKEN_RIGHT_BRACE)) break;
 
@@ -731,14 +731,12 @@ static bool setBuilder(Parser* initialParser) {
     } while (match(TOKEN_COMMA));
 
     if (generatorCount == 0) errorAtCurrent("Set-builder must have at least one generator");
-
     Parser endParser = parser;
     parser = *initialParser;
 
     // Load set and insert expression
     emitBytes(OP_GET_LOCAL, setSlot);
     expression(false);
-
     emitByte(OP_SET_INSERT); // This seems to update without OP_SET_LOCAL - pointer fault?
     emitByte(OP_POP);
 
@@ -779,7 +777,7 @@ static bool setBuilder(Parser* initialParser) {
 }
 
 /**
- * @brief Wrapper to setBuilder to call it only if a '|' is found.
+ * @brief Helper function to call setBuilder if a '|' is found.
  *
  * Assumes a left brace has been opened.
  */
@@ -977,8 +975,7 @@ ParseRule rules[] = {
     [TOKEN_UNION]         = {NULL,       binary,    PREC_TERM},
     [TOKEN_SUBSET]        = {NULL,       binary,    PREC_TERM},
     [TOKEN_SUBSETEQ]      = {NULL,       binary,    PREC_TERM},
-    [TOKEN_EQUAL]         = {NULL,       NULL,      PREC_NONE},
-    [TOKEN_EQUAL_EQUAL]   = {NULL,       binary,    PREC_EQUALITY},
+    [TOKEN_EQUAL]         = {NULL,       binary,    PREC_EQUALITY},
     [TOKEN_ASSIGN]        = {NULL,       NULL,      PREC_NONE},
     [TOKEN_NOT]           = {unary,      NULL,      PREC_UNARY},
     [TOKEN_NOT_EQUAL]     = {NULL,       binary,    PREC_EQUALITY},
@@ -1203,7 +1200,6 @@ static void forStatement() {
     // Parse the local variable that will be the generator
     uint8_t loopVarSlot = parseGenerator();
     if (loopVarSlot == 0) error("Variable with this identifier already defined in this scope");
-    // Create an iterator for the loopVar
     uint8_t iteratorSlot = syntheticLocal(OP_CREATE_ITERATOR, "@iter");
 
     int loopStart = currentChunk()->count;

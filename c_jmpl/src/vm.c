@@ -25,13 +25,13 @@ static void resetStack() {
 
 static void runtimeError(const unsigned char* format, ...) {
     // Print the stack trace
-    for(int i = 0; i < vm.frameCount; i++) {
+    for (int i = 0; i < vm.frameCount; i++) {
         CallFrame* frame = &vm.frames[i];
         ObjFunction* function = frame->closure->function;
         size_t instruction = frame->ip - function->chunk.code - 1;
         fprintf(stderr, "[line %d] in ", getLine(&function->chunk, instruction));
 
-        if(function->name == NULL) {
+        if (function->name == NULL) {
             fprintf(stderr, "script\n");
         } else {
             fprintf(stderr, "%s\n", function->name->chars);
@@ -97,6 +97,7 @@ void initVM() {
     defineNative("min", 2, minNative);
     defineNative("floor", 1, floorNative);
     defineNative("ceil", 1, ceilNative);
+    defineNative("round", 1, roundNative);
 }
 
 void freeVM() {
@@ -272,10 +273,6 @@ static int tupleOmission(bool hasNext) {
     int next;
     if (hasNext) {
         next = (int)AS_NUMBER(pop());
-
-        // if () {
-
-        // }
     }
     int first = (int)AS_NUMBER(pop());
 
@@ -356,6 +353,50 @@ static void concatenate() {
     pop();
     pop();
     push(OBJ_VAL(result));
+}
+
+static int subscript() {
+    if (!IS_INTEGER(peek(0))) {
+        runtimeError("Tuple index must be an integer");
+        return INTERPRET_RUNTIME_ERROR;
+    }
+    int index = (int)AS_NUMBER(pop());
+
+    Value value = pop();
+    if (IS_TUPLE(value)) {
+        ObjTuple* tuple = AS_TUPLE(value);
+        if (index > tuple->arity - 1 || index < 0) {
+            runtimeError("Tuple index out of range");
+            return INTERPRET_RUNTIME_ERROR;
+        }
+
+        push(tuple->elements[index]);
+    } else if (IS_STRING(value)) {
+        ObjString* string = AS_STRING(value);
+        if (index > string->length - 1 || index < 0) {
+            runtimeError("String index out of range");
+            return INTERPRET_RUNTIME_ERROR;
+        }
+
+        // Probably make this a function
+        int len = 1;
+        unsigned char* chars = (char*)malloc(len);
+        if (!chars) {
+            runtimeError("Out of memory :(");
+            return INTERNAL_SOFTWARE_ERROR;
+        }
+        strncpy(chars, string->chars + index, len);
+        chars[len] = '\0';
+
+        push(OBJ_VAL(copyString(chars, len)));
+        free(chars);
+
+    } else {
+        runtimeError("Object cannot be subscripted");
+        return INTERPRET_RUNTIME_ERROR;
+    }
+
+    return INTERPRET_OK;
 }
 
 static InterpretResult run() {
@@ -684,13 +725,13 @@ static InterpretResult run() {
                                 break;
                             default:
                                 runtimeError("Invalid operand type");
-                                break;
+                                return INTERPRET_RUNTIME_ERROR;
                         }
                         break;
                     case VAL_NULL:
                     case VAL_BOOL:
                         runtimeError("Invalid operand type");
-                        break;
+                        return INTERPRET_RUNTIME_ERROR;
                     default: break;
                 }
                 break;
@@ -714,17 +755,8 @@ static InterpretResult run() {
                 break;
             }
             case OP_SUBSCRIPT: {
-                if (!IS_INTEGER(peek(0))) {
-                    runtimeError("Tuple index must be an integer");
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                int index = (int)AS_NUMBER(pop());
-                ObjTuple* tuple = AS_TUPLE(pop());
-                if (index > tuple->arity - 1 || index < 0) {
-                    runtimeError("Tuple index out of range");
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                push(tuple->elements[index]);
+                int status = subscript();
+                if (status != INTERPRET_OK) return status;
                 break;
             }
             case OP_CREATE_ITERATOR: {

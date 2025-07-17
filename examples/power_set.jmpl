@@ -1,7 +1,7 @@
 func arb(S) = for x ∈ S do return x
 
 func power(S) = 
-    if S == {} then 
+    if S = {} then 
         {{}}
     else
         let e = arb(S)

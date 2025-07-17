@@ -72,7 +72,7 @@ typedef struct {
 struct ObjString {
     Obj obj;
     int length;
-    char* chars;
+    unsigned char* chars;
     uint32_t hash;
 };
 

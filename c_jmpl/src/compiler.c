@@ -538,7 +538,7 @@ static void binary(bool canAssign) {
 
     switch (operatorType) {
         case TOKEN_NOT_EQUAL:     emitByte(OP_NOT_EQUAL);      break;
-        case TOKEN_EQUAL_EQUAL:   emitByte(OP_EQUAL);          break;
+        case TOKEN_EQUAL:         emitByte(OP_EQUAL);          break;
         case TOKEN_GREATER:       emitByte(OP_GREATER);        break;
         case TOKEN_GREATER_EQUAL: emitByte(OP_GREATER_EQUAL);  break;
         case TOKEN_LESS:          emitByte(OP_LESS);           break;
@@ -652,29 +652,41 @@ static void growArray(uint8_t** array, size_t currentSize, uint8_t newVal) {
 }
 
 static bool parseSetBuilderGenerator(int oldCount, uint8_t** generatorSlots, uint8_t** iteratorSlots, uint8_t** loopStarts, uint8_t** exitJumps) {
-    uint8_t generatorSlot = parseGenerator();
-    if (generatorSlot == 0) return false;
+    Parser temp = parser;
+    // Check if its a generator 'x ∈'
+    bool isGenerator = match(TOKEN_IDENTIFIER) && match(TOKEN_IN);
+    parser = temp;
 
-    uint8_t iteratorSlot = syntheticLocal(OP_CREATE_ITERATOR, "@iter");
+    if (isGenerator) {
+        uint8_t generatorSlot = parseGenerator();
+        if (generatorSlot == 0) {
+            parser = temp;
+            return false; // Return false if already defined
+        }
 
-    growArray(generatorSlots, oldCount, generatorSlot);
-    growArray(iteratorSlots, oldCount, iteratorSlot);
+        uint8_t iteratorSlot = syntheticLocal(OP_CREATE_ITERATOR, "@iter");
 
-    // Generate loop
-    int loopStart = currentChunk()->count;
-    emitBytes(OP_GET_LOCAL, iteratorSlot);
-    emitByte(OP_ITERATE);
+        growArray(generatorSlots, oldCount, generatorSlot);
+        growArray(iteratorSlots, oldCount, iteratorSlot);
 
-    int exitJump = emitJump(OP_JUMP_IF_FALSE);
-    emitByte(OP_POP); // Pop check
+        // Generate loop
+        int loopStart = currentChunk()->count;
+        emitBytes(OP_GET_LOCAL, iteratorSlot);
+        emitByte(OP_ITERATE);
 
-    emitBytes(OP_SET_LOCAL, generatorSlot);
-    emitByte(OP_POP);
+        int exitJump = emitJump(OP_JUMP_IF_FALSE);
+        emitByte(OP_POP); // Pop check
 
-    growArray(loopStarts, oldCount, loopStart);
-    growArray(exitJumps, oldCount, exitJump);
+        emitBytes(OP_SET_LOCAL, generatorSlot);
+        emitByte(OP_POP);
 
-    return true;
+        growArray(loopStarts, oldCount, loopStart);
+        growArray(exitJumps, oldCount, exitJump);
+
+        return true;
+    }
+
+    return false;
 }
 
 /**
@@ -682,7 +694,7 @@ static bool parseSetBuilderGenerator(int oldCount, uint8_t** generatorSlots, uin
  * 
  * @return Whether we are in a set-builder
  */
-static bool setBuilder(Parser* initialParser) {
+static bool setBuilder() {
     // === Pretend this is a function ===
     Compiler compiler;
     initCompiler(&compiler, TYPE_FUNCTION);
@@ -694,32 +706,37 @@ static bool setBuilder(Parser* initialParser) {
     // Store an opened set as a local
     uint8_t setSlot = syntheticLocal(OP_SET_CREATE, "@set");
 
-    uint8_t* loopStarts = NULL;
-    uint8_t* exitJumps = NULL;
     uint8_t* generatorSlots = NULL;
     uint8_t* iteratorSlots = NULL;
+    uint8_t* loopStarts = NULL;
+    uint8_t* exitJumps = NULL;
     int generatorCount = 0;
 
     uint8_t* skipJumps = NULL;
     int skipCount = 0;
 
-    consume(TOKEN_PIPE, "Expected '|' after expression");
+    // Check if expression is a generator, otherwise skip to pipe
+    Parser initialParser = parser;
+    bool hasLHSGenerator = false;
+    if (parseSetBuilderGenerator(generatorCount, &generatorSlots, & iteratorSlots, &loopStarts, &exitJumps)) {
+        generatorCount++;
+        hasLHSGenerator = true;
+    } else {
+        while (!check(TOKEN_PIPE)) advance();
+    }
+    consume(TOKEN_PIPE, "Expected '|' after expression or generator");
 
-    // Parse other qualifiers (generators and filters)
+    // Parse qualifiers (generators and filters)
+    bool hasRHS = false;
     do {
         if (check(TOKEN_RIGHT_BRACE)) break;
+        hasRHS = true;
 
-        Parser temp = parser;
-        // Check if its a generator 'x ∈'
-        if (match(TOKEN_IDENTIFIER) && match(TOKEN_IN)) {
-            parser = temp;
-            bool success = parseSetBuilderGenerator(generatorCount, &generatorSlots, & iteratorSlots, &loopStarts, &exitJumps);
-            if (success) {
-                generatorCount++;
-                continue;
-            } 
+        // Check if it is a generator
+        if (parseSetBuilderGenerator(generatorCount, &generatorSlots, & iteratorSlots, &loopStarts, &exitJumps)) {
+            generatorCount++;
+            continue;
         }
-        parser = temp;
 
         // Not a generator, so a predicate
         expression(false);
@@ -730,15 +747,18 @@ static bool setBuilder(Parser* initialParser) {
         skipCount++;
     } while (match(TOKEN_COMMA));
 
+    if (!hasRHS) errorAtCurrent("Set-builder must have at one qualifier");
     if (generatorCount == 0) errorAtCurrent("Set-builder must have at least one generator");
-
     Parser endParser = parser;
-    parser = *initialParser;
+    parser = initialParser;
 
     // Load set and insert expression
     emitBytes(OP_GET_LOCAL, setSlot);
-    expression(false);
-
+    if (hasLHSGenerator) {
+        emitBytes(OP_GET_LOCAL, generatorSlots[0]);
+    } else {
+        expression(false);
+    }
     emitByte(OP_SET_INSERT); // This seems to update without OP_SET_LOCAL - pointer fault?
     emitByte(OP_POP);
 
@@ -755,9 +775,13 @@ static bool setBuilder(Parser* initialParser) {
     
     parser = endParser;
     consume(TOKEN_RIGHT_BRACE, "Expected '}' after set-builder");
+    emitBytes(OP_GET_LOCAL, setSlot); // Push the completed set
 
-    // Push the completed set
-    emitBytes(OP_GET_LOCAL, setSlot);
+    free(generatorSlots);
+    free(iteratorSlots);
+    free(loopStarts);
+    free(exitJumps);
+    free(skipJumps);
 
     // === End the anonymous function and call it ===
     ObjFunction* function = endCompiler();
@@ -770,16 +794,10 @@ static bool setBuilder(Parser* initialParser) {
 
     emitBytes(OP_CALL, 0);
     // ==============================================
-
-    free(generatorSlots);
-    free(iteratorSlots);
-    free(loopStarts);
-    free(exitJumps);
-    free(skipJumps);
 }
 
 /**
- * @brief Wrapper to setBuilder to call it only if a '|' is found.
+ * @brief Helper function to call setBuilder if a '|' is found.
  *
  * Assumes a left brace has been opened.
  */
@@ -789,21 +807,19 @@ static bool isSetBuilder() {
     int braceDepth = 1; 
 
     // Find the pipe (to show we are in a set builder)
-    while (parser.current.type != TOKEN_PIPE && parser.current.type != TOKEN_EOF) {
-        if (parser.current.type == TOKEN_LEFT_BRACE) braceDepth++;
-        if (parser.current.type == TOKEN_RIGHT_BRACE) braceDepth--;
+    while (!check(TOKEN_PIPE) && !check(TOKEN_EOF)) {
+        if (check(TOKEN_LEFT_BRACE)) braceDepth++;
+        if (check(TOKEN_RIGHT_BRACE)) braceDepth--;
         if (braceDepth == 0) break;
 
         advance();
     }
 
-    if (!check(TOKEN_PIPE)) {
-        parser = initialParser;
-        return false;
-    }
+    bool isBuilder = check(TOKEN_PIPE);
+    parser = initialParser;
+    if (!isBuilder) return false;
 
-    setBuilder(&initialParser);
-
+    setBuilder();
     return true;
 }
 
@@ -977,8 +993,7 @@ ParseRule rules[] = {
     [TOKEN_UNION]         = {NULL,       binary,    PREC_TERM},
     [TOKEN_SUBSET]        = {NULL,       binary,    PREC_TERM},
     [TOKEN_SUBSETEQ]      = {NULL,       binary,    PREC_TERM},
-    [TOKEN_EQUAL]         = {NULL,       NULL,      PREC_NONE},
-    [TOKEN_EQUAL_EQUAL]   = {NULL,       binary,    PREC_EQUALITY},
+    [TOKEN_EQUAL]         = {NULL,       binary,    PREC_EQUALITY},
     [TOKEN_ASSIGN]        = {NULL,       NULL,      PREC_NONE},
     [TOKEN_NOT]           = {unary,      NULL,      PREC_UNARY},
     [TOKEN_NOT_EQUAL]     = {NULL,       binary,    PREC_EQUALITY},
@@ -1203,7 +1218,6 @@ static void forStatement() {
     // Parse the local variable that will be the generator
     uint8_t loopVarSlot = parseGenerator();
     if (loopVarSlot == 0) error("Variable with this identifier already defined in this scope");
-    // Create an iterator for the loopVar
     uint8_t iteratorSlot = syntheticLocal(OP_CREATE_ITERATOR, "@iter");
 
     int loopStart = currentChunk()->count;

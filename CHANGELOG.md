@@ -18,8 +18,8 @@
 ### Added
 - New native functions
     - `pi()`
-    - `max()` and `min()`
-    - `floor()` and `ceil()`
+    - `max(x, y)` and `min(x, y)`
+    - `floor(x)` and `ceil(x)`
 ### Changed
 - Statements no longer need to end with a semicolon (`;`)
 - Blocks use indents instead of curly braces (`{}`)
@@ -31,7 +31,7 @@
     - `tan(n * pi() / 2)` will now return null for any integer n
 - Escape characters can now be properly printed to the console
 
-## [v0.2.0] - 06/07/2025
+## [v0.2.0] - 13/07/2025
 ### Added
 - Finite set literals
     - Sets can be constructed with `{}` and can contain a finite amount of any unique value delimited by commas
@@ -55,3 +55,15 @@
 ### Fixed
 - Casting numbers to string no longer creates a memory leak
 - Indentation bugs
+
+## [v0.2.1] - 17/07/2025
+### Added
+- Added set-builder notation
+- `round(x)` native
+### Changed
+- `==` (equality operation) to be `=`
+### Fixed
+- Bugs relating to upvalues and closures
+    - Fixed crash when trying to free upvalues
+    - Closures popping upvalues from the stack before implicit return
+- Invalid infix operators no longer cause a crash

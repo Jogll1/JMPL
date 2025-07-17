@@ -5,23 +5,20 @@
 #define TOKEN_QUEUE_SIZE 16
 
 typedef enum {
-    // Single-character tokens - some can be represented by words
     TOKEN_LEFT_PAREN, TOKEN_RIGHT_PAREN,    // ( )
     TOKEN_LEFT_BRACE, TOKEN_RIGHT_BRACE,    // { }
     TOKEN_LEFT_SQUARE, TOKEN_RIGHT_SQUARE,  // [ ]
     TOKEN_COMMA, TOKEN_DOT, TOKEN_ELLIPSIS, // , . ...
     TOKEN_MINUS, TOKEN_PLUS,                // - +
     TOKEN_SLASH, TOKEN_ASTERISK,            // / *
-    TOKEN_BACK_SLASH,                       // '\'
+    TOKEN_EQUAL, TOKEN_BACK_SLASH,          // = '\'
     TOKEN_CARET, TOKEN_MOD,                 // ^ %
     TOKEN_SEMICOLON, TOKEN_COLON,           // ; :
     TOKEN_PIPE, TOKEN_IN, TOKEN_HASHTAG,    // | ∈ #
     TOKEN_INTERSECT, TOKEN_UNION,           // ∩, ∪
     TOKEN_SUBSET, TOKEN_SUBSETEQ,           // ⊂, ⊆ 
  
-    // One or two character tokens 
-    // This is when a common character can be followed by another
-    TOKEN_EQUAL, TOKEN_EQUAL_EQUAL, TOKEN_ASSIGN, // = == := (≡?)
+    TOKEN_ASSIGN,                                 // :=
     TOKEN_NOT, TOKEN_NOT_EQUAL,                   // ¬ ¬= (≠)
     TOKEN_GREATER, TOKEN_GREATER_EQUAL,           // > >= (≥)
     TOKEN_LESS, TOKEN_LESS_EQUAL,                 // < <= (≤)

@@ -2,14 +2,14 @@ let Map = {(0, "a"), (2, "r"), (5, "c")}
 
 func get(M, k) =
     let answer = null
-    for t in M | t[0] == k do
+    for t in M | t[0] = k do
         answer := t[1]
     answer
 
 func add(M, k, v) = M ∪ {(k, v)}
 
 func remove(M, k) =
-    for t in M | t[0] == k do
+    for t in M | t[0] = k do
         M := M \ {(t[0], t[1])}
     M
 

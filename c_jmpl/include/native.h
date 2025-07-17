@@ -25,5 +25,6 @@ Value maxNative(int argCount, Value* args);
 Value minNative(int argCount, Value* args);
 Value floorNative(int argCount, Value* args);
 Value ceilNative(int argCount, Value* args);
+Value roundNative(int argCount, Value* args);
 
 #endif

@@ -183,3 +183,15 @@ Value ceilNative(int argCount, Value* args) {
     
     return NUMBER_VAL(ceil(AS_NUMBER(args[0])));
 }
+
+/**
+ * round(x)
+ * 
+ * Returns the rounded value of x.
+ * Returns null if x is not a number.
+ */
+Value roundNative(int argCount, Value* args) {
+    if(!IS_NUMBER(args[0])) return NULL_VAL;
+    
+    return NUMBER_VAL(round(AS_NUMBER(args[0])));
+}

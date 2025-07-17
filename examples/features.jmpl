@@ -78,7 +78,7 @@ out "p and q = " + (p and q)
 out "p ∨ q = " + (p ∨ q)
 out "p or q = " + (p or q)
 out ""
-out "p == q = " + (p == q)
+out "p = q = " + (p = q)
 out "S ≠ T = " + (S ≠ T)
 out "S /= T = " + (S /= T)
 out "1 < 4 = " + (1 < 4)
@@ -132,8 +132,8 @@ for x ∈ R do
 out "total = " + total
 total := 1
 out "total = " + total
-out "for x ∈ R | x mod 2 == 0 do\n    total := total * x"
-for x ∈ R | x mod 2 == 0 do 
+out "for x ∈ R | x mod 2 = 0 do\n    total := total * x"
+for x ∈ R | x mod 2 = 0 do 
     total := total * x
 out "total = " + total
 

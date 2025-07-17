@@ -2,7 +2,7 @@ func isPrime(x) =
     if x ≤ 1 then return false
     let i = 2
     while i ≤ floor(x / 2) do
-        if x mod i == 0 then return false
+        if x mod i = 0 then return false
         i := i + 1
     true
 

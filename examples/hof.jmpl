@@ -4,10 +4,14 @@ func map(S, f) =
         S := S ∪ {f(x)}
     S
 
+func map2(S, f) = {f(x) | x ∈ S}
+
 func filter(S, f) =
     for x ∈ S | ¬f(x) do
         S := S \ {x}
     S
+
+func filter2(S, f) = {x ∈ S | ¬f(x)}
 
 func fold(S, b, f) = 
     let temp = b;

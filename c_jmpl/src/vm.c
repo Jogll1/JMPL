@@ -97,6 +97,7 @@ void initVM() {
     defineNative("min", 2, minNative);
     defineNative("floor", 1, floorNative);
     defineNative("ceil", 1, ceilNative);
+    defineNative("round", 1, roundNative);
 }
 
 void freeVM() {

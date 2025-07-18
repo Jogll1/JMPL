@@ -511,6 +511,28 @@ static uint8_t parseGenerator() {
     return localVarSlot;
 }
 
+/**
+ * @brief Creates and closes a new compiler around a c function call.
+ * 
+ * @param type The type of function to create
+ * @param f    The c function to call to compile the inner part of the function
+ */
+static void functionWrapper(FunctionType type, void (*f)()) {
+    Compiler compiler;
+    initCompiler(&compiler, type);
+    beginScope();
+
+    (*f)();
+
+    ObjFunction* function = endCompiler();
+    emitOpShort(OP_CLOSURE, makeConstant(OBJ_VAL(function)));
+
+    for (int i = 0; i < function->upvalueCount; i++) {
+        emitByte(compiler.upvalues[i].isLocal ? 1 : 0);
+        emitByte(compiler.upvalues[i].index);
+    }
+}
+
 static uint8_t argumentList() {
     uint8_t argCount = 0;
     if (!check(TOKEN_RIGHT_PAREN)) {
@@ -717,17 +739,11 @@ static bool parseSetBuilderGenerator(int oldCount, uint8_t** generatorSlots, uin
 
 /**
  * @brief Parse a set builder.
- * 
- * @return Whether we are in a set-builder
  */
-static bool setBuilder() {
-    // === Pretend this is a function ===
-    Compiler compiler;
-    initCompiler(&compiler, TYPE_FUNCTION);
+static void setBuilder() {
+    // Set anonymous function name and to implicit return
     current->function->name = copyString("@setb", 5);
     current->implicitReturn = true;
-    beginScope();
-    // ================================== 
 
     // Store an opened set as a local
     uint8_t setSlot = syntheticLocal(OP_SET_CREATE, "@set");
@@ -808,18 +824,6 @@ static bool setBuilder() {
     free(loopStarts);
     free(exitJumps);
     free(skipJumps);
-
-    // === End the anonymous function and call it ===
-    ObjFunction* function = endCompiler();
-    emitOpShort(OP_CLOSURE, makeConstant(OBJ_VAL(function)));
-
-    for (int i = 0; i < function->upvalueCount; i++) {
-        emitByte(compiler.upvalues[i].isLocal ? 1 : 0);
-        emitByte(compiler.upvalues[i].index);
-    }
-
-    emitBytes(OP_CALL, 0);
-    // ==============================================
 }
 
 /**
@@ -845,7 +849,9 @@ static bool isSetBuilder() {
     parser = initialParser;
     if (!isBuilder) return false;
 
-    setBuilder();
+    // Call set builder and implicitly return its value
+    functionWrapper(TYPE_FUNCTION, setBuilder);
+    emitBytes(OP_CALL, 0); 
     return true;
 }
 
@@ -1123,11 +1129,7 @@ static void block() {
     consume(TOKEN_DEDENT, "Expected 'DEDENT' after block");
 }
 
-static void function(FunctionType type) {
-    Compiler compiler;
-    initCompiler(&compiler, type);
-    beginScope();
-
+static void function() {
     consume(TOKEN_LEFT_PAREN, "Expected '(' after function name");
 
     if (!check(TOKEN_RIGHT_PAREN)) {
@@ -1148,20 +1150,12 @@ static void function(FunctionType type) {
     // Compile the body
     skipNewlines();
     statement(true, false);
-
-    ObjFunction* function = endCompiler();
-    emitOpShort(OP_CLOSURE, makeConstant(OBJ_VAL(function)));
-
-    for (int i = 0; i < function->upvalueCount; i++) {
-        emitByte(compiler.upvalues[i].isLocal ? 1 : 0);
-        emitByte(compiler.upvalues[i].index);
-    }
 }
 
 static void functionDeclaration() {
     uint16_t global = parseVariable("Expected function name");
     markInitialised();
-    function(TYPE_FUNCTION);
+    functionWrapper(TYPE_FUNCTION, function);
     defineVariable(global);
 }
 

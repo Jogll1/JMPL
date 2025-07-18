@@ -14,5 +14,5 @@ func nPrimes(n) =
         i := i + 1
     P
 
-let n = 100
+let n = 1000
 out "Set of primes from 1 - " + n + " = " + nPrimes(n)

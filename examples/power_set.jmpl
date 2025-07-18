@@ -8,6 +8,7 @@ func power(S) =
         let T = S \ {e}
         power(T) ∪ {t ∪ {e} | t ∈ power(T)}
 
-let S = {0, 1, 2, 3, 4}
+let S = {0, 1, 2, 3}
 let pS = power(S)
-out pS + ", # = " + (#pS)
+out pS
+out "# = " + (#pS)

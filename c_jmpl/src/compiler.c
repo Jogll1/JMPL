@@ -585,6 +585,13 @@ static void call(bool canAssign) {
 
 static void subscript(bool canAssign) {
     expression(true);
+
+    // if (match(TOKEN_COLON)) {
+    //     expression(true);
+    // } else {
+
+    // }
+
     consume(TOKEN_RIGHT_SQUARE, "Expected ']' after expression");
 
     emitByte(OP_SUBSCRIPT);
@@ -1247,7 +1254,7 @@ static void forStatement() {
 
     // Load and iterate the iterator
     emitBytes(OP_GET_LOCAL, iteratorSlot);
-    emitByte(OP_ITERATE); // Should push next value + check if there is a current value
+    emitByte(OP_ITERATE); // Push next value + bool for if there is a current value
 
     // If no current value -> jump to after-loop
     int exitJump = emitJump(OP_JUMP_IF_FALSE);

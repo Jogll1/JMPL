@@ -80,8 +80,8 @@ void freeValueArray(ValueArray* array);
 int findInValueArray(ValueArray* array, Value value);
 
 bool valuesEqual(Value a, Value b);
-
 ObjString* valueToString(Value value);
+uint32_t hashValue(Value value);
 void printValue(Value value);
 
 #endif

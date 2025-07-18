@@ -128,6 +128,24 @@ ObjString* valueToString(Value value) {
     return result;
 }
 
+uint32_t hashValue(Value value) {
+    switch(value.type) {
+        case VAL_BOOL: return AS_BOOL(value) ? 0xAAAA : 0xBBBB;
+        case VAL_NULL: return 0xCCCC;
+        case VAL_NUMBER: {
+            uint64_t bits = *(uint64_t*)&value.as.number;
+            return (uint32_t)(bits ^ (bits >> 32));
+        }
+        case VAL_OBJ:  
+            switch(AS_OBJ(value)->type) {
+                case OBJ_SET:   return hashSet(AS_SET(value));
+                case OBJ_TUPLE: return hashTuple(AS_TUPLE(value));
+                default:        return (uint32_t)((uintptr_t)AS_OBJ(value) >> 2);
+            }
+        default: return 0;
+    }
+}
+
 void printValue(Value value) {
     switch(value.type) {
         case VAL_BOOL:   printf(AS_BOOL(value) ? "true" : "false"); break;

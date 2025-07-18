@@ -324,7 +324,7 @@ static bool isFalse(Value value) {
            (IS_NUMBER(value) && AS_NUMBER(value) == 0) || 
            (IS_BOOL(value) && !AS_BOOL(value)) ||
            (IS_STRING(value) && AS_CSTRING(value)[0] == '\0' ||
-           (IS_SET(value) && AS_SET(value)->elements.count == 0));
+           (IS_SET(value) && AS_SET(value)->count == 0));
 }
 
 /**
@@ -720,7 +720,7 @@ static InterpretResult run() {
                                 push(NUMBER_VAL(AS_STRING(value)->length));
                                 break;
                             case OBJ_SET:
-                                push(NUMBER_VAL(AS_SET(value)->elements.count));
+                                push(NUMBER_VAL(AS_SET(value)->count));
                                 break;
                             case OBJ_TUPLE:
                                 push(NUMBER_VAL(AS_TUPLE(value)->size));

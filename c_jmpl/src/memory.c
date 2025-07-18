@@ -73,10 +73,10 @@ static void markArray(ValueArray* array) {
 }
 
 static void markSet(ObjSet* set) {
-    for (int i = 0; i < set->elements.capacity; i++) {
-        ValEntry* entry = &set->elements.entries[i];
-        if (entry->key.type != VAL_NULL && !IS_NULL(entry->key)) {
-            markValue(entry->key);
+    for (int i = 0; i < set->capacity; i++) {
+        Value element = set->elements[i];
+        if (!IS_NULL(element)) {
+            markValue(element);
         }
     }
 }

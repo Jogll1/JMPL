@@ -4,6 +4,8 @@
 #include "object.h"
 #include "value.h"
 
+#define DEBUG_LOG_PATH "log.txt"
+
 // --- DEBUG TOKENS ---
 
 /**
@@ -84,6 +86,59 @@ const unsigned char* getTokenName(TokenType type) {
 }
 
 // --- DEBUG BYTECODE ---
+
+void initDebugger(Debugger* debugger) {
+#ifdef DEBUG_PRINT_CODE
+    debugger->printCode = true;
+#else
+    debugger->printCode = false;
+#endif
+#ifdef DEBUG_TRACE_EXECUTION
+    debugger->traceExecution = true;
+#else
+    debugger->traceExecution = false;
+#endif
+#ifdef DEBUG_PRINT_TOKENS
+    debugger->printTokens = true;
+#else
+    debugger->printTokens = false;
+#endif
+#ifdef DEBUG_STRESS_GC
+    debugger->stressGC = true;
+#else
+    debugger->stressGC = false;
+#endif
+#ifdef DEBUG_LOG_GC
+    debugger->logGC = true;
+#else
+    debugger->logGC = false;
+#endif
+#ifdef DEBUG_TO_FILE
+    debugger->logFile = fopen(DEBUG_LOG_PATH, "a");;
+    debugger->logToFile = true;
+#else
+    debugger->logFile = NULL;
+    debugger->logToFile = false;
+#endif
+}
+
+void logMessage(Debugger* debugger, bool logToConsole, const char* format, ...) {
+    va_list args;
+
+    if (debugger->logToFile) {
+        va_start(args, format);
+        if (debugger->logFile != NULL) {
+            vfprintf(debugger->logFile, format, args);
+        }
+        va_end(args);
+    }
+
+    if (logToConsole) {
+        va_start(args, format);
+        vprintf(format, args);
+        va_end(args);
+    }
+}
 
 // Disassemble each instruction of bytecode
 void disassembleChunk(Chunk* chunk, const char* name) {

@@ -12,7 +12,7 @@
 // #define DEBUG_PRINT_TOKENS
 // #define DEBUG_STRESS_GC
 // #define DEBUG_LOG_GC
-// #define DEBUG_TO_LOG
+// #define DEBUG_TO_FILE
 
 // Misc
 

@@ -73,10 +73,10 @@ static void markArray(ValueArray* array) {
 }
 
 static void markSet(ObjSet* set) {
-    for (int i = 0; i < set->elements.capacity; i++) {
-        ValEntry* entry = &set->elements.entries[i];
-        if (entry->key.type != VAL_NULL && !IS_NULL(entry->key)) {
-            markValue(entry->key);
+    for (int i = 0; i < set->capacity; i++) {
+        Value element = set->elements[i];
+        if (!IS_NULL(element)) {
+            markValue(element);
         }
     }
 }
@@ -119,7 +119,7 @@ static void blackenObject(Obj* object) {
         case OBJ_TUPLE:
             ObjTuple* tuple = (ObjTuple*)object;
             markObject((Obj*)tuple);
-            for(int i = 0; i < tuple->arity; i++) {
+            for(int i = 0; i < tuple->size; i++) {
                 markValue(tuple->elements[i]);
             }
         case OBJ_NATIVE:
@@ -171,7 +171,7 @@ static void freeObject(Obj* object) {
         }
         case OBJ_TUPLE: {
             ObjTuple* tuple = (ObjTuple*)object;
-            FREE_ARRAY(Value, tuple->elements, tuple->arity);
+            FREE_ARRAY(Value, tuple->elements, tuple->size);
             FREE(ObjTuple, object);
             break;
         }

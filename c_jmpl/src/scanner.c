@@ -239,6 +239,7 @@ static TokenType identifierType(Scanner* scanner) {
                 }
             }
             break;
+        case 'p': return checkKeyword(scanner, 1, 2, "ut", TOKEN_PUT);
         case 'r': return checkKeyword(scanner, 1, 5, "eturn", TOKEN_RETURN);
         case 's':
             if(scanner->current - scanner->start > 1) {

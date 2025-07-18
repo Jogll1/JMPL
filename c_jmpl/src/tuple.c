@@ -8,7 +8,7 @@
 
 ObjTuple* newTuple(int size) {
     ObjTuple* tuple = (ObjTuple*)allocateObject(sizeof(ObjTuple), OBJ_TUPLE);
-    tuple->arity = size;
+    tuple->size = size;
     tuple->elements = ALLOCATE(Value, size); 
     
     for (int i = 0; i < size; i++) {
@@ -16,6 +16,25 @@ ObjTuple* newTuple(int size) {
     }
     
     return tuple;
+}
+
+
+bool tuplesEqual(ObjTuple* a, ObjTuple* b) {
+    if (a->size != b->size) return false;
+    
+    for (int i = 0; i < a->size; i++) {
+        Value valA = a->elements[i];
+
+        for (int j = 0; j < b->size; j++) {
+            Value valB = b->elements[i];
+
+            if (!valuesEqual(valA, valB)) {
+                return false;
+            }
+        }
+    }
+
+    return true;
 }
 
 /**
@@ -34,7 +53,7 @@ unsigned char* tupleToString(ObjTuple* tuple) {
     sb_append(sb, "(");
     
     // Append elements
-    int numElements = tuple->arity;
+    int numElements = tuple->size;
     for (int i = 0; i < numElements; i++) {
         Value value = tuple->elements[i];
 
@@ -56,22 +75,28 @@ unsigned char* tupleToString(ObjTuple* tuple) {
     return str;
 }
 
-bool tuplesEqual(ObjTuple* a, ObjTuple* b) {
-    if (a->arity != b->arity) return false;
+/**
+ * @brief Concatenate tuples a and b if both are tuples.
+ * 
+ * @param a A tuple
+ * @param b A tuple
+ * @return  The concatenated tuple
+ */
+ObjTuple* concatenateTuple(ObjTuple* a, ObjTuple* b) {
+    ObjTuple* tuple = (ObjTuple*)allocateObject(sizeof(ObjTuple), OBJ_TUPLE);
+    int size = a->size + b->size;
+    tuple->size = size;
+    tuple->elements = ALLOCATE(Value, size); 
     
-    for (int i = 0; i < a->arity; i++) {
-        Value valA = a->elements[i];
-
-        for (int j = 0; j < b->arity; j++) {
-            Value valB = b->elements[i];
-
-            if (!valuesEqual(valA, valB)) {
-                return false;
-            }
-        }
+    for (int i = 0; i < a->size; i++) {
+        tuple->elements[i] = a->elements[i];
     }
 
-    return true;
+    for (int i = 0; i < b->size; i++) {
+        tuple->elements[i + a->size] = b->elements[i];
+    }
+    
+    return tuple;
 }
 
 /**
@@ -83,7 +108,7 @@ bool tuplesEqual(ObjTuple* a, ObjTuple* b) {
 uint32_t hashTuple(ObjTuple* tuple) {
     uint32_t hash = 2166136261u;
 
-    for (int i = 0; i < tuple->arity; i++) {
+    for (int i = 0; i < tuple->size; i++) {
         Value value = tuple->elements[i];
 
         uint32_t elemHash = hashValue(value);

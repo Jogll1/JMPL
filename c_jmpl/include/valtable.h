@@ -15,8 +15,6 @@ typedef struct {
     ValEntry* entries;
 } ValTable;
 
-uint32_t hashValue(Value value);
-
 void initValTable(ValTable* table);
 void freeValTable(ValTable* table);
 

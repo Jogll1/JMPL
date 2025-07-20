@@ -4,8 +4,6 @@
 #include "object.h"
 #include "value.h"
 
-#define DEBUG_LOG_PATH "log.txt"
-
 // --- DEBUG TOKENS ---
 
 /**
@@ -86,59 +84,6 @@ const unsigned char* getTokenName(TokenType type) {
 }
 
 // --- DEBUG BYTECODE ---
-
-void initDebugger(Debugger* debugger) {
-#ifdef DEBUG_PRINT_CODE
-    debugger->printCode = true;
-#else
-    debugger->printCode = false;
-#endif
-#ifdef DEBUG_TRACE_EXECUTION
-    debugger->traceExecution = true;
-#else
-    debugger->traceExecution = false;
-#endif
-#ifdef DEBUG_PRINT_TOKENS
-    debugger->printTokens = true;
-#else
-    debugger->printTokens = false;
-#endif
-#ifdef DEBUG_STRESS_GC
-    debugger->stressGC = true;
-#else
-    debugger->stressGC = false;
-#endif
-#ifdef DEBUG_LOG_GC
-    debugger->logGC = true;
-#else
-    debugger->logGC = false;
-#endif
-#ifdef DEBUG_TO_FILE
-    debugger->logFile = fopen(DEBUG_LOG_PATH, "a");;
-    debugger->logToFile = true;
-#else
-    debugger->logFile = NULL;
-    debugger->logToFile = false;
-#endif
-}
-
-void logMessage(Debugger* debugger, bool logToConsole, const char* format, ...) {
-    va_list args;
-
-    if (debugger->logToFile) {
-        va_start(args, format);
-        if (debugger->logFile != NULL) {
-            vfprintf(debugger->logFile, format, args);
-        }
-        va_end(args);
-    }
-
-    if (logToConsole) {
-        va_start(args, format);
-        vprintf(format, args);
-        va_end(args);
-    }
-}
 
 // Disassemble each instruction of bytecode
 void disassembleChunk(Chunk* chunk, const char* name) {
@@ -235,7 +180,7 @@ int disassembleInstruction(Chunk* chunk, int offset) {
         case OP_MOD:             return simpleInstruction("OP_MOD", offset);
         case OP_NOT:             return simpleInstruction("OP_NOT", offset);
         case OP_NEGATE:          return simpleInstruction("OP_NEGATE", offset);
-        case OP_OUT:             return simpleInstruction("OP_OUT", offset);
+        case OP_OUT:             return byteInstruction("OP_OUT", chunk, offset);
         case OP_JUMP:            return jumpInstruction("OP_JUMP", 1, chunk, offset);
         case OP_JUMP_IF_FALSE:   return jumpInstruction("OP_JUMP_IF_FALSE", 1, chunk, offset);
         case OP_JUMP_IF_FALSE_2: return jumpInstruction("OP_JUMP_IF_FALSE_2", 1, chunk, offset);
@@ -243,11 +188,12 @@ int disassembleInstruction(Chunk* chunk, int offset) {
         case OP_CALL:            return byteInstruction("OP_CALL", chunk, offset);
         case OP_CLOSURE:         return closureInstruction("OP_CLOSURE", chunk, offset);
         case OP_CLOSE_UPVALUE:   return simpleInstruction("OP_CLOSE_UPVALUE", offset);
-        case OP_RETURN:          return simpleInstruction("OP_RETURN", offset);
+        case OP_RETURN:          return byteInstruction("OP_RETURN", chunk, offset);
+        case OP_STASH:           return simpleInstruction("OP_STASH", offset);
         case OP_SET_CREATE:      return simpleInstruction("OP_SET_CREATE", offset);
         case OP_SET_INSERT:      return simpleInstruction("OP_SET_INSERT", offset);
         case OP_SET_INSERT_2:    return simpleInstruction("OP_SET_INSERT_2", offset);
-        case OP_SET_OMISSION:    return simpleInstruction("OP_SET_OMISSION", offset);
+        case OP_SET_OMISSION:    return byteInstruction("OP_SET_OMISSION", chunk, offset);
         case OP_SET_IN:          return simpleInstruction("OP_SET_IN", offset);
         case OP_SET_INTERSECT:   return simpleInstruction("OP_SET_INTERSECT", offset);
         case OP_SET_UNION:       return simpleInstruction("OP_SET_UNION", offset);
@@ -255,8 +201,8 @@ int disassembleInstruction(Chunk* chunk, int offset) {
         case OP_SET_DIFFERENCE:  return simpleInstruction("OP_SET_DIFFERENCE", offset);
         case OP_SUBSET:          return simpleInstruction("OP_SUBSET", offset);
         case OP_SUBSETEQ:        return simpleInstruction("OP_SUBSETEQ", offset);
-        case OP_CREATE_TUPLE:    return simpleInstruction("OP_CREATE_TUPLE", offset);
-        case OP_TUPLE_OMISSION:  return simpleInstruction("OP_TUPLE_OMISSION", offset);
+        case OP_CREATE_TUPLE:    return byteInstruction("OP_CREATE_TUPLE", chunk, offset);
+        case OP_TUPLE_OMISSION:  return byteInstruction("OP_TUPLE_OMISSION", chunk, offset);
         case OP_SUBSCRIPT:       return simpleInstruction("OP_SUBSCRIPT", offset);
         case OP_CREATE_ITERATOR: return simpleInstruction("OP_CREATE_ITERATOR", offset);
         case OP_ITERATE:         return simpleInstruction("OP_ITERATE", offset);

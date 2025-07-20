@@ -4,19 +4,24 @@
 #include "common.h"
 #include "value.h"
 
+/**
+ * @brief Opcodes for the VM.
+ * 
+ * A 'b' tag means the opcode takes a byte as a parameter.
+ */
 typedef enum {
     OP_CONSTANT,
     OP_NULL,
     OP_TRUE,
     OP_FALSE,
     OP_POP,
-    OP_GET_LOCAL,
-    OP_SET_LOCAL,
+    OP_GET_LOCAL, // b
+    OP_SET_LOCAL, // b
     OP_GET_GLOBAL,
     OP_DEFINE_GLOBAL,
     OP_SET_GLOBAL,
-    OP_GET_UPVALUE,
-    OP_SET_UPVALUE,
+    OP_GET_UPVALUE, // b
+    OP_SET_UPVALUE, // b
     OP_EQUAL,
     OP_NOT_EQUAL,
     OP_GREATER,
@@ -31,19 +36,20 @@ typedef enum {
     OP_EXPONENT,
     OP_NOT,
     OP_NEGATE,
-    OP_OUT,
+    OP_OUT, // b
     OP_JUMP,
     OP_JUMP_IF_FALSE,
     OP_JUMP_IF_FALSE_2, // Pops condition if false
     OP_LOOP,
-    OP_CALL,
+    OP_CALL, // b
     OP_CLOSURE,
     OP_CLOSE_UPVALUE,
-    OP_RETURN,
+    OP_RETURN, // b
+    OP_STASH,
     OP_SET_CREATE,
     OP_SET_INSERT,
     OP_SET_INSERT_2,
-    OP_SET_OMISSION,
+    OP_SET_OMISSION, // b
     OP_SET_IN,
     OP_SET_INTERSECT,
     OP_SET_UNION,
@@ -51,8 +57,8 @@ typedef enum {
     OP_SET_DIFFERENCE,
     OP_SUBSET,
     OP_SUBSETEQ,
-    OP_CREATE_TUPLE,
-    OP_TUPLE_OMISSION,
+    OP_CREATE_TUPLE, // b
+    OP_TUPLE_OMISSION, // b
     OP_SUBSCRIPT,
     OP_CREATE_ITERATOR,
     OP_ITERATE

@@ -220,7 +220,7 @@ static void emitReturn() {
         emitByte(OP_NULL);
     }
 
-    emitByte(OP_RETURN);
+    emitBytes(OP_RETURN, current->implicitReturn);
 }
 
 static uint16_t makeConstant(Value value) {
@@ -238,7 +238,6 @@ static uint16_t makeConstant(Value value) {
 }
 
 static void emitConstant(Value value) {
-    // emitBytes(OP_CONSTANT, makeConstant(value));
     emitOpShort(OP_CONSTANT, makeConstant(value));
 }
 
@@ -297,12 +296,10 @@ static void endScope() {
     current->scopeDepth--;
 
     while (current->localCount > 0 && current->locals[current->localCount - 1].depth > current->scopeDepth) {
-        if (!current->implicitReturn) {
-            if (current->locals[current->localCount - 1].isCaptured) {
-                emitByte(OP_CLOSE_UPVALUE);
-            } else {
-                emitByte(OP_POP);
-            }
+        if (current->locals[current->localCount - 1].isCaptured) {
+            emitByte(OP_CLOSE_UPVALUE);
+        } else {
+            emitByte(OP_POP);
         }
         current->localCount--;
     }
@@ -641,7 +638,7 @@ static void tuple() {
         // Omission operation without 'next'
         advance();
         expression(true);
-        emitBytes(OP_FALSE, OP_TUPLE_OMISSION);
+        emitBytes(OP_TUPLE_OMISSION, 0);
     } else {
         if (match(TOKEN_COMMA)) {
             expression(true);
@@ -650,7 +647,7 @@ static void tuple() {
                 // Omission operation with 'next'
                 advance();
                 expression(true);
-                emitBytes(OP_TRUE, OP_TUPLE_OMISSION);
+                emitBytes(OP_TUPLE_OMISSION, 1);
             } else {
                 // Normal tuple construction
                 int count = 2;
@@ -818,6 +815,7 @@ static void setBuilder() {
     parser = endParser;
     consume(TOKEN_RIGHT_BRACE, "Expected '}' after set-builder");
     emitBytes(OP_GET_LOCAL, setSlot); // Push the completed set
+    emitByte(OP_STASH);
 
     free(generatorSlots);
     free(iteratorSlots);
@@ -851,7 +849,7 @@ static bool isSetBuilder() {
 
     // Call set builder and implicitly return its value
     functionWrapper(TYPE_FUNCTION, setBuilder);
-    emitBytes(OP_CALL, 0); 
+    emitBytes(OP_CALL, 0);
     return true;
 }
 
@@ -878,7 +876,7 @@ static void set(bool canAssign) {
             // Omission operation without 'next'
             advance();
             expression(true);
-            emitBytes(OP_FALSE, OP_SET_OMISSION);
+            emitBytes(OP_SET_OMISSION, 0);
         } else {
             if (match(TOKEN_COMMA)) {
                 expression(true);
@@ -887,7 +885,7 @@ static void set(bool canAssign) {
                     // Omission operation with 'next'
                     advance();
                     expression(true);
-                    emitBytes(OP_TRUE, OP_SET_OMISSION);
+                    emitBytes(OP_SET_OMISSION, 1);
                 } else {
                     // Normal set construction
                     emitByte(OP_SET_INSERT_2);
@@ -1177,7 +1175,7 @@ static void letDeclaration() {
 
 static void expressionStatement() {
     expression(false);
-    if (!current->implicitReturn) emitByte(OP_POP);
+    emitByte(current->implicitReturn ? OP_STASH : OP_POP);
 }
 
 static void ifStatement() {
@@ -1202,10 +1200,9 @@ static void ifStatement() {
 }
 
 static void outStatement() {
-    emitByte(parser.previous.type == TOKEN_OUT ? OP_TRUE : OP_FALSE);
-
+    int printNewline = parser.previous.type == TOKEN_OUT ? 1 : 0;
     expression(false);
-    emitByte(OP_OUT);
+    emitBytes(OP_OUT, printNewline);
 }
 
 static void returnStatement() {
@@ -1213,11 +1210,11 @@ static void returnStatement() {
         error("Can't return from top-level code");
     }
 
-    if(match(TOKEN_SEMICOLON) || match(TOKEN_NEWLINE)) {
+    if(match(TOKEN_SEMICOLON) || match(TOKEN_NEWLINE)) { // Interesting
         emitReturn();
     } else {
         expression(false);
-        emitByte(OP_RETURN);
+        emitBytes(OP_RETURN, 0);
     }
 }
 

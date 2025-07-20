@@ -101,6 +101,7 @@ ObjString* takeString(unsigned char* chars, int length);
 ObjString* copyString(const unsigned char* chars, int length);
 ObjUpvalue* newUpvalue(Value* slot);
 
+void printJMPLString(ObjString* string);
 void printObject(Value value);
 
 static inline bool isObjType(Value value, ObjType type) {

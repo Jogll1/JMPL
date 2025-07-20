@@ -70,3 +70,5 @@
     - Fixed crash when trying to free upvalues
     - Closures popping upvalues from the stack before implicit return
 - Invalid infix operators no longer cause a crash
+- Optimised HashSet code
+- Fixed implicit return

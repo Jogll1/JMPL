@@ -8,6 +8,8 @@
 #include "tuple.h"
 #include "value.h"
 
+// NOTE: Quite a few things redundant in this. Needs a better hashmap implementation to be usable
+
 // NOTE: should be fine-tuned once table implemented and tested
 #define VAL_TABLE_MAX_LOAD 0.75
 

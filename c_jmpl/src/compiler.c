@@ -220,7 +220,7 @@ static void emitReturn() {
         emitByte(OP_NULL);
     }
 
-    emitByte(OP_RETURN);
+    emitBytes(OP_RETURN, current->implicitReturn);
 }
 
 static uint16_t makeConstant(Value value) {
@@ -238,7 +238,6 @@ static uint16_t makeConstant(Value value) {
 }
 
 static void emitConstant(Value value) {
-    // emitBytes(OP_CONSTANT, makeConstant(value));
     emitOpShort(OP_CONSTANT, makeConstant(value));
 }
 
@@ -297,12 +296,10 @@ static void endScope() {
     current->scopeDepth--;
 
     while (current->localCount > 0 && current->locals[current->localCount - 1].depth > current->scopeDepth) {
-        if (!current->implicitReturn) {
-            if (current->locals[current->localCount - 1].isCaptured) {
-                emitByte(OP_CLOSE_UPVALUE);
-            } else {
-                emitByte(OP_POP);
-            }
+        if (current->locals[current->localCount - 1].isCaptured) {
+            emitByte(OP_CLOSE_UPVALUE);
+        } else {
+            emitByte(OP_POP);
         }
         current->localCount--;
     }
@@ -511,6 +508,28 @@ static uint8_t parseGenerator() {
     return localVarSlot;
 }
 
+/**
+ * @brief Creates and closes a new compiler around a c function call.
+ * 
+ * @param type The type of function to create
+ * @param f    The c function to call to compile the inner part of the function
+ */
+static void functionWrapper(FunctionType type, void (*f)()) {
+    Compiler compiler;
+    initCompiler(&compiler, type);
+    beginScope();
+
+    (*f)();
+
+    ObjFunction* function = endCompiler();
+    emitOpShort(OP_CLOSURE, makeConstant(OBJ_VAL(function)));
+
+    for (int i = 0; i < function->upvalueCount; i++) {
+        emitByte(compiler.upvalues[i].isLocal ? 1 : 0);
+        emitByte(compiler.upvalues[i].index);
+    }
+}
+
 static uint8_t argumentList() {
     uint8_t argCount = 0;
     if (!check(TOKEN_RIGHT_PAREN)) {
@@ -619,7 +638,7 @@ static void tuple() {
         // Omission operation without 'next'
         advance();
         expression(true);
-        emitBytes(OP_FALSE, OP_TUPLE_OMISSION);
+        emitBytes(OP_TUPLE_OMISSION, 0);
     } else {
         if (match(TOKEN_COMMA)) {
             expression(true);
@@ -628,7 +647,7 @@ static void tuple() {
                 // Omission operation with 'next'
                 advance();
                 expression(true);
-                emitBytes(OP_TRUE, OP_TUPLE_OMISSION);
+                emitBytes(OP_TUPLE_OMISSION, 1);
             } else {
                 // Normal tuple construction
                 int count = 2;
@@ -717,17 +736,11 @@ static bool parseSetBuilderGenerator(int oldCount, uint8_t** generatorSlots, uin
 
 /**
  * @brief Parse a set builder.
- * 
- * @return Whether we are in a set-builder
  */
-static bool setBuilder() {
-    // === Pretend this is a function ===
-    Compiler compiler;
-    initCompiler(&compiler, TYPE_FUNCTION);
+static void setBuilder() {
+    // Set anonymous function name and to implicit return
     current->function->name = copyString("@setb", 5);
     current->implicitReturn = true;
-    beginScope();
-    // ================================== 
 
     // Store an opened set as a local
     uint8_t setSlot = syntheticLocal(OP_SET_CREATE, "@set");
@@ -802,24 +815,13 @@ static bool setBuilder() {
     parser = endParser;
     consume(TOKEN_RIGHT_BRACE, "Expected '}' after set-builder");
     emitBytes(OP_GET_LOCAL, setSlot); // Push the completed set
+    emitByte(OP_STASH);
 
     free(generatorSlots);
     free(iteratorSlots);
     free(loopStarts);
     free(exitJumps);
     free(skipJumps);
-
-    // === End the anonymous function and call it ===
-    ObjFunction* function = endCompiler();
-    emitOpShort(OP_CLOSURE, makeConstant(OBJ_VAL(function)));
-
-    for (int i = 0; i < function->upvalueCount; i++) {
-        emitByte(compiler.upvalues[i].isLocal ? 1 : 0);
-        emitByte(compiler.upvalues[i].index);
-    }
-
-    emitBytes(OP_CALL, 0);
-    // ==============================================
 }
 
 /**
@@ -845,7 +847,9 @@ static bool isSetBuilder() {
     parser = initialParser;
     if (!isBuilder) return false;
 
-    setBuilder();
+    // Call set builder and implicitly return its value
+    functionWrapper(TYPE_FUNCTION, setBuilder);
+    emitBytes(OP_CALL, 0);
     return true;
 }
 
@@ -872,7 +876,7 @@ static void set(bool canAssign) {
             // Omission operation without 'next'
             advance();
             expression(true);
-            emitBytes(OP_FALSE, OP_SET_OMISSION);
+            emitBytes(OP_SET_OMISSION, 0);
         } else {
             if (match(TOKEN_COMMA)) {
                 expression(true);
@@ -881,7 +885,7 @@ static void set(bool canAssign) {
                     // Omission operation with 'next'
                     advance();
                     expression(true);
-                    emitBytes(OP_TRUE, OP_SET_OMISSION);
+                    emitBytes(OP_SET_OMISSION, 1);
                 } else {
                     // Normal set construction
                     emitByte(OP_SET_INSERT_2);
@@ -1123,11 +1127,7 @@ static void block() {
     consume(TOKEN_DEDENT, "Expected 'DEDENT' after block");
 }
 
-static void function(FunctionType type) {
-    Compiler compiler;
-    initCompiler(&compiler, type);
-    beginScope();
-
+static void function() {
     consume(TOKEN_LEFT_PAREN, "Expected '(' after function name");
 
     if (!check(TOKEN_RIGHT_PAREN)) {
@@ -1148,20 +1148,12 @@ static void function(FunctionType type) {
     // Compile the body
     skipNewlines();
     statement(true, false);
-
-    ObjFunction* function = endCompiler();
-    emitOpShort(OP_CLOSURE, makeConstant(OBJ_VAL(function)));
-
-    for (int i = 0; i < function->upvalueCount; i++) {
-        emitByte(compiler.upvalues[i].isLocal ? 1 : 0);
-        emitByte(compiler.upvalues[i].index);
-    }
 }
 
 static void functionDeclaration() {
     uint16_t global = parseVariable("Expected function name");
     markInitialised();
-    function(TYPE_FUNCTION);
+    functionWrapper(TYPE_FUNCTION, function);
     defineVariable(global);
 }
 
@@ -1183,7 +1175,7 @@ static void letDeclaration() {
 
 static void expressionStatement() {
     expression(false);
-    if (!current->implicitReturn) emitByte(OP_POP);
+    emitByte(current->implicitReturn ? OP_STASH : OP_POP);
 }
 
 static void ifStatement() {
@@ -1208,10 +1200,9 @@ static void ifStatement() {
 }
 
 static void outStatement() {
-    emitByte(parser.previous.type == TOKEN_OUT ? OP_TRUE : OP_FALSE);
-
+    int printNewline = parser.previous.type == TOKEN_OUT ? 1 : 0;
     expression(false);
-    emitByte(OP_OUT);
+    emitBytes(OP_OUT, printNewline);
 }
 
 static void returnStatement() {
@@ -1219,11 +1210,11 @@ static void returnStatement() {
         error("Can't return from top-level code");
     }
 
-    if(match(TOKEN_SEMICOLON) || match(TOKEN_NEWLINE)) {
+    if(match(TOKEN_SEMICOLON) || match(TOKEN_NEWLINE)) { // Interesting
         emitReturn();
     } else {
         expression(false);
-        emitByte(OP_RETURN);
+        emitBytes(OP_RETURN, 0);
     }
 }
 

@@ -75,6 +75,8 @@ void initVM() {
     vm.greyCapacity = 0;
     vm.greyStack = NULL;
 
+    vm.impReturnStash = NULL_VAL;
+
     initTable(&vm.globals);
     initTable(&vm.strings);
 
@@ -592,8 +594,9 @@ static InterpretResult run() {
                 break;
             }
             case OP_OUT: {
-                printValue(pop()); 
-                if (AS_BOOL(pop())) printf("\n");
+                int printNewline = READ_BYTE();
+                printValue(pop());
+                if (printNewline) printf("\n");
                 break;
             }
             case OP_JUMP: {
@@ -648,7 +651,15 @@ static InterpretResult run() {
                 break;
             }
             case OP_RETURN: {
-                Value result = pop();
+                bool implicitReturn = READ_BYTE();
+                Value result;
+                if (implicitReturn) {
+                    result = vm.impReturnStash;
+                    vm.impReturnStash = NULL_VAL;
+                } else {
+                    result = pop();
+                }
+
                 closeUpvalues(frame->slots);
                 vm.frameCount--;
                 if (vm.frameCount == 0) {
@@ -659,6 +670,10 @@ static InterpretResult run() {
                 vm.stackTop = frame->slots;
                 push(result);
                 frame = &vm.frames[vm.frameCount - 1];
+                break;
+            }
+            case OP_STASH: {
+                vm.impReturnStash = pop();
                 break;
             }
             case OP_SET_CREATE: {
@@ -685,11 +700,8 @@ static InterpretResult run() {
                 break;
             }
             case OP_SET_OMISSION: {
-                if (!IS_BOOL(peek(0))) {
-                    runtimeError("(Internal) Expected omission parameter");
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                int status = setOmission(AS_BOOL(pop()));
+                bool omissionParameter = READ_BYTE();
+                int status = setOmission(omissionParameter);
                 if (status != INTERPRET_OK) return status;
                 break;
             }
@@ -748,11 +760,8 @@ static InterpretResult run() {
                 break;
             }
             case OP_TUPLE_OMISSION: {
-                if (!IS_BOOL(peek(0))) {
-                    runtimeError("(Internal) Expected omission parameter");
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                int status = tupleOmission(AS_BOOL(pop()));
+                bool omissionParameter = READ_BYTE();
+                int status = tupleOmission(omissionParameter);
                 if (status != INTERPRET_OK) return status;
                 break;
             }

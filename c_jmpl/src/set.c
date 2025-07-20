@@ -8,6 +8,7 @@
 #include "../lib/c-stringbuilder/sb.h"
 
 #define SET_MAX_LOAD 0.75
+#define MAX_PRINT_ELEMENTS 100
 
 static void initSet(ObjSet* set) {
     set->count = 0;
@@ -232,6 +233,11 @@ unsigned char* setToString(ObjSet* set) {
     for (int i = 0; i < set->capacity; i++) {
         Value value = set->elements[i];
         if (!IS_NULL(value)) {
+            // if (count == MAX_PRINT_ELEMENTS) {
+            //     sb_appendf(sb, "...");
+            //     break;
+            // }
+
             if (IS_OBJ(value) && IS_STRING(value)) {
                 sb_appendf(sb, "\"%s\"", valueToString(value)->chars);
             } else {

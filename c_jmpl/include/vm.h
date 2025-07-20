@@ -32,6 +32,8 @@ typedef struct {
     int greyCount;
     int greyCapacity;
     Obj** greyStack;
+
+    Value impReturnStash; // Register for storing implicit return value
 } VM;
 
 typedef enum {

@@ -199,6 +199,17 @@ bool isProperSubset(ObjSet* a, ObjSet* b) {
     return isSubset(a, b);
 }
 
+Value getArb(ObjSet* set) {
+    for (int i = 0; i < set->count; i++) {
+        Value val = set->elements[i];
+        if (IS_NULL(val)) continue;
+
+        return val;
+    }
+    
+    return NULL_VAL;
+}
+
 /**
  * @brief Hashes a set using the FNV-1a hashing algorithm.
  * 

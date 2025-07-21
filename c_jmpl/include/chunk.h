@@ -61,7 +61,8 @@ typedef enum {
     OP_TUPLE_OMISSION, // b
     OP_SUBSCRIPT,
     OP_CREATE_ITERATOR,
-    OP_ITERATE
+    OP_ITERATE,
+    OP_ARB
 } OpCode;
 
 typedef struct {

@@ -70,6 +70,7 @@ const unsigned char* getTokenName(TokenType type) {
         case TOKEN_DO:            return "DO";
         case TOKEN_FOR:           return "FOR";
         case TOKEN_SOME:          return "SOME";
+        case TOKEN_ARB:           return "ARB";
         case TOKEN_OUT:           return "OUT";
         case TOKEN_RETURN:        return "RETURN";
         case TOKEN_FUNCTION:      return "FUNCTION";
@@ -208,6 +209,7 @@ int disassembleInstruction(Chunk* chunk, int offset) {
         case OP_SUBSCRIPT:       return simpleInstruction("OP_SUBSCRIPT", offset);
         case OP_CREATE_ITERATOR: return simpleInstruction("OP_CREATE_ITERATOR", offset);
         case OP_ITERATE:         return simpleInstruction("OP_ITERATE", offset);
+        case OP_ARB:             return simpleInstruction("OP_ARB", offset);
         default:
             printf("Unknown opcode %d\n", instruction);
             return offset + 1;

@@ -995,6 +995,7 @@ static void unary(bool canAssign) {
         case TOKEN_MINUS:   emitByte(OP_NEGATE); break;
         case TOKEN_PLUS:    break;
         case TOKEN_HASHTAG: emitByte(OP_SIZE);   break;
+        case TOKEN_ARB:     emitByte(OP_ARB);   break;
         default: return;
     } 
 }
@@ -1130,6 +1131,7 @@ ParseRule rules[] = {
     [TOKEN_DO]            = {NULL,       NULL,      PREC_NONE},
     [TOKEN_FOR]           = {NULL,       NULL,      PREC_NONE},
     [TOKEN_SOME]          = {quantAnon,  NULL,      PREC_EQUALITY},
+    [TOKEN_ARB]           = {unary,      NULL,      PREC_UNARY},
     [TOKEN_OUT]           = {NULL,       NULL,      PREC_NONE},
     [TOKEN_PUT]           = {NULL,       NULL,      PREC_NONE},
     [TOKEN_RETURN]        = {NULL,       NULL,      PREC_NONE},

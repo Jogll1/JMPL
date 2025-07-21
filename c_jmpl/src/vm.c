@@ -792,6 +792,15 @@ static InterpretResult run() {
                 push(BOOL_VAL(hasCurrentVal));
                 break;
             }
+            case OP_ARB: {
+                if (!IS_SET(peek(0))) {
+                    runtimeError("Expected set after some keyword");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                ObjSet* set = AS_SET(pop());
+                push(getArb(set));
+                break;
+            }
             default: {
                 runtimeError("(Internal) Invalid Opcode");
                 return INTERPRET_RUNTIME_ERROR;

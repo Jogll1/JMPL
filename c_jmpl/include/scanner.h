@@ -5,10 +5,11 @@
 #define TOKEN_QUEUE_SIZE 16
 
 typedef enum {
+    // Character operators (all should have ASCII representations too)
     TOKEN_LEFT_PAREN, TOKEN_RIGHT_PAREN,    // ( )
     TOKEN_LEFT_BRACE, TOKEN_RIGHT_BRACE,    // { }
     TOKEN_LEFT_SQUARE, TOKEN_RIGHT_SQUARE,  // [ ]
-    TOKEN_COMMA, TOKEN_DOT, TOKEN_ELLIPSIS, // , . ...
+    TOKEN_COMMA, TOKEN_DOT,                 // , . 
     TOKEN_MINUS, TOKEN_PLUS,                // - +
     TOKEN_SLASH, TOKEN_ASTERISK,            // / *
     TOKEN_EQUAL, TOKEN_BACK_SLASH,          // = '\'
@@ -16,13 +17,14 @@ typedef enum {
     TOKEN_SEMICOLON, TOKEN_COLON,           // ; :
     TOKEN_PIPE, TOKEN_IN, TOKEN_HASHTAG,    // | ∈ #
     TOKEN_INTERSECT, TOKEN_UNION,           // ∩, ∪
-    TOKEN_SUBSET, TOKEN_SUBSETEQ,           // ⊂, ⊆ 
- 
-    TOKEN_ASSIGN,                                 // :=
-    TOKEN_NOT, TOKEN_NOT_EQUAL,                   // ¬ ¬= (≠)
-    TOKEN_GREATER, TOKEN_GREATER_EQUAL,           // > >= (≥)
-    TOKEN_LESS, TOKEN_LESS_EQUAL,                 // < <= (≤)
-    TOKEN_MAPS_TO, TOKEN_IMPLIES,                 // -> => (→, ⇒)
+    TOKEN_SUBSET, TOKEN_SUBSETEQ,           // ⊂, ⊆
+    TOKEN_FORALL, TOKEN_EXISTS,             // ∀, ∃
+    
+    TOKEN_ASSIGN, TOKEN_ELLIPSIS,           // :=, ...
+    TOKEN_NOT, TOKEN_NOT_EQUAL,             // ¬ ¬= (≠)
+    TOKEN_GREATER, TOKEN_GREATER_EQUAL,     // > >= (≥)
+    TOKEN_LESS, TOKEN_LESS_EQUAL,           // < <= (≤)
+    TOKEN_MAPS_TO, TOKEN_IMPLIES,           // -> => (→, ⇒)
 
     // Literals
     TOKEN_IDENTIFIER, TOKEN_STRING, TOKEN_NUMBER,

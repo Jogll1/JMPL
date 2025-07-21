@@ -59,6 +59,7 @@
 ## [v0.2.1] - 17/07/2025
 ### Added
 - Added set-builder notation
+- Added existential and universal quantifiers (`∀` or `forall` and `∃` or `exists`)
 - `round(x)` native
 - Strings can be indexed
 - Tuples can be concatenated

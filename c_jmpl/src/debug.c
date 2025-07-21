@@ -21,12 +21,12 @@ const unsigned char* getTokenName(TokenType type) {
         case TOKEN_RIGHT_SQUARE:  return "RIGHT_SQUARE";
         case TOKEN_COMMA:         return "COMMA";
         case TOKEN_DOT:           return "DOT";
-        case TOKEN_ELLIPSIS:      return "ELLIPSIS";
         case TOKEN_MINUS:         return "MINUS";
         case TOKEN_PLUS:          return "PLUS";
         case TOKEN_SLASH:         return "SLASH";
         case TOKEN_ASTERISK:      return "ASTERISK";
         case TOKEN_BACK_SLASH:    return "BACK_SLASH";
+        case TOKEN_EQUAL:         return "EQUAL";
         case TOKEN_CARET:         return "CARET";
         case TOKEN_MOD:           return "MOD";
         case TOKEN_SEMICOLON:     return "SEMICOLON";
@@ -38,9 +38,11 @@ const unsigned char* getTokenName(TokenType type) {
         case TOKEN_UNION:         return "UNION";
         case TOKEN_SUBSET:        return "SUBSET";
         case TOKEN_SUBSETEQ:      return "SUBSETEQ";
+        case TOKEN_FORALL:        return "FORALL";
+        case TOKEN_EXISTS:        return "EXISTS";
 
-        case TOKEN_EQUAL:         return "EQUAL";
         case TOKEN_ASSIGN:        return "ASSIGN";
+        case TOKEN_ELLIPSIS:      return "ELLIPSIS";
         case TOKEN_NOT:           return "NOT";
         case TOKEN_NOT_EQUAL:     return "NOT_EQUAL";
         case TOKEN_GREATER:       return "GREATER";

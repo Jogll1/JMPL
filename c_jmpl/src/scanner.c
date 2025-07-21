@@ -178,12 +178,12 @@ static void skipWhitespace(Scanner* scanner) {
     }
 }
 
-static bool isKeyword(Scanner* scanner, unsigned int start, int length, const unsigned char* rest, TokenType type) {
+static bool isKeyword(Scanner* scanner, unsigned int start, int length, const unsigned char* rest) {
     return scanner->current - scanner->start == start + length && memcmp(scanner->start + start, rest, length) == 0;
 }
 
 static TokenType checkKeyword(Scanner* scanner, unsigned int start, int length, const unsigned char* rest, TokenType type) {
-    if(isKeyword(scanner, start, length, rest, type)) {
+    if(isKeyword(scanner, start, length, rest)) {
         return type;
     }
 
@@ -197,12 +197,23 @@ static TokenType identifierType(Scanner* scanner) {
     switch(scanner->start[0]) {
         case 'a': return checkKeyword(scanner, 1, 2, "nd", TOKEN_AND);
         case 'd': return checkKeyword(scanner, 1, 1, "o", TOKEN_DO);
-        case 'e': return checkKeyword(scanner, 1, 3, "lse", TOKEN_ELSE);
+        case 'e':
+            if(scanner->current - scanner->start > 1) {
+                switch(scanner->start[1]) {
+                    case 'l': return checkKeyword(scanner, 2, 2, "se", TOKEN_ELSE);
+                    case 'x': return checkKeyword(scanner, 2, 4, "ists", TOKEN_EXISTS);
+                }
+            }
         case 'f': 
             if(scanner->current - scanner->start > 1) {
                 switch(scanner->start[1]) {
                     case 'a': return checkKeyword(scanner, 2, 3, "lse", TOKEN_FALSE);
-                    case 'o': return checkKeyword(scanner, 2, 1, "r", TOKEN_FOR);
+                    case 'o':
+                    if(scanner->current - scanner->start > 1) {
+                        if (isKeyword(scanner, 2, 1, "r")) return TOKEN_FOR;
+                        else if (isKeyword(scanner, 2, 4, "rall")) return TOKEN_FORALL;
+                        else return TOKEN_IDENTIFIER;
+                    }
                     case 'u': return checkKeyword(scanner, 2, 2, "nc", TOKEN_FUNCTION);
                 }
             }
@@ -243,8 +254,8 @@ static TokenType identifierType(Scanner* scanner) {
         case 'r': return checkKeyword(scanner, 1, 5, "eturn", TOKEN_RETURN);
         case 's':
             if(scanner->current - scanner->start > 1) {
-                if (isKeyword(scanner, 1, 7, "ubseteq", TOKEN_SUBSETEQ)) return TOKEN_SUBSETEQ;
-                else if (isKeyword(scanner, 1, 5, "ubset", TOKEN_SUBSET)) return TOKEN_SUBSET;
+                if (isKeyword(scanner, 1, 7, "ubseteq")) return TOKEN_SUBSETEQ;
+                else if (isKeyword(scanner, 1, 5, "ubset")) return TOKEN_SUBSET;
                 else return TOKEN_IDENTIFIER;
             }
             break;
@@ -424,6 +435,8 @@ Token scanToken(Scanner* scanner) {
         case 0xE288AA: return makeToken(scanner, TOKEN_UNION); // '∪' U+222A, UTF-8: 0xE288AA
         case 0xE28A82: return makeToken(scanner, TOKEN_SUBSET); // '⊂' U+2282, UTF-8: 0xE28A82
         case 0xE28A86: return makeToken(scanner, TOKEN_SUBSETEQ); // '⊆' U+2286, UTF-8: 0xE28A86
+        case 0xE28880: return makeToken(scanner, TOKEN_FORALL); // '∀' U+2200, UTF-8: 0xE28880
+        case 0xE28883: return makeToken(scanner, TOKEN_EXISTS); // '∃' U+2203, UTF-8: 0xE28883
         case '#': return makeToken(scanner, TOKEN_HASHTAG);
         case 0xE289A0: return makeToken(scanner, TOKEN_NOT_EQUAL); // '≠' U+2260, UTF-8: 0xE289A0
         case 0xE289A4: return makeToken(scanner, TOKEN_LESS_EQUAL); // '≤' U+2264, UTF-8: 0xE289A4

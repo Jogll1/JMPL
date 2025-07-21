@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <assert.h>
 
 #include "object.h"
 #include "common.h"
@@ -996,6 +997,70 @@ static void unary(bool canAssign) {
     } 
 }
 
+static void quantifier() {
+    // Set anonymous function name and to implicit return
+    current->function->name = copyString("@quan", 5);
+    current->implicitReturn = true;
+
+    TokenType operatorType = parser.previous.type;
+    assert(parser.previous.type == TOKEN_FORALL || parser.previous.type == TOKEN_EXISTS);
+    bool isForAll = parser.previous.type == TOKEN_FORALL;
+
+    // === FOR LOAN CODE ===
+    uint8_t loopVarSlot = parseGenerator();
+    if (loopVarSlot == 0) error("Variable with this identifier already defined in this scope");
+    uint8_t iteratorSlot = syntheticLocal(OP_CREATE_ITERATOR, "@iter");
+
+    int loopStart = currentChunk()->count;
+
+    // Load and iterate the iterator
+    emitBytes(OP_GET_LOCAL, iteratorSlot);
+    emitByte(OP_ITERATE); // Push next value + bool for if there is a current value
+
+    // If no current value -> jump to after-loop
+    int loopEnd = emitJump(OP_JUMP_IF_FALSE);
+    emitByte(OP_POP); // Pop check
+
+    // If loop is fine, set iterative variable
+    emitBytes(OP_SET_LOCAL, loopVarSlot);
+    emitByte(OP_POP);
+    // =====================
+
+    // Predicate
+    consume(TOKEN_COMMA, "Expected comma after generator of quantifier");
+    expression(false);
+
+    // Invert expression for exists
+    if (!isForAll) {
+        emitByte(OP_NOT);
+    }
+
+    int loopEarlyExit = emitJump(OP_JUMP_IF_FALSE_2);
+    emitByte(OP_POP);
+
+    emitLoop(loopStart);
+
+    // Early exit
+    patchJump(loopEarlyExit);
+    emitByte(isForAll ? OP_FALSE : OP_TRUE);
+    emitByte(OP_STASH);
+    emitBytes(OP_RETURN, current->implicitReturn); // Return manually
+
+    // Loop end
+    patchJump(loopEnd);
+    emitByte(OP_POP);
+    emitByte(isForAll ? OP_TRUE : OP_FALSE); 
+    emitByte(OP_STASH);
+}
+
+/**
+ * @brief Wrapper for quantifier to call it as an anonymous function.
+ */
+static void quantFunc(bool canAssign) {
+    functionWrapper(TYPE_FUNCTION, quantifier);
+    emitBytes(OP_CALL, 0);
+}
+
 ParseRule rules[] = {
     // Rules for parsing expressions
     // Token name            prefix      infix      precedence
@@ -1024,6 +1089,8 @@ ParseRule rules[] = {
     [TOKEN_UNION]         = {NULL,       binary,    PREC_TERM},
     [TOKEN_SUBSET]        = {NULL,       binary,    PREC_TERM},
     [TOKEN_SUBSETEQ]      = {NULL,       binary,    PREC_TERM},
+    [TOKEN_FORALL]        = {quantFunc,  NULL,      PREC_EQUALITY},
+    [TOKEN_EXISTS]        = {quantFunc,  NULL,      PREC_EQUALITY},
     [TOKEN_EQUAL]         = {NULL,       binary,    PREC_EQUALITY},
     [TOKEN_ASSIGN]        = {NULL,       NULL,      PREC_NONE},
     [TOKEN_NOT]           = {unary,      NULL,      PREC_UNARY},
@@ -1236,7 +1303,6 @@ static void whileStatement() {
 static void forStatement() {
     beginScope();
 
-    // Parse the local variable that will be the generator
     uint8_t loopVarSlot = parseGenerator();
     if (loopVarSlot == 0) error("Variable with this identifier already defined in this scope");
     uint8_t iteratorSlot = syntheticLocal(OP_CREATE_ITERATOR, "@iter");
@@ -1274,7 +1340,6 @@ static void forStatement() {
         statement(true, false);
     }
 
-    // emitByte(OP_POP); // Sketchy? - pops the iterative value?
     emitLoop(loopStart);
 
     patchJump(exitJump);

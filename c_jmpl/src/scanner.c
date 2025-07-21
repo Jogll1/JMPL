@@ -256,6 +256,7 @@ static TokenType identifierType(Scanner* scanner) {
             if(scanner->current - scanner->start > 1) {
                 if (isKeyword(scanner, 1, 7, "ubseteq")) return TOKEN_SUBSETEQ;
                 else if (isKeyword(scanner, 1, 5, "ubset")) return TOKEN_SUBSET;
+                else if (isKeyword(scanner, 1, 3, "ome")) return TOKEN_SOME;
                 else return TOKEN_IDENTIFIER;
             }
             break;

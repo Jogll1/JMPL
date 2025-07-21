@@ -642,23 +642,25 @@ static void tuple() {
         emitBytes(OP_TUPLE_OMISSION, 0);
     } else {
         if (match(TOKEN_COMMA)) {
-            expression(true);
-
             if (check(TOKEN_ELLIPSIS)) {
                 // Omission operation with 'next'
+                expression(true);
                 advance();
                 expression(true);
                 emitBytes(OP_TUPLE_OMISSION, 1);
             } else {
                 // Normal tuple construction
-                int count = 2;
-                while (match(TOKEN_COMMA)) {
-                    expression(true);
-                    if (count < UINT8_MAX) {
-                        count++;
-                    } else {
-                        error("(Internal) Can't have more than 255 elements in a tuple literal");
-                    }
+                int count = 1;
+
+                if (!check(TOKEN_RIGHT_PAREN)) {
+                    do {
+                        expression(true);
+                        if (count < UINT8_MAX) {
+                            count++;
+                        } else {
+                            error("(Internal) Can't have more than 255 elements in a tuple literal");
+                        }
+                    } while (match(TOKEN_COMMA));
                 }
 
                 emitBytes(OP_CREATE_TUPLE, count);
@@ -1003,8 +1005,6 @@ static void quantifier() {
     current->implicitReturn = true;
 
     TokenType operatorType = parser.previous.type;
-    assert(parser.previous.type == TOKEN_FORALL || parser.previous.type == TOKEN_EXISTS);
-    bool isForAll = parser.previous.type == TOKEN_FORALL;
 
     // === FOR LOAN CODE ===
     uint8_t loopVarSlot = parseGenerator();
@@ -1030,8 +1030,8 @@ static void quantifier() {
     consume(TOKEN_COMMA, "Expected comma after generator of quantifier");
     expression(false);
 
-    // Invert expression for exists
-    if (!isForAll) {
+    // Invert expression for exists and some
+    if (operatorType == TOKEN_EXISTS || operatorType == TOKEN_SOME) {
         emitByte(OP_NOT);
     }
 
@@ -1042,21 +1042,33 @@ static void quantifier() {
 
     // Early exit
     patchJump(loopEarlyExit);
-    emitByte(isForAll ? OP_FALSE : OP_TRUE);
+
+    if (operatorType == TOKEN_SOME) {
+        emitBytes(OP_GET_LOCAL, loopVarSlot);
+    } else {
+        emitByte(operatorType == TOKEN_FORALL ? OP_FALSE : OP_TRUE);
+    }
+
     emitByte(OP_STASH);
     emitBytes(OP_RETURN, current->implicitReturn); // Return manually
 
     // Loop end
     patchJump(loopEnd);
     emitByte(OP_POP);
-    emitByte(isForAll ? OP_TRUE : OP_FALSE); 
+
+    if (operatorType == TOKEN_SOME) {
+        emitByte(OP_NULL);
+    } else {
+        emitByte(operatorType == TOKEN_FORALL ? OP_TRUE : OP_FALSE); 
+    }
+
     emitByte(OP_STASH);
 }
 
 /**
  * @brief Wrapper for quantifier to call it as an anonymous function.
  */
-static void quantFunc(bool canAssign) {
+static void quantAnon(bool canAssign) {
     functionWrapper(TYPE_FUNCTION, quantifier);
     emitBytes(OP_CALL, 0);
 }
@@ -1089,8 +1101,8 @@ ParseRule rules[] = {
     [TOKEN_UNION]         = {NULL,       binary,    PREC_TERM},
     [TOKEN_SUBSET]        = {NULL,       binary,    PREC_TERM},
     [TOKEN_SUBSETEQ]      = {NULL,       binary,    PREC_TERM},
-    [TOKEN_FORALL]        = {quantFunc,  NULL,      PREC_EQUALITY},
-    [TOKEN_EXISTS]        = {quantFunc,  NULL,      PREC_EQUALITY},
+    [TOKEN_FORALL]        = {quantAnon,  NULL,      PREC_EQUALITY},
+    [TOKEN_EXISTS]        = {quantAnon,  NULL,      PREC_EQUALITY},
     [TOKEN_EQUAL]         = {NULL,       binary,    PREC_EQUALITY},
     [TOKEN_ASSIGN]        = {NULL,       NULL,      PREC_NONE},
     [TOKEN_NOT]           = {unary,      NULL,      PREC_UNARY},
@@ -1117,7 +1129,7 @@ ParseRule rules[] = {
     [TOKEN_WHILE]         = {NULL,       NULL,      PREC_NONE},
     [TOKEN_DO]            = {NULL,       NULL,      PREC_NONE},
     [TOKEN_FOR]           = {NULL,       NULL,      PREC_NONE},
-    [TOKEN_SUMMATION]     = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_SOME]          = {quantAnon,  NULL,      PREC_EQUALITY},
     [TOKEN_OUT]           = {NULL,       NULL,      PREC_NONE},
     [TOKEN_PUT]           = {NULL,       NULL,      PREC_NONE},
     [TOKEN_RETURN]        = {NULL,       NULL,      PREC_NONE},

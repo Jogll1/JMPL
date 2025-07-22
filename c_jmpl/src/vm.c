@@ -340,7 +340,7 @@ static bool isFalse(Value value) {
 static void concatenateString() {
     Value b = pop();
     Value a = pop();
-    
+
     ObjString* aString = valueToString(a);
     ObjString* bString = valueToString(b);
 

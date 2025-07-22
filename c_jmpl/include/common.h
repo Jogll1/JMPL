@@ -8,7 +8,7 @@
 // Debug
 
 // #define DEBUG_PRINT_CODE
-// #define DEBUG_TRACE_EXECUTION
+#define DEBUG_TRACE_EXECUTION
 // #define DEBUG_PRINT_TOKENS
 // #define DEBUG_STRESS_GC
 // #define DEBUG_LOG_GC
@@ -19,9 +19,9 @@
 
 // ANSI Colours
 
-#define ANSI_RESET "\033[0m"
-#define ANSI_YELLOW "\033[33m"
-#define ANSI_RED "\033[31m"
+#define ANSI_RESET "\e[0m"
+#define ANSI_YELLOW "\e[33m"
+#define ANSI_RED "\e[31m"
 
 // Error Codes
 

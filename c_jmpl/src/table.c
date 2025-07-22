@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <assert.h>
 
 #include "memory.h"
 #include "object.h"
@@ -131,10 +132,10 @@ void tableAddAll(Table* from, Table* to) {
 
 ObjString* tableFindString(Table* table, const unsigned char* chars, int length, uint32_t hash) {
     if (table->count == 0) return NULL;
-
     uint32_t index = hash % table->capacity;
 
     while (true) {
+        assert(index < table->capacity);
         Entry* entry = &table->entries[index];
 
         if (entry->key == NULL) {

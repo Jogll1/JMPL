@@ -121,10 +121,10 @@ ObjString* valueToString(Value value) {
             str = "CAST_ERROR";
             break;
     }
-
+    
     ObjString* result = AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
     if (shouldFree) free(str);
-    
+
     return result;
 }
 

@@ -15,4 +15,4 @@ func nPrimes(n) =
     P
 
 let n = 1000
-out "Set of primes from 1 - " + n + " = " + nPrimes(n)
+println("Set of primes from 1 - " + n + " = " + nPrimes(n))

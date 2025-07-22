@@ -59,13 +59,15 @@
 ## [v0.2.1] - 17/07/2025
 ### Added
 - Added set-builder notation
-- Added existential and universal quantifiers (`∀` or `forall` and `∃` or `exists`)
-- `round(x)` native
+- Added quantifiers (`∀` or `forall`, `∃` or `exists`, and `some`)
+- New native functions
+    - `round(x)`
+    - `print(x)` and `println(x)`
 - Strings can be indexed
 - Tuples can be concatenated
-- Added `put` keyword that prints output to the console without a newline
 ### Changed
 - `==` (equality operation) to be `=`
+- Removed `out` keyword and replaced it with a function
 ### Fixed
 - Bugs relating to upvalues and closures
     - Fixed crash when trying to free upvalues

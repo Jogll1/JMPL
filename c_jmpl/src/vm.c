@@ -85,16 +85,18 @@ void initVM() {
     // General purpose
     defineNative("clock", 0, clockNative);
 
+    // I/O
+    defineNative("print", 1, printNative);
+    defineNative("println", 1, printlnNative);
+
     // Maths library
     defineNative("pi", 0, piNative);
-
     defineNative("sin", 1, sinNative);
     defineNative("cos", 1, cosNative);
     defineNative("tan", 1, tanNative);
     defineNative("arcsin", 1, arcsinNative);
     defineNative("arccos", 1, arccosNative);
     defineNative("arctan", 1, arctanNative);
-
     defineNative("max", 2, maxNative);
     defineNative("min", 2, minNative);
     defineNative("floor", 1, floorNative);
@@ -591,12 +593,6 @@ static InterpretResult run() {
                     return INTERPRET_RUNTIME_ERROR;
                 }
                 push(NUMBER_VAL(-AS_NUMBER(pop())));
-                break;
-            }
-            case OP_OUT: {
-                int printNewline = READ_BYTE();
-                printValue(pop());
-                if (printNewline) printf("\n");
                 break;
             }
             case OP_JUMP: {

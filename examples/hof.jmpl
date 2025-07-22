@@ -22,5 +22,5 @@ func fold(S, b, f) =
 func add(x, y) = x + y
 
 let S = {1 ... 10}
-out fold(S, 0, add)
+println(fold(S, 0, add))
 

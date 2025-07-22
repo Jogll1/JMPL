@@ -10,6 +10,11 @@
 
 Value clockNative(int argCount, Value* args);
 
+// --- I/O ---
+
+Value printNative(int argCount, Value* args);
+Value printlnNative(int argCount, Value* args);
+
 // --- Maths library (built-in by design) ---
 
 Value piNative(int argCount, Value* args);

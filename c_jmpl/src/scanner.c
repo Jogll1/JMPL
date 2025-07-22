@@ -249,15 +249,7 @@ static TokenType identifierType(Scanner* scanner) {
                 }
             }
             break;
-        case 'o': 
-            if(scanner->current - scanner->start > 1) {
-                switch(scanner->start[1]) {
-                    case 'r': return TOKEN_OR;
-                    case 'u': return checkKeyword(scanner, 2, 1, "t", TOKEN_OUT);
-                }
-            }
-            break;
-        case 'p': return checkKeyword(scanner, 1, 2, "ut", TOKEN_PUT);
+        case 'o': return checkKeyword(scanner, 1, 1, "r", TOKEN_OR);
         case 'r': return checkKeyword(scanner, 1, 5, "eturn", TOKEN_RETURN);
         case 's':
             if(scanner->current - scanner->start > 1) {

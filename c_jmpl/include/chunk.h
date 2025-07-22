@@ -36,7 +36,6 @@ typedef enum {
     OP_EXPONENT,
     OP_NOT,
     OP_NEGATE,
-    OP_OUT, // b
     OP_JUMP,
     OP_JUMP_IF_FALSE,
     OP_JUMP_IF_FALSE_2, // Pops condition if false

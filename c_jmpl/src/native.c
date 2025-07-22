@@ -23,6 +23,33 @@ Value clockNative(int argCount, Value* args) {
     return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
 }
 
+// --- I/O ---
+
+/**
+ * print(x)
+ * 
+ * Prints a value to the console.
+ * Returns null.
+ */
+Value printNative(int argCount, Value* args) {
+    printValue(args[0]);
+
+    return NULL_VAL;
+}
+
+/**
+ * println(x)
+ * 
+ * Prints a value to the console with a newline.
+ * Returns null.
+ */
+Value printlnNative(int argCount, Value* args) {
+    printValue(args[0]);
+    printf("\n");
+
+    return NULL_VAL;
+}
+
 // --- Maths library ---
 
 /**

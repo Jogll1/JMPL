@@ -71,7 +71,6 @@ const unsigned char* getTokenName(TokenType type) {
         case TOKEN_FOR:           return "FOR";
         case TOKEN_SOME:          return "SOME";
         case TOKEN_ARB:           return "ARB";
-        case TOKEN_OUT:           return "OUT";
         case TOKEN_RETURN:        return "RETURN";
         case TOKEN_FUNCTION:      return "FUNCTION";
 
@@ -183,7 +182,6 @@ int disassembleInstruction(Chunk* chunk, int offset) {
         case OP_MOD:             return simpleInstruction("OP_MOD", offset);
         case OP_NOT:             return simpleInstruction("OP_NOT", offset);
         case OP_NEGATE:          return simpleInstruction("OP_NEGATE", offset);
-        case OP_OUT:             return byteInstruction("OP_OUT", chunk, offset);
         case OP_JUMP:            return jumpInstruction("OP_JUMP", 1, chunk, offset);
         case OP_JUMP_IF_FALSE:   return jumpInstruction("OP_JUMP_IF_FALSE", 1, chunk, offset);
         case OP_JUMP_IF_FALSE_2: return jumpInstruction("OP_JUMP_IF_FALSE_2", 1, chunk, offset);

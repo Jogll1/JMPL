@@ -2,163 +2,163 @@
 let start = clock()
 
 // Comments
-out "--- Comments ---"
+println("--- Comments ---")
 // This is a comment
 
 /* This is a
    multiline comment */
 
 // Output
-out "\n--- Output ---"
-out "Hello, world!"
+println("\n--- Output ---")
+println("Hello, world!")
 
 // Statements
-out "\n--- Statements ---"
-out "Statement 1";
-out "Statement 2"; out "Statement 3"
+println("\n--- Statements ---")
+println("Statement 1");
+println("Statement 2"); println("Statement 3")
 
 // Variables
-out "\n--- Variables ---"
+println("\n--- Variables ---")
 let x = 5
-out "x = " + x
+println("x = " + x)
 let π = 3.14
-out "π = " + π
+println("π = " + π)
 let p = true
-out "p = " + p
+println("p = " + p)
 let s = "Hi"
-out "s = " + s
+println("s = " + s)
 
 x := 6
-out "x = " + x
+println("x = " + x)
 
 // Sets
-out "\n--- Sets ---"
+println("\n--- Sets ---")
 let S = {1, 2, 3, 4, {5}, "Hi"}
-out "S = " + S
+println("S = " + S)
 let T = {3 ... 10}
-out "T = " + T
+println("T = " + T)
 let U = {10, 8 ... 0}
-out "U = " + U
-out ""
-out "S ∪ T = " + (S ∪ T) 
-out "S union T = " + (S union T) 
-out "U ∩ T = " + (U ∩ T)
-out "U intersect T = " + (U intersect T)
-out "U \\ T = " + (U \ T)
-out "{1, 2} ⊆ S = " + ({1, 2} ⊆ S)
-out "{1, 2} subseteq S = " + ({1, 2} subseteq S)
-out "{3 ... 10} ⊂ T = " + ({3 ... 10} ⊂ T)
-out "{3 ... 10} subset T = " + ({3 ... 10} subset T)
-out "5 ∈ S = " + (5 ∈ S)
-out "5 in S = " + (5 in S) 
-out "{5} ∈ S = " + ({5} ∈ S)
+println("U = " + U)
+println("")
+println("S ∪ T = " + (S ∪ T))
+println("S union T = " + (S union T))
+println("U ∩ T = " + (U ∩ T))
+println("U intersect T = " + (U intersect T))
+println("U \\ T = " + (U \ T))
+println("{1, 2} ⊆ S = " + ({1, 2} ⊆ S))
+println("{1, 2} subseteq S = " + ({1, 2} subseteq S))
+println("{3 ... 10} ⊂ T = " + ({3 ... 10} ⊂ T))
+println("{3 ... 10} subset T = " + ({3 ... 10} subset T))
+println("5 ∈ S = " + (5 ∈ S))
+println("5 in S = " + (5 in S))
+println("{5} ∈ S = " + ({5} ∈ S))
 
 // Tuples
-out "\n--- Tuple ---"
+println("\n--- Tuple ---")
 let t = (1, 2, 3)
-out "t = " + t
+println("t = " + t)
 let u = (3, 5 ... 11)
-out "u = " + u
+println("u = " + u)
 let v = (11, 4 ... -17)
-out "v = " + v
-out ""
-out "t[0] = " + t[0]
-out "u[5] = " + u[3]
+println("v = " + v)
+println("")
+println("t[0] = " + t[0])
+println("u[5] = " + u[3])
 
 // Operators
-out "\n--- Operators ---"
+println("\n--- Operators ---")
 let p = true
-out "p = " + p
+println("p = " + p)
 let q = false
-out "q = " + q
-out "¬p = " + ¬p 
-out "not p = " + not p
-out "p ∧ q = " + (p ∧ q)
-out "p and q = " + (p and q)
-out "p ∨ q = " + (p ∨ q)
-out "p or q = " + (p or q)
-out ""
-out "p = q = " + (p = q)
-out "S ≠ T = " + (S ≠ T)
-out "S /= T = " + (S /= T)
-out "1 < 4 = " + (1 < 4)
-out "1 > 4 = " + (1 > 4)
-out "1 ≤ 1 = " + (1 ≤ 1)
-out "1 <= 1 = " + (1 <= 1)
-out "1 ≥ 1 = " + (0 ≥ 1)
-out "1 >= 1 = " + (0 >= 1)
-out ""
-out "1 + 4 = " + (1 + 4)
-out "1 - 4 = " + (1 - 4)
-out "2 * 4 = " + (2 * 4)
-out "2 / 4 = " + (2 / 4)
-out "2^4 = " + (2^4)
-out "15 mod 4 = " + (15 mod 4)
-out "15 % 4 = " + (15 % 4)
-out ""
-out "#S = " + #S
-out "#v = " + #v
-out "#(-1) = " + #(-1)
-out "#(Hello) = " + #("Hello")
+println("q = " + q)
+println("¬p = " + ¬p)
+println("not p = " + not p)
+println("p ∧ q = " + (p ∧ q))
+println("p and q = " + (p and q))
+println("p ∨ q = " + (p ∨ q))
+println("p or q = " + (p or q))
+println("")
+println("p = q = " + (p = q))
+println("S ≠ T = " + (S ≠ T))
+println("S /= T = " + (S /= T))
+println("1 < 4 = " + (1 < 4))
+println("1 > 4 = " + (1 > 4))
+println("1 ≤ 1 = " + (1 ≤ 1))
+println("1 <= 1 = " + (1 <= 1))
+println("1 ≥ 1 = " + (0 ≥ 1))
+println("1 >= 1 = " + (0 >= 1))
+println("")
+println("1 + 4 = " + (1 + 4))
+println("1 - 4 = " + (1 - 4))
+println("2 * 4 = " + (2 * 4))
+println("2 / 4 = " + (2 / 4))
+println("2^4 = " + (2^4))
+println("15 mod 4 = " + (15 mod 4))
+println("15 % 4 = " + (15 % 4))
+println("")
+println("#S = " + #S)
+println("#v = " + #v)
+println("#(-1) = " + #(-1))
+println("#(Hello) = " + #("Hello"))
 
 // If Statements
-out "\n---If Statements---"
-out "if true then out Hello else out Goodbye"
-if true then out "Hello" else out "Goodbye"
-out "if false then \n    out Hello\nelse\n    out Goodbye"
+println("\n---If Statements---")
+println("if true then println(Hello) else println(Goodbye)")
+if true then println("Hello") else println("Goodbye")
+println("if false then \n    println(Hello)\nelse\n    println(Goodbye)")
 if false then 
-    out "Hello" 
+    println("Hello") 
 else 
-    out "Goodbye"
+    println("Goodbye")
 
 // While loops
-out "\n---While Loops---"
+println("\n---While Loops---")
 let i = 0
-out "i = " + i
-out "while i < 5 do\n    out Hello\n    i := i + 1"
+println("i = " + i)
+println("while i < 5 do\n    println(Hello)\n    i := i + 1")
 while i < 5 do 
-    out "Hello"
+    println("Hello")
     i := i + 1
 
 // For loop
-out "\n---For Loops---"
+println("\n---For Loops---")
 let R = {1 ... 5}
-out "R = " + R
+println("R = " + R)
 let total = 0
-out "total = " + total
-out "for x ∈ R do\n    total := total + x"
+println("total = " + total)
+println("for x ∈ R do\n    total := total + x")
 for x ∈ R do 
     total := total + x
-out "total = " + total
+println("total = " + total)
 total := 1
-out "total = " + total
-out "for x ∈ R | x mod 2 = 0 do\n    total := total * x"
+println("total = " + total)
+println("for x ∈ R | x mod 2 = 0 do\n    total := total * x")
 for x ∈ R | x mod 2 = 0 do 
     total := total * x
-out "total = " + total
+println("total = " + total)
 
 // Functions
-out "\n---Functions---"
+println("\n---Functions---")
 func square(x) = x * x
-out "square(4) = " + square(4)
+println("square(4) = " + square(4))
 func addOneDiv3(x) =
     let add = x + 1
     let div = add / 3
     div
-out "addOneDiv3(4) = " + addOneDiv3(4)
+println("addOneDiv3(4) = " + addOneDiv3(4))
 func caller(f, x) = f(x)
-out "caller(square, 3) = square(3) = " + caller(square, 3)
+println("caller(square, 3) = square(3) = " + caller(square, 3))
 func factory() = 
     func add1(y) = y + 1
     add1
-out "factory()(5) = add1(5) = " + factory()(5)
-out "square(addOneDiv3(6)) = " + square(addOneDiv3(6))
+println("factory()(5) = add1(5) = " + factory()(5))
+println("square(addOneDiv3(6)) = " + square(addOneDiv3(6)))
 func explicitReturn(x) = 
     if x > 5 then
         return "X > 5"
     else
         return "X ≤ 5"
-out "explicitReturn(6) = " + explicitReturn(6) 
+println("explicitReturn(6) = " + explicitReturn(6))
 
-out "\n====End of Line===="
-out "Time: " + (clock() - start)
+println("\n====End of Line====")
+println("Time: " + (clock() - start))

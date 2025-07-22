@@ -629,10 +629,10 @@ static void literal(bool canAssign) {
 /**
  * @brief Parses a tuple.
  * 
- * Can parse sets in format: (x, y, z, etc),
- * or:                       (f ... l),
- * or:                       (f, n, ... l),
- * but not:                  (x)
+ * Can parse tuples in format: (x, y, z, etc)
+ * or:                         (x,)
+ * or:                         (f ... l)
+ * or:                         (f, n, ... l)
  */
 static void tuple() {
     if (check(TOKEN_ELLIPSIS)) {
@@ -642,25 +642,29 @@ static void tuple() {
         emitBytes(OP_TUPLE_OMISSION, 0);
     } else {
         if (match(TOKEN_COMMA)) {
+            if (check(TOKEN_RIGHT_PAREN)) {
+                // 1-tuple
+                emitBytes(OP_CREATE_TUPLE, 1);
+                return;
+            }
+
+            expression(true);
+
             if (check(TOKEN_ELLIPSIS)) {
                 // Omission operation with 'next'
-                expression(true);
                 advance();
                 expression(true);
                 emitBytes(OP_TUPLE_OMISSION, 1);
             } else {
                 // Normal tuple construction
-                int count = 1;
-
-                if (!check(TOKEN_RIGHT_PAREN)) {
-                    do {
-                        expression(true);
-                        if (count < UINT8_MAX) {
-                            count++;
-                        } else {
-                            error("(Internal) Can't have more than 255 elements in a tuple literal");
-                        }
-                    } while (match(TOKEN_COMMA));
+                int count = 2;
+                while (match(TOKEN_COMMA)) {
+                    expression(true);
+                    if (count < UINT8_MAX) {
+                        count++;
+                    } else {
+                        error("(Internal) Can't have more than 255 elements in a tuple literal");
+                    }
                 }
 
                 emitBytes(OP_CREATE_TUPLE, count);
@@ -1132,8 +1136,6 @@ ParseRule rules[] = {
     [TOKEN_FOR]           = {NULL,       NULL,      PREC_NONE},
     [TOKEN_SOME]          = {quantAnon,  NULL,      PREC_EQUALITY},
     [TOKEN_ARB]           = {unary,      NULL,      PREC_UNARY},
-    [TOKEN_OUT]           = {NULL,       NULL,      PREC_NONE},
-    [TOKEN_PUT]           = {NULL,       NULL,      PREC_NONE},
     [TOKEN_RETURN]        = {NULL,       NULL,      PREC_NONE},
     [TOKEN_FUNCTION]      = {NULL,       NULL,      PREC_NONE},
     [TOKEN_NEWLINE]       = {NULL,       NULL,      PREC_NONE},
@@ -1280,12 +1282,6 @@ static void ifStatement() {
     patchJump(elseJump);
 }
 
-static void outStatement() {
-    int printNewline = parser.previous.type == TOKEN_OUT ? 1 : 0;
-    expression(false);
-    emitBytes(OP_OUT, printNewline);
-}
-
 static void returnStatement() {
     if(current->type == TYPE_SCRIPT) {
         error("Can't return from top-level code");
@@ -1372,8 +1368,6 @@ static void synchronise() {
             case TOKEN_IF:
             case TOKEN_WHILE:
             case TOKEN_FOR:
-            case TOKEN_OUT:
-            case TOKEN_PUT:
             case TOKEN_RETURN:
                 return;
             default:; // Do nothing
@@ -1400,10 +1394,7 @@ static void declaration() {
 static void statement(bool blockAllowed, bool ignoreSeparator) {
     if(current->type == TYPE_SCRIPT) current->implicitReturn = false;
     
-    if (match(TOKEN_OUT) || match(TOKEN_PUT)) {
-        outStatement();
-        if(!ignoreSeparator) consumeSeparator();
-    } else if (match(TOKEN_IF)) {
+    if (match(TOKEN_IF)) {
         ifStatement();
     } else if (match(TOKEN_RETURN)) {
         returnStatement();

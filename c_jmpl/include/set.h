@@ -33,6 +33,7 @@ typedef struct {
 // --- ObjSet ---
 ObjSet* newSet();
 void freeSet(ObjSet* set);
+void markSet(ObjSet* set);
 
 bool setInsert(ObjSet* set, Value value);
 bool setContains(ObjSet* set, Value value);

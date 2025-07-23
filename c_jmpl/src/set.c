@@ -76,6 +76,13 @@ void freeSet(ObjSet* set) {
     FREE(ObjSet, set); 
 }
 
+void markSet(ObjSet* set) {
+    for (int i = 0; i < set->capacity; i++) {
+        Value element = set->elements[i];
+        markValue(element);
+    }
+}
+
 bool setInsert(ObjSet* set, Value value) {
     if(set->count + 1 > set->capacity * SET_MAX_LOAD) {
         int capacity = GROW_CAPACITY(set->capacity);
@@ -230,6 +237,14 @@ uint32_t hashSet(ObjSet* set) {
     }
 }
 
+/**
+ * @brief Converts a set to a C string.
+ * 
+ * @param set Pointer to the set
+ * @return    An array of characters
+ * 
+ * Must be freed.
+ */
 unsigned char* setToString(ObjSet* set) {
     // Create an empty string builder
     StringBuilder* sb = sb_create();

@@ -67,7 +67,7 @@ static void runFile(const unsigned char* path) {
     InterpretResult result = interpret(source);
     free(source);
 
-    if (result != INTERPRET_OK) printf("Exited with code %d.", result);
+    if (result != INTERPRET_OK) printf("Exited with code %d.\n", result);
     if (result == INTERPRET_COMPILE_ERROR) exit(DATA_FORMAT_ERROR);
     if (result == INTERPRET_RUNTIME_ERROR) exit(INTERNAL_SOFTWARE_ERROR);
 }

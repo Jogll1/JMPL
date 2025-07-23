@@ -4,6 +4,8 @@
 #include "chunk.h"
 #include "common.h"
 #include "value.h"
+#include "gc.h"
+#include "table.h"
 
 // Get type
 
@@ -92,14 +94,15 @@ typedef struct {
 
 // ------
 
-Obj* allocateObject(size_t size, ObjType type);
+Obj* allocateObject(GC* gc, size_t size, ObjType type);
 
-ObjClosure* newClosure(ObjFunction* function);
-ObjFunction* newFunction();
-ObjNative* newNative(NativeFn function, int arity);
-ObjString* takeString(unsigned char* chars, int length);
-ObjString* copyString(const unsigned char* chars, int length);
-ObjUpvalue* newUpvalue(Value* slot);
+ObjClosure* newClosure(GC* gc, ObjFunction* function);
+ObjFunction* newFunction(GC* gc);
+ObjNative* newNative(GC* gc, NativeFn function, int arity);
+// ObjString* takeString(unsigned char* chars, int length);
+ObjString* concatStrings(GC* gc, Table* strings, const char* a, int aLen, uint32_t aHash, const char* b, int bLen);
+ObjString* copyString(GC* gc, Table* strings, const unsigned char* chars, int length);
+ObjUpvalue* newUpvalue(GC* gc, Value* slot);
 
 void printJMPLString(ObjString* string);
 void printObject(Value value);

@@ -5,6 +5,8 @@
 #include "memory.h"
 #include "object.h"
 #include "debug.h"
+#include "table.h"
+#include "gc.h"
 #include "../lib/c-stringbuilder/sb.h"
 
 #define SET_MAX_LOAD 0.75
@@ -16,10 +18,12 @@ static void initSet(ObjSet* set) {
     set->elements = NULL;
 }
 
-static void printDebugSet(ObjSet* set) {
+static void printDebugSet(GC* gc, Table* table, ObjSet* set) {
     printf("\n==============\n");
     for (int i = 0; i < set->capacity; i++) {
-        printf("%d. %s\n", i, valueToString(set->elements[i])->chars);
+        unsigned char* str = valueToString(set->elements[i]);
+        printf("%d. %s\n", i, str);
+        free(str);
     }
     printf("==============\n");
 }
@@ -40,8 +44,8 @@ static Value* findElement(Value* elements, int capacity, Value value) {
     }
 }
 
-static void adjustCapacity(ObjSet* set, int capacity) {
-    Value* elements = ALLOCATE(Value, capacity);
+static void adjustCapacity(GC* gc, ObjSet* set, int capacity) {
+    Value* elements = ALLOCATE(gc, Value, capacity);
     // Initialise every element to be null
     for(int i = 0; i < capacity; i++) {
         elements[i] = NULL_VAL;
@@ -58,35 +62,28 @@ static void adjustCapacity(ObjSet* set, int capacity) {
         set->count++;
     }
 
-    FREE_ARRAY(Value, set->elements, set->capacity);
+    FREE_ARRAY(gc, Value, set->elements, set->capacity);
     set->elements = elements;
     set->capacity = capacity;
 }
 
 // --- Sets --- 
-ObjSet* newSet() {
-    ObjSet* set = (ObjSet*)allocateObject(sizeof(ObjSet), OBJ_SET);
+ObjSet* newSet(GC* gc) {
+    ObjSet* set = (ObjSet*)allocateObject(gc, sizeof(ObjSet), OBJ_SET);
     initSet(set);
     return set;
 }
 
-void freeSet(ObjSet* set) {
-    FREE_ARRAY(Value, set->elements, set->capacity);
+void freeSet(GC* gc, ObjSet* set) {
+    FREE_ARRAY(gc, Value, set->elements, set->capacity);
     initSet(set);
-    FREE(ObjSet, set); 
+    FREE(gc, ObjSet, set); 
 }
 
-void markSet(ObjSet* set) {
-    for (int i = 0; i < set->capacity; i++) {
-        Value element = set->elements[i];
-        markValue(element);
-    }
-}
-
-bool setInsert(ObjSet* set, Value value) {
+bool setInsert(GC* gc, ObjSet* set, Value value) {
     if(set->count + 1 > set->capacity * SET_MAX_LOAD) {
         int capacity = GROW_CAPACITY(set->capacity);
-        adjustCapacity(set, capacity);
+        adjustCapacity(gc, set, capacity);
     }
 
     Value* element = findElement(set->elements, set->capacity, value);
@@ -130,8 +127,8 @@ bool setsEqual(ObjSet* a, ObjSet* b) {
     return true;
 }
 
-ObjSet* setIntersect(ObjSet* a, ObjSet* b) {
-    ObjSet* result = newSet();
+ObjSet* setIntersect(GC* gc, ObjSet* a, ObjSet* b) {
+    ObjSet* result = newSet(gc);
 
     // Iterate through smaller set
     if (a->count > b->count) {
@@ -144,48 +141,49 @@ ObjSet* setIntersect(ObjSet* a, ObjSet* b) {
         Value valA = a->elements[i];
         if (IS_NULL(valA)) continue;
 
-        if (setContains(b, valA)) setInsert(result, valA);
+        if (setContains(b, valA)) setInsert(gc, result, valA);
     }
 
     return result;
 }
 
-ObjSet* setUnion(ObjSet* a, ObjSet* b) {
-    ObjSet* result = newSet();
+ObjSet* setUnion(GC* gc, ObjSet* a, ObjSet* b) {
+    ObjSet* result = newSet(gc);
 
     for (int i = 0; i < a->capacity; i++) {
         Value valA = a->elements[i];
         if (IS_NULL(valA)) continue;
 
-        setInsert(result, valA);
+        setInsert(gc, result, valA);
     }
 
     for (int i = 0; i < b->capacity; i++) {
         Value valB = b->elements[i];
         if (IS_NULL(valB)) continue;
 
-        setInsert(result, valB);
+        setInsert(gc, result, valB);
     }
 
     return result;
 }
 
-ObjSet* setDifference(ObjSet* a, ObjSet* b) {
-    ObjSet* result = newSet();
+ObjSet* setDifference(GC* gc, ObjSet* a, ObjSet* b) {
+    ObjSet* result = newSet(gc);
 
     for (int i = 0; i < a->capacity; i++) {
         Value valA = a->elements[i];
         if (IS_NULL(valA)) continue;
 
         if (!setContains(b, valA)) {
-            setInsert(result, valA);
+            setInsert(gc, result, valA);
         }
     }
 
     return result;
 }
 
-bool isSubset(ObjSet* a, ObjSet* b) {
+/** Takes a gc until i can be bothered to make a separate macro */
+bool isSubset(GC* gc, ObjSet* a, ObjSet* b) {
     if (a->count > b->count) return false;
 
     for (int i = 0; i < a->capacity; i++) {
@@ -200,10 +198,11 @@ bool isSubset(ObjSet* a, ObjSet* b) {
     return true;
 }
 
-bool isProperSubset(ObjSet* a, ObjSet* b) {
+/** Takes a gc until i can be bothered to make a separate macro */
+bool isProperSubset(GC* gc, ObjSet* a, ObjSet* b) {
     if (a->count == b->count) return false;
 
-    return isSubset(a, b);
+    return isSubset(gc, a, b);
 }
 
 Value getArb(ObjSet* set) {
@@ -264,11 +263,13 @@ unsigned char* setToString(ObjSet* set) {
             //     break;
             // }
 
+            unsigned char* str = valueToString(value);
             if (IS_OBJ(value) && IS_STRING(value)) {
-                sb_appendf(sb, "\"%s\"", valueToString(value)->chars);
+                sb_appendf(sb, "\"%s\"", str);
             } else {
-                sb_appendf(sb, "%s", valueToString(value)->chars);
+                sb_appendf(sb, "%s", str);
             }
+            free(str);
 
             if (count < numElements - 1) sb_append(sb, ", ");
             count++;
@@ -285,8 +286,8 @@ unsigned char* setToString(ObjSet* set) {
 }
 
 // --- Set Iterator --- 
-ObjSetIterator* newSetIterator(ObjSet* set) {
-    ObjSetIterator* iterator = (ObjSetIterator*)allocateObject(sizeof(ObjSetIterator), OBJ_SET_ITERATOR);
+ObjSetIterator* newSetIterator(GC* gc, ObjSet* set) {
+    ObjSetIterator* iterator = (ObjSetIterator*)allocateObject(gc, sizeof(ObjSetIterator), OBJ_SET_ITERATOR);
     iterator->set = set;
     iterator->currentIndex = -1;
 
@@ -301,8 +302,8 @@ ObjSetIterator* newSetIterator(ObjSet* set) {
     return iterator;
 }
 
-void freeSetIterator(ObjSetIterator* iterator) {
-    FREE(ObjSetIterator, iterator);
+void freeSetIterator(GC* gc, ObjSetIterator* iterator) {
+    FREE(gc, ObjSetIterator, iterator);
 }
 
 /**

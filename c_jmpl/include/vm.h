@@ -5,6 +5,7 @@
 #include "object.h"
 #include "table.h"
 #include "value.h"
+#include "gc.h"
 
 #define FRAMES_MAX 64
 #define STACK_MAX (FRAMES_MAX * UINT8_COUNT)
@@ -16,24 +17,22 @@ typedef struct {
 } CallFrame;
 
 typedef struct {
+    ValueArray args;
+
     CallFrame frames[FRAMES_MAX];
     int frameCount;
 
     Value stack[STACK_MAX];
     Value* stackTop;
     Table globals;
-    Table strings; // Table for string interning
+    ValueArray globalSlots;
+    Table strings;
+    ObjString* initString;
     ObjUpvalue* openUpvalues;
 
-    size_t bytesAllocated;
-    size_t nextGC;
-    Obj* objects;
-
-    int greyCount;
-    int greyCapacity;
-    Obj** greyStack;
-
     Value impReturnStash; // Register for storing implicit return value
+
+    GC gc;
 } VM;
 
 typedef enum {
@@ -42,12 +41,11 @@ typedef enum {
     INTERPRET_RUNTIME_ERROR
 } InterpretResult;
 
-extern VM vm;
+void initVM(VM* vm);
+void freeVM(VM* vm);
 
-void initVM();
-void freeVM();
-InterpretResult interpret(const unsigned char* source);
-void push(Value value);
-Value pop();
+void push(VM* vm, Value value);
+Value pop(VM* vm);
 
+InterpretResult interpret(VM* vm, const unsigned char* source);
 #endif

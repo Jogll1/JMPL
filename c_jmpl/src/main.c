@@ -10,17 +10,21 @@
 #define CURRENT_VERSION "0.2.1"
 
 static void repl() {
+    VM vm;
+    initVM(&vm);
+
     char line[1024];
 
     while(true) {
         printf(ANSI_YELLOW ">> " ANSI_RESET);
 
         if(!fgets(line, sizeof(line), stdin)) {
+            freeVM(&vm);
             printf("\n");
             break;
         }
 
-        interpret(line);
+        InterpretResult result = interpret(&vm, line);
     }
 }
 
@@ -63,9 +67,13 @@ static char* readFile(const char* path) {
 }
 
 static void runFile(const unsigned char* path) {
+    VM vm;
+    initVM(&vm);
+
     unsigned char* source = readFile(path);
-    InterpretResult result = interpret(source);
+    InterpretResult result = interpret(&vm, source);
     free(source);
+    freeVM(&vm);
 
     if (result != INTERPRET_OK) printf("Exited with code %d.\n", result);
     if (result == INTERPRET_COMPILE_ERROR) exit(DATA_FORMAT_ERROR);
@@ -73,8 +81,6 @@ static void runFile(const unsigned char* path) {
 }
 
 int main(int argc, const char* argv[]) {
-    initVM();
-
     if (argc == 1) {
         // If no file argument, run the REPL
         printf("JMPL v%s\n", CURRENT_VERSION);
@@ -88,6 +94,5 @@ int main(int argc, const char* argv[]) {
         exit(COMMAND_LINE_USAGE_ERROR);
     }
 
-    freeVM();
     return 0;
 }

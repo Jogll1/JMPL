@@ -19,8 +19,8 @@ void initValTable(ValTable* table) {
     table->entries = NULL;
 }
 
-void freeValTable(ValTable* table) {
-    FREE_ARRAY(ValEntry, table->entries, table->capacity);
+void freeValTable(GC* gc, ValTable* table) {
+    FREE_ARRAY(gc, ValEntry, table->entries, table->capacity);
     initValTable(table);
 }
 
@@ -60,8 +60,8 @@ bool valTableGet(ValTable* table, Value key, Value* value) {
     return true;
 }
 
-static void adjustCapacity(ValTable* table, int capacity) {
-    ValEntry* entries = ALLOCATE(ValEntry, capacity);
+static void adjustCapacity(GC* gc, ValTable* table, int capacity) {
+    ValEntry* entries = ALLOCATE(gc, ValEntry, capacity);
 
     // Initialise every element to be an empty bucket
     for(int i = 0; i < capacity; i++) {
@@ -81,16 +81,16 @@ static void adjustCapacity(ValTable* table, int capacity) {
         table->count++;
     }
 
-    FREE_ARRAY(ValEntry, table->entries, table->capacity);
+    FREE_ARRAY(gc, ValEntry, table->entries, table->capacity);
     table->entries = entries;
     table->capacity = capacity;
 }
 
-bool valTableSet(ValTable* table, Value key, Value value) {
+bool valTableSet(GC* gc, ValTable* table, Value key, Value value) {
     // Grow the array when load factor reaches TABLE_MAX_LOAD
     if(table->count + 1 > table->capacity * VAL_TABLE_MAX_LOAD) {
         int capacity = GROW_CAPACITY(table->capacity);
-        adjustCapacity(table, capacity);
+        adjustCapacity(gc, table, capacity);
     }
 
     ValEntry* entry = findEntry(table->entries, table->capacity, key);
@@ -117,13 +117,13 @@ bool valTableDelete(ValTable* table, Value key) {
     return true;
 }
 
-void valTableAddAll(ValTable* from, ValTable* to) {
+void valTableAddAll(GC* gc, ValTable* from, ValTable* to) {
     // Copy all entries of a table into another
     for (int i = 0; i < from->capacity; i++) {
         ValEntry* entry = &from->entries[i];
 
         if(entry->key.type != VAL_NULL) {
-            valTableSet(to, entry->key, entry->value);
+            valTableSet(gc, to, entry->key, entry->value);
         }
     }
 }

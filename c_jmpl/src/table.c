@@ -17,14 +17,14 @@ void initTable(Table* table) {
     table->entries = NULL;
 }
 
-void freeTable(Table* table) {
-    FREE_ARRAY(Entry, table->entries, table->capacity);
+void freeTable(GC* gc, Table* table) {
+    FREE_ARRAY(gc, Entry, table->entries, table->capacity);
     initTable(table);
 }
 
 static Entry* findEntry(Entry* entries, int capacity, ObjString* key) {
     // Map the key's hash code to an index in the array
-    uint32_t index = key->hash % capacity;
+    uint32_t index = key->hash & (capacity - 1);
     Entry* tombstone = NULL;
 
     while (true) {
@@ -48,22 +48,22 @@ static Entry* findEntry(Entry* entries, int capacity, ObjString* key) {
         }
 
         // Collision, so start linear probing
-        index = (index + 1) % capacity;
+        index = (index + 1) & (capacity - 1);
     }
 }
 
 bool tableGet(Table* table, ObjString* key, Value* value) {
     if (table->count == 0) return false;
 
-    Entry* entry = findEntry (table->entries, table->capacity, key);
+    Entry* entry = findEntry(table->entries, table->capacity, key);
     if (entry->key == NULL) return false;
 
     *value = entry->value;
     return true;
 }
 
-static void adjustCapacity(Table* table, int capacity) {
-    Entry* entries = ALLOCATE(Entry, capacity);
+static void adjustCapacity(GC* gc, Table* table, int capacity) {
+    Entry* entries = ALLOCATE(gc, Entry, capacity);
 
     // Initialise every element to be an empty bucket
     for (int i = 0; i < capacity; i++) {
@@ -78,31 +78,40 @@ static void adjustCapacity(Table* table, int capacity) {
         if(entry->key == NULL) continue;
 
         Entry* destination = findEntry(entries, capacity, entry->key);
+        assert(destination != NULL);
         destination->key = entry->key;
         destination->value = entry->value;
         table->count++;
     }
 
-    FREE_ARRAY(Entry, table->entries, table->capacity);
+    FREE_ARRAY(gc, Entry, table->entries, table->capacity);
     table->entries = entries;
     table->capacity = capacity;
 }
 
-bool tableSet(Table* table, ObjString* key, Value value) {
-    // Grow the array when load factor reaches TABLE_MAX_LOAD
-    if (table->count + 1 > table->capacity * TABLE_MAX_LOAD) {
-        int capacity = GROW_CAPACITY(table->capacity);
-        adjustCapacity(table, capacity);
-    }
+bool tableSetEntry(Table* table, Entry* entry, ObjString* key, Value value) {
+    assert(entry >= table->entries);
+    assert(entry < table->entries + table->capacity);
 
-    Entry* entry = findEntry(table->entries, table->capacity, key);
     bool isNewKey = entry->key == NULL;
-    if (isNewKey && IS_NULL(entry->value)) table->count++;
+    if (isNewKey && IS_NULL(entry->value)) {
+        table->count++;
+    }
 
     entry->key = key;
     entry->value = value;
-
     return isNewKey;
+}
+
+bool tableSet(GC* gc, Table* table, ObjString* key, Value value) {
+    // Grow the array when load factor reaches TABLE_MAX_LOAD
+    if (table->count + 1 > table->capacity * TABLE_MAX_LOAD) {
+        int capacity = GROW_CAPACITY(table->capacity);
+        adjustCapacity(gc, table, capacity);
+    }
+
+    Entry* entry = findEntry(table->entries, table->capacity, key);
+    return tableSetEntry(table, entry, key, value);
 }
 
 bool tableDelete(Table* table, ObjString* key) {
@@ -119,34 +128,54 @@ bool tableDelete(Table* table, ObjString* key) {
     return true;
 }
 
-void tableAddAll(Table* from, Table* to) {
+void tableAddAll(GC* gc, Table* from, Table* to) {
     // Copy all entries of a table into another
     for (int i = 0; i < from->capacity; i++) {
         Entry* entry = &from->entries[i];
 
         if (entry->key != NULL) {
-            tableSet(to, entry->key, entry->value);
+            tableSet(gc, to, entry->key, entry->value);
         }
     }
 }
 
-ObjString* tableFindString(Table* table, const unsigned char* chars, int length, uint32_t hash) {
-    if (table->count == 0) return NULL;
-    uint32_t index = hash % table->capacity;
+Entry* tableJoinedStringsEntry(GC* gc, Table* table, const char* a, int aLen, const char* b, int bLen, uint32_t hash) {
+    if (table->count + 1 > table->capacity * TABLE_MAX_LOAD) {
+        int capacity = GROW_CAPACITY(table->capacity);
+        adjustCapacity(gc, table, capacity);
+    }
 
-    while (true) {
-        assert(index < table->capacity);
+    int length = aLen + bLen;
+    uint32_t index = hash & (table->capacity - 1);
+    Entry* tombstone = NULL;
+
+    for (int i = 0; i < table->capacity; i++) {
         Entry* entry = &table->entries[index];
-
         if (entry->key == NULL) {
-            // Stop when an empty non-tombstone entry is found
-            if (IS_NULL(entry->value)) return NULL;
-        } else if (entry->key->length == length && entry->key->hash == hash && memcmp(entry->key->chars, chars, length) == 0) {
-            return entry->key;
+            if (IS_NULL(entry->value)) {
+                // Return an unused entry
+                return tombstone != NULL ? tombstone : entry;
+            } else {
+                if (tombstone == NULL) {
+                    tombstone = entry;
+                }
+            }
+        } else {
+            ObjString* key = entry->key;
+            if (key->hash == hash && key->length == length) {
+                const char* keyChars = key->chars;
+                if (!memcmp(keyChars, a, aLen) && !memcmp(keyChars + aLen, b, bLen)) {
+                    // We found it
+                    return entry;
+                }
+            }
         }
 
-        index = (index + 1) % table->capacity;
+        index = (index + 1) & (table->capacity - 1);
     }
+
+    assert(tombstone != NULL);
+    return tombstone;
 }
 
 void tableRemoveWhite(Table* table) {
@@ -159,11 +188,11 @@ void tableRemoveWhite(Table* table) {
     }
 }
 
-void markTable(Table* table) {
+void markTable(GC* gc, Table* table) {
     for (int i = 0; i < table->capacity; i++) {
         Entry* entry = &table->entries[i];
-        markObject((Obj*)entry->key);
-        markValue(entry->value);
+        markObject(gc, (Obj*)entry->key);
+        markValue(gc, entry->value);
     }
 }
 

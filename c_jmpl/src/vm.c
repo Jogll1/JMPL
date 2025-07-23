@@ -3,6 +3,7 @@
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include "common.h"
 #include "compiler.h"
@@ -13,20 +14,18 @@
 #include "memory.h"
 #include "native.h"
 #include "debug.h"
+#include "gc.h"
 
-// ToDo: swap this for a pointer
-VM vm;
-
-static void resetStack() {
-    vm.stackTop = vm.stack;
-    vm.frameCount = 0;
-    vm.openUpvalues = NULL;
+static void resetStack(VM* vm) {
+    vm->stackTop = vm->stack;
+    vm->frameCount = 0;
+    vm->openUpvalues = NULL;
 }
 
-static void runtimeError(const unsigned char* format, ...) {
+static void runtimeError(VM* vm, const unsigned char* format, ...) {
     // Print the stack trace
-    for (int i = 0; i < vm.frameCount; i++) {
-        CallFrame* frame = &vm.frames[i];
+    for (int i = 0; i < vm->frameCount; i++) {
+        CallFrame* frame = &vm->frames[i];
         ObjFunction* function = frame->closure->function;
         size_t instruction = frame->ip - function->chunk.code - 1;
         fprintf(stderr, "[line %d] in ", getLine(&function->chunk, instruction));
@@ -47,7 +46,7 @@ static void runtimeError(const unsigned char* format, ...) {
     va_end(args);
     fputs(".\n", stderr);
 
-    resetStack();
+    resetStack(vm);
 }
 
 /**
@@ -57,94 +56,93 @@ static void runtimeError(const unsigned char* format, ...) {
  * @param arity    How many parameters it should have
  * @param function The C function that is called
  */
-static void defineNative(const unsigned char* name, int arity, NativeFn function) {
-    push(OBJ_VAL(copyString(name, (int)strlen(name))));
-    push(OBJ_VAL(newNative(function, arity)));
-    tableSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
-    pop();
-    pop();
+static void defineNative(VM* vm, const unsigned char* name, int arity, NativeFn function) {
+    push(vm, OBJ_VAL(copyString(&vm->gc, &vm->strings, name, (int)strlen(name))));
+    push(vm, OBJ_VAL(newNative(&vm->gc, function, arity)));
+    tableSet(&vm->gc, &vm->globals, AS_STRING(vm->stack[0]), vm->stack[1]);
+    pop(vm);
+    pop(vm);
 }
 
-void initVM() {
-    resetStack();
-    vm.objects = NULL;
-    vm.bytesAllocated = 0;
-    vm.nextGC = 1024 * 1024;
+void initVM(VM* vm) {
+    resetStack(vm);
+    vm->gc.objects = NULL;
+    vm->gc.bytesAllocated = 0;
+    vm->gc.nextGC = 1024 * 1024;
 
-    vm.greyCount = 0;
-    vm.greyCapacity = 0;
-    vm.greyStack = NULL;
+    vm->gc.greyCount = 0;
+    vm->gc.greyCapacity = 0;
+    vm->gc.greyStack = NULL;
 
-    vm.impReturnStash = NULL_VAL;
+    vm->impReturnStash = NULL_VAL;
 
-    initTable(&vm.globals);
-    initTable(&vm.strings);
+    initTable(&vm->globals);
+    initTable(&vm->strings);
 
     // --- Add native functions ---
 
     // General purpose
-    defineNative("clock", 0, clockNative);
+    defineNative(vm, "clock", 0, clockNative);
 
     // I/O
-    defineNative("print", 1, printNative);
-    defineNative("println", 1, printlnNative);
+    defineNative(vm, "print", 1, printNative);
+    defineNative(vm, "println", 1, printlnNative);
 
     // Maths library
-    defineNative("pi", 0, piNative);
-    defineNative("sin", 1, sinNative);
-    defineNative("cos", 1, cosNative);
-    defineNative("tan", 1, tanNative);
-    defineNative("arcsin", 1, arcsinNative);
-    defineNative("arccos", 1, arccosNative);
-    defineNative("arctan", 1, arctanNative);
-    defineNative("max", 2, maxNative);
-    defineNative("min", 2, minNative);
-    defineNative("floor", 1, floorNative);
-    defineNative("ceil", 1, ceilNative);
-    defineNative("round", 1, roundNative);
+    defineNative(vm, "pi", 0, piNative);
+    defineNative(vm, "sin", 1, sinNative);
+    defineNative(vm, "cos", 1, cosNative);
+    defineNative(vm, "tan", 1, tanNative);
+    defineNative(vm, "arcsin", 1, arcsinNative);
+    defineNative(vm, "arccos", 1, arccosNative);
+    defineNative(vm, "arctan", 1, arctanNative);
+    defineNative(vm, "max", 2, maxNative);
+    defineNative(vm, "min", 2, minNative);
+    defineNative(vm, "floor", 1, floorNative);
+    defineNative(vm, "ceil", 1, ceilNative);
+    defineNative(vm, "round", 1, roundNative);
 }
 
-void freeVM() {
-    freeTable(&vm.globals);
-    freeTable(&vm.strings);
-    freeObjects();
+void freeVM(VM* vm) {
+    freeValueArray(&vm->gc, &vm->args);
+    freeTable(&vm->gc, &vm->globals);
+    freeValueArray(&vm->gc, &vm->globalSlots);
+    freeTable(&vm->gc, &vm->strings);
+    vm->initString = NULL;
+    freeGC(&vm->gc);
 }
 
-void push(Value value) {
-    *vm.stackTop = value;
-    vm.stackTop++;
+void push(VM* vm, Value value) {
+    assert(vm->stackTop < vm->stack + STACK_MAX);
+    *vm->stackTop = value;
+    vm->stackTop++;
 }
 
-Value pop() {
-    vm.stackTop--;
-    return *vm.stackTop;
+Value pop(VM* vm) {
+    assert(vm->stackTop > vm->stack);
+    vm->stackTop--;
+    return *vm->stackTop;
 }
 
-/**
- * @brief Returns a value from the stack but doesn't pop it.
- *
- * @param distance How far down from the top of the stack to look, zero being the top
- * @return         The value at that distance on the stack
- */
-static Value peek(int distance) {
-    return vm.stackTop[-1 - distance];
+static Value peek(VM* vm, int distance) {
+    return vm->stackTop[-1 - distance];
 }
 
-static bool call(ObjClosure* closure, int argCount) {
+static bool call(VM* vm, ObjClosure* closure, int argCount) {
     if(argCount != closure->function->arity) {
-        runtimeError("Expected %d arguments but got %d", closure->function->arity, argCount);
+        runtimeError(vm, "Expected %d arguments but got %d", closure->function->arity, argCount);
         return false;
     }
 
-    if(vm.frameCount == FRAMES_MAX) {
-        runtimeError("(Internal) Call stack overflow");
+    if(vm->frameCount == FRAMES_MAX) {
+        runtimeError(vm, "(Internal) Call stack overflow");
         return false;
     }
 
-    CallFrame* frame = &vm.frames[vm.frameCount++];
+    CallFrame* frame = &vm->frames[vm->frameCount++];
     frame->closure = closure;
     frame->ip = closure->function->chunk.code;
-    frame->slots = vm.stackTop - argCount - 1;
+    frame->slots = vm->stackTop - argCount - 1;
     return true;
 }
 
@@ -154,23 +152,23 @@ static bool call(ObjClosure* closure, int argCount) {
  * @param callee   The object to call
  * @param argCount The number of arguments to the callable
  */
-static bool callValue(Value callee, int argCount) {
+static bool callValue(VM* vm,Value callee, int argCount) {
     if(IS_OBJ(callee)) {
         switch (OBJ_TYPE(callee)) {
             case OBJ_CLOSURE:
-                return call(AS_CLOSURE(callee), argCount);
+                return call(vm, AS_CLOSURE(callee), argCount);
             case OBJ_NATIVE: {
                 ObjNative* objNative = AS_NATIVE(callee);
 
                 if(argCount != objNative->arity) {
-                    runtimeError("Expected %d arguments but got %d", objNative->arity, argCount);
+                    runtimeError(vm, "Expected %d arguments but got %d", objNative->arity, argCount);
                     return false;
                 }
 
                 NativeFn native = objNative->function;
-                Value result = native(argCount, vm.stackTop - argCount);
-                vm.stackTop -= argCount + 1;
-                push(result);
+                Value result = native(argCount, vm->stackTop - argCount);
+                vm->stackTop -= argCount + 1;
+                push(vm, result);
                 return true;
             }
             default:
@@ -178,13 +176,13 @@ static bool callValue(Value callee, int argCount) {
         }
     }
 
-    runtimeError("Can only call functions");
+    runtimeError(vm, "Can only call functions");
     return false;
 }
 
-static ObjUpvalue* captureUpvalue(Value* local) {
+static ObjUpvalue* captureUpvalue(VM* vm, Value* local) {
     ObjUpvalue* prevUpvalue = NULL;
-    ObjUpvalue* upvalue = vm.openUpvalues;
+    ObjUpvalue* upvalue = vm->openUpvalues;
     while(upvalue != NULL && upvalue->location > local) {
         prevUpvalue = upvalue;
         upvalue = upvalue->next;
@@ -194,11 +192,11 @@ static ObjUpvalue* captureUpvalue(Value* local) {
         return upvalue;
     }
 
-    ObjUpvalue* createdUpvalue = newUpvalue(local);
+    ObjUpvalue* createdUpvalue = newUpvalue(&vm->gc, local);
     createdUpvalue->next = upvalue;
 
     if(prevUpvalue == NULL) {
-        vm.openUpvalues = createdUpvalue;
+        vm->openUpvalues = createdUpvalue;
     } else {
         prevUpvalue->next = createdUpvalue;
     }
@@ -206,86 +204,86 @@ static ObjUpvalue* captureUpvalue(Value* local) {
     return createdUpvalue;
 }
 
-static void closeUpvalues(Value* last) {
-    while(vm.openUpvalues != NULL && vm.openUpvalues->location >= last) {
-        ObjUpvalue* upvalue = vm.openUpvalues;
+static void closeUpvalues(VM* vm, Value* last) {
+    while(vm->openUpvalues != NULL && vm->openUpvalues->location >= last) {
+        ObjUpvalue* upvalue = vm->openUpvalues;
         upvalue->closed = *upvalue->location;
         upvalue->location = &upvalue->closed;
-        vm.openUpvalues = upvalue->next;
+        vm->openUpvalues = upvalue->next;
     }
 }
 
-static int setOmission(bool hasNext) {
+static int setOmission(VM* vm, bool hasNext) {
     if (hasNext) {
-        if (!IS_INTEGER(peek(0)) || !IS_INTEGER(peek(1)) || !IS_INTEGER(peek(2)) || !IS_SET(peek(3))) {
-            runtimeError("Expected: {int, int ... int}");
+        if (!IS_INTEGER(peek(vm, 0)) || !IS_INTEGER(peek(vm, 1)) || !IS_INTEGER(peek(vm, 2)) || !IS_SET(peek(vm, 3))) {
+            runtimeError(vm, "Expected: {int, int ... int}");
             return INTERPRET_RUNTIME_ERROR; 
         }
     } else {
-        if (!IS_INTEGER(peek(0)) || !IS_INTEGER(peek(1)) || !IS_SET(peek(2))) {
-            runtimeError("Expected: {int ... int}");
+        if (!IS_INTEGER(peek(vm, 0)) || !IS_INTEGER(peek(vm, 1)) || !IS_SET(peek(vm, 2))) {
+            runtimeError(vm, "Expected: {int ... int}");
             return INTERPRET_RUNTIME_ERROR; 
         }
     }
 
-    int last = (int)AS_NUMBER(pop());
+    int last = (int)AS_NUMBER(pop(vm));
     int next;
     if (hasNext) {
-        next = (int)AS_NUMBER(pop());
+        next = (int)AS_NUMBER(pop(vm));
     }
-    int first = (int)AS_NUMBER(pop());
-    ObjSet* set = AS_SET(pop());
+    int first = (int)AS_NUMBER(pop(vm));
+    ObjSet* set = AS_SET(pop(vm));
 
     int gap = 1;
     if (hasNext) {
         gap = abs(next - first);
 
         if (gap == 0) {
-            runtimeError("Set omission gap cannot be zero");
+            runtimeError(vm, "Set omission gap cannot be zero");
             return INTERPRET_RUNTIME_ERROR; 
         }
     }
 
     if (last > first) {
         for (int i = first; i <= last; i += gap) {
-            setInsert(set, NUMBER_VAL(i));
+            setInsert(&vm->gc, set, NUMBER_VAL(i));
         }   
     } else {
         for (int i = first; i >= last; i -= gap) {
-            setInsert(set, NUMBER_VAL(i));
+            setInsert(&vm->gc, set, NUMBER_VAL(i));
         }   
     }
 
-    push(OBJ_VAL(set));
+    push(vm, OBJ_VAL(set));
     return INTERPRET_OK;
 }
 
-static int tupleOmission(bool hasNext) {
+static int tupleOmission(VM* vm, bool hasNext) {
     if (hasNext) {
-        if (!IS_INTEGER(peek(0)) || !IS_INTEGER(peek(1)) || !IS_INTEGER(peek(2))) {
-            runtimeError("Expected: (int, int ... int)");
+        if (!IS_INTEGER(peek(vm, 0)) || !IS_INTEGER(peek(vm, 1)) || !IS_INTEGER(peek(vm, 2))) {
+            runtimeError(vm, "Expected: (int, int ... int)");
             return INTERPRET_RUNTIME_ERROR; 
         }
     } else {
-        if (!IS_INTEGER(peek(0)) || !IS_INTEGER(peek(1))) {
-            runtimeError("Expected: (int ... int)");
+        if (!IS_INTEGER(peek(vm, 0)) || !IS_INTEGER(peek(vm, 1))) {
+            runtimeError(vm, "Expected: (int ... int)");
             return INTERPRET_RUNTIME_ERROR; 
         }
     }
 
-    int last = (int)AS_NUMBER(pop());
+    int last = (int)AS_NUMBER(pop(vm));
     int next;
     if (hasNext) {
-        next = (int)AS_NUMBER(pop());
+        next = (int)AS_NUMBER(pop(vm));
     }
-    int first = (int)AS_NUMBER(pop());
+    int first = (int)AS_NUMBER(pop(vm));
 
     int gap = 1;
     if (hasNext) {
         gap = abs(next - first);
 
         if (gap == 0) {
-            runtimeError("Tuple omission gap cannot be zero");
+            runtimeError(vm, "Tuple omission gap cannot be zero");
             return INTERPRET_RUNTIME_ERROR; 
         }
     }
@@ -296,7 +294,7 @@ static int tupleOmission(bool hasNext) {
     } 
     arity++;
     
-    ObjTuple* tuple = newTuple(arity);
+    ObjTuple* tuple = newTuple(&vm->gc, arity);
     int i = 0;
     if (last > first) {
         int i = 0;
@@ -311,7 +309,7 @@ static int tupleOmission(bool hasNext) {
         }   
     }
 
-    push(OBJ_VAL(tuple));
+    push(vm, OBJ_VAL(tuple));
     return INTERPRET_OK;
 }
 
@@ -331,52 +329,26 @@ static bool isFalse(Value value) {
            (IS_SET(value) && AS_SET(value)->count == 0));
 }
 
-/**
- * @brief Concatenate strings a and b if either are a string.
- * 
- * Pops two strings from the stack and pushes the concatenated
- * string to the stack.
- */
-static void concatenateString() {
-    Value b = pop();
-    Value a = pop();
-
-    ObjString* aString = valueToString(a);
-    ObjString* bString = valueToString(b);
-
-    // Length of concatenated string
-    int length = aString->length + bString->length;
-    // Allocated memory for concatenated string and null terminator
-    unsigned char* chars = ALLOCATE(unsigned char, length + 1);
-
-    memcpy(chars, aString->chars, aString->length);
-    memcpy(chars + aString->length, bString->chars, bString->length);
-    chars[length] = '\0'; // Null terminator
-
-    ObjString* result = takeString(chars, length);
-    push(OBJ_VAL(result));
-}
-
-static int subscript() {
-    if (!IS_INTEGER(peek(0))) {
-        runtimeError("Tuple index must be an integer");
+static int subscript(VM* vm) {
+    if (!IS_INTEGER(peek(vm, 0))) {
+        runtimeError(vm, "Tuple index must be an integer");
         return INTERPRET_RUNTIME_ERROR;
     }
-    int index = (int)AS_NUMBER(pop());
+    int index = (int)AS_NUMBER(pop(vm));
 
-    Value value = pop();
+    Value value = pop(vm);
     if (IS_TUPLE(value)) {
         ObjTuple* tuple = AS_TUPLE(value);
         if (index > tuple->size - 1 || index < 0) {
-            runtimeError("Tuple index out of range");
+            runtimeError(vm, "Tuple index out of range");
             return INTERPRET_RUNTIME_ERROR;
         }
 
-        push(tuple->elements[index]);
+        push(vm, tuple->elements[index]);
     } else if (IS_STRING(value)) {
         ObjString* string = AS_STRING(value);
         if (index > string->length - 1 || index < 0) {
-            runtimeError("String index out of range");
+            runtimeError(vm, "String index out of range");
             return INTERPRET_RUNTIME_ERROR;
         }
 
@@ -384,57 +356,57 @@ static int subscript() {
         int len = 1;
         unsigned char* chars = (char*)malloc(len + 1);
         if (!chars) {
-            runtimeError("Out of memory :(");
+            runtimeError(vm, "Out of memory :(");
             return INTERNAL_SOFTWARE_ERROR;
         }
         strncpy(chars, string->chars + index, len);
         chars[len] = '\0';
 
-        push(OBJ_VAL(copyString(chars, len)));
+        push(vm, OBJ_VAL(copyString(&vm->gc, &vm->strings, chars, len)));
         free(chars);
 
     } else {
-        runtimeError("Object cannot be subscripted");
+        runtimeError(vm, "Object cannot be subscripted");
         return INTERPRET_RUNTIME_ERROR;
     }
 
     return INTERPRET_OK;
 }
 
-static InterpretResult run() {
-    CallFrame* frame = &vm.frames[vm.frameCount - 1];
+static InterpretResult run(VM* vm) {
+    CallFrame* frame = &vm->frames[vm->frameCount - 1];
 
 #define READ_BYTE()     (*frame->ip++)
 #define READ_SHORT()    (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
 #define READ_CONSTANT() (frame->closure->function->chunk.constants.values[READ_SHORT()])
 #define READ_STRING()   AS_STRING(READ_CONSTANT())
 // --- Ugly ---
-#define BINARY_OP(valueType, op) \
+#define BINARY_OP(vm, valueType, op) \
     do { \
-        if(!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) { \
-            runtimeError("Operands must be numbers"); \
+        if(!IS_NUMBER(peek(vm, 0)) || !IS_NUMBER(peek(vm, 1))) { \
+            runtimeError(vm, "Operands must be numbers"); \
             return INTERPRET_RUNTIME_ERROR; \
         } \
-        double b = AS_NUMBER(pop()); \
-        double a = AS_NUMBER(pop()); \
-        push(valueType(a op b)); \
+        double b = AS_NUMBER(pop(vm)); \
+        double a = AS_NUMBER(pop(vm)); \
+        push(vm, valueType(a op b)); \
     } while (false)
-#define SET_OP(valueType, setFunction) \
+#define SET_OP(vm, valueType, setFunction) \
     do { \
-        if (!IS_SET(peek(0)) || !IS_SET(peek(1))) { \
-            runtimeError("Operands must be sets"); \
+        if (!IS_SET(peek(vm, 0)) || !IS_SET(peek(vm, 1))) { \
+            runtimeError(vm, "Operands must be sets"); \
             return INTERPRET_RUNTIME_ERROR; \
         } \
-        ObjSet* setB = AS_SET(pop()); \
-        ObjSet* setA = AS_SET(pop()); \
-        push(valueType(setFunction(setA, setB))); \
+        ObjSet* setB = AS_SET(pop(vm)); \
+        ObjSet* setA = AS_SET(pop(vm)); \
+        push(vm, valueType(setFunction(&vm->gc, setA, setB))); \
     } while (false)
 // ---
 
     while(true) {
 #ifdef DEBUG_TRACE_EXECUTION
         printf("          ");
-        for(Value* slot = vm.stack; slot < vm.stackTop; slot++) {
+        for(Value* slot = vm->stack; slot < vm->stackTop; slot++) {
             printf("[ ");
             printValue(*slot);
             printf(" ]");
@@ -448,151 +420,158 @@ static InterpretResult run() {
         switch(instruction = READ_BYTE()) {
             case OP_CONSTANT: {
                 Value constant = READ_CONSTANT();
-                push(constant);
+                push(vm, constant);
                 break;
             }
-            case OP_NULL: push(NULL_VAL); break;
-            case OP_TRUE: push(BOOL_VAL(true)); break;
-            case OP_FALSE: push(BOOL_VAL(false)); break;
-            case OP_POP: pop(); break;
+            case OP_NULL: push(vm, NULL_VAL); break;
+            case OP_TRUE: push(vm, BOOL_VAL(true)); break;
+            case OP_FALSE: push(vm, BOOL_VAL(false)); break;
+            case OP_POP: pop(vm); break;
             case OP_GET_LOCAL: {
                 uint8_t slot = READ_BYTE();
-                push(frame->slots[slot]);
+                push(vm, frame->slots[slot]);
                 break;
             }
             case OP_SET_LOCAL: {
                 uint8_t slot = READ_BYTE();
-                frame->slots[slot] = peek(0);
+                frame->slots[slot] = peek(vm, 0);
                 break;
             }
             case OP_GET_GLOBAL: {
                 ObjString* name = READ_STRING();
                 Value value;
-                if (!tableGet(&vm.globals, name, &value)) {
-                    runtimeError("Undefined variable '%s'", name->chars);
+                if (!tableGet(&vm->globals, name, &value)) {
+                    runtimeError(vm, "Undefined variable '%s'", name->chars);
                     return INTERPRET_RUNTIME_ERROR;
                 }
-                push(value);
+                push(vm, value);
                 break;
             }
             case OP_DEFINE_GLOBAL: {
                 ObjString* name = READ_STRING();
-                tableSet(&vm.globals, name, peek(0));
-                pop();
+                tableSet(&vm->gc, &vm->globals, name, peek(vm, 0));
+                pop(vm);
                 break;
             }
             case OP_SET_GLOBAL: {
                 ObjString* name = READ_STRING();
-                if (tableSet(&vm.globals, name, peek(0))) {
-                    tableDelete(&vm.globals, name);
-                    runtimeError("Undefined variable '%s'", name->chars);
+                if (tableSet(&vm->gc, &vm->globals, name, peek(vm, 0))) {
+                    tableDelete(&vm->globals, name);
+                    runtimeError(vm, "Undefined variable '%s'", name->chars);
                     return INTERPRET_RUNTIME_ERROR;
                 }
                 break;
             }
             case OP_GET_UPVALUE: {
                 uint8_t slot = READ_BYTE();
-                push(*frame->closure->upvalues[slot]->location);
+                push(vm, *frame->closure->upvalues[slot]->location);
                 break;
             }
             case OP_SET_UPVALUE: {
                 uint8_t slot = READ_BYTE();
-                *frame->closure->upvalues[slot]->location = peek(0);
+                *frame->closure->upvalues[slot]->location = peek(vm, 0);
                 break;
             }
             case OP_EQUAL: {
-                Value b = pop();
-                Value a = pop();
+                Value b = pop(vm);
+                Value a = pop(vm);
                 
                 if (IS_BOOL(b) || IS_BOOL(a)) {
                     // Use truth values
-                    push(BOOL_VAL(isFalse(b) == isFalse(a)));
+                    push(vm, BOOL_VAL(isFalse(b) == isFalse(a)));
                 } else {
-                    push(BOOL_VAL(valuesEqual(a, b)));
+                    push(vm, BOOL_VAL(valuesEqual(a, b)));
                 }
 
                 break;
             }
             case OP_NOT_EQUAL: {
-                Value b = pop();
-                Value a = pop();
-                push(BOOL_VAL(!valuesEqual(a, b)));
+                Value b = pop(vm);
+                Value a = pop(vm);
+                push(vm, BOOL_VAL(!valuesEqual(a, b)));
                 break;
             }
-            case OP_GREATER: BINARY_OP(BOOL_VAL, >); break;
-            case OP_GREATER_EQUAL: BINARY_OP(BOOL_VAL, >=); break;
-            case OP_LESS: BINARY_OP(BOOL_VAL, <); break;
-            case OP_LESS_EQUAL: BINARY_OP(BOOL_VAL, <=); break;
+            case OP_GREATER: BINARY_OP(vm, BOOL_VAL, >); break;
+            case OP_GREATER_EQUAL: BINARY_OP(vm, BOOL_VAL, >=); break;
+            case OP_LESS: BINARY_OP(vm, BOOL_VAL, <); break;
+            case OP_LESS_EQUAL: BINARY_OP(vm, BOOL_VAL, <=); break;
             case OP_ADD: {
-                if (IS_STRING(peek(0)) || IS_STRING(peek(1))) {
+                if (IS_STRING(peek(vm, 0)) || IS_STRING(peek(vm, 1))) {
                     // Concatenate if at least one operand is a string
-                    concatenateString();
-                } else if (IS_TUPLE(peek(0)) && IS_TUPLE(peek(1))) {
-                    ObjTuple* b = AS_TUPLE(pop());
-                    ObjTuple* a = AS_TUPLE(pop());
-                    push(OBJ_VAL(concatenateTuple(a, b)));
-                } else if (IS_NUMBER(peek(0)) && IS_NUMBER(peek(1))) {
+                    Value b = pop(vm);
+                    Value a = pop(vm);
+
+                    ObjString* aStr = AS_STRING(IS_STRING(a) ? a : b);
+                    unsigned char* bStr = valueToString(IS_STRING(a) ? b : a);
+
+                    ObjString* result = concatStrings(&vm->gc, &vm->strings, aStr->chars, aStr->length, aStr->hash, bStr, strlen(bStr));
+                    push(vm, OBJ_VAL(result));
+                } else if (IS_TUPLE(peek(vm, 0)) && IS_TUPLE(peek(vm, 1))) {
+                    ObjTuple* b = AS_TUPLE(pop(vm));
+                    ObjTuple* a = AS_TUPLE(pop(vm));
+                    push(vm, OBJ_VAL(concatenateTuple(&vm->gc, a, b)));
+                } else if (IS_NUMBER(peek(vm, 0)) && IS_NUMBER(peek(vm, 1))) {
                     // Else, numerically add
-                    double b = AS_NUMBER(pop());
-                    double a = AS_NUMBER(pop());
-                    push(NUMBER_VAL(a + b));
+                    double b = AS_NUMBER(pop(vm));
+                    double a = AS_NUMBER(pop(vm));
+                    push(vm, NUMBER_VAL(a + b));
                 } else {
-                    runtimeError("Invalid operand type(s)");
+                    runtimeError(vm, "Invalid operand type(s)");
                     return INTERPRET_RUNTIME_ERROR;
                 }
                 break;
             }
-            case OP_SUBTRACT: BINARY_OP(NUMBER_VAL, -); break;
-            case OP_MULTIPLY: BINARY_OP(NUMBER_VAL, *); break;
+            case OP_SUBTRACT: BINARY_OP(vm, NUMBER_VAL, -); break;
+            case OP_MULTIPLY: BINARY_OP(vm, NUMBER_VAL, *); break;
             case OP_MOD: {
-                if (!IS_INTEGER(peek(0)) || !IS_INTEGER(peek(1))) {
-                    runtimeError("Operands must be integers");
+                if (!IS_INTEGER(peek(vm, 0)) || !IS_INTEGER(peek(vm, 1))) {
+                    runtimeError(vm, "Operands must be integers");
                     return INTERPRET_RUNTIME_ERROR;
-                } else if (IS_NUMBER(peek(0)) && AS_NUMBER(peek(0)) == 0) {
+                } else if (IS_NUMBER(peek(vm, 0)) && AS_NUMBER(peek(vm, 0)) == 0) {
                     // Return error if divisor is 0
-                    runtimeError("Division by 0");
+                    runtimeError(vm, "Division by 0");
                     return INTERPRET_RUNTIME_ERROR;
                 }
 
-                int b = AS_NUMBER(pop());
-                int a = AS_NUMBER(pop());
-                push(NUMBER_VAL(a % b));
+                int b = AS_NUMBER(pop(vm));
+                int a = AS_NUMBER(pop(vm));
+                push(vm, NUMBER_VAL(a % b));
                 break;
             }
             case OP_DIVIDE: {
-                if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
-                    runtimeError("Operands must be numbers");
+                if (!IS_NUMBER(peek(vm, 0)) || !IS_NUMBER(peek(vm, 1))) {
+                    runtimeError(vm, "Operands must be numbers");
                     return INTERPRET_RUNTIME_ERROR;
-                } else if (IS_NUMBER(peek(0)) && AS_NUMBER(peek(0)) == 0) {
+                } else if (IS_NUMBER(peek(vm, 0)) && AS_NUMBER(peek(vm, 0)) == 0) {
                     // Return error if divisor is 0
-                    runtimeError("Division by 0");
+                    runtimeError(vm, "Division by 0");
                     return INTERPRET_RUNTIME_ERROR;
                 }
-                double b = AS_NUMBER(pop());
-                double a = AS_NUMBER(pop());
-                push(NUMBER_VAL(a / b));
+                double b = AS_NUMBER(pop(vm));
+                double a = AS_NUMBER(pop(vm));
+                push(vm, NUMBER_VAL(a / b));
                 break;
             }
             case OP_EXPONENT: {
-                if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
-                    runtimeError("Operands must be numbers");
+                if (!IS_NUMBER(peek(vm, 0)) || !IS_NUMBER(peek(vm, 1))) {
+                    runtimeError(vm, "Operands must be numbers");
                     return INTERPRET_RUNTIME_ERROR;
                 }
-                double b = AS_NUMBER(pop());
-                double a = AS_NUMBER(pop());
-                push(NUMBER_VAL(pow(a, b)));
+                double b = AS_NUMBER(pop(vm));
+                double a = AS_NUMBER(pop(vm));
+                push(vm, NUMBER_VAL(pow(a, b)));
                 break;
             }
             case OP_NOT: {   
-                push(BOOL_VAL(isFalse(pop()))); 
+                push(vm, BOOL_VAL(isFalse(pop(vm)))); 
                 break;
             }
             case OP_NEGATE: {
-                if (!IS_NUMBER(peek(0))) {
-                    runtimeError("Operand must be a number");
+                if (!IS_NUMBER(peek(vm, 0))) {
+                    runtimeError(vm, "Operand must be a number");
                     return INTERPRET_RUNTIME_ERROR;
                 }
-                push(NUMBER_VAL(-AS_NUMBER(pop())));
+                push(vm, NUMBER_VAL(-AS_NUMBER(pop(vm))));
                 break;
             }
             case OP_JUMP: {
@@ -602,14 +581,14 @@ static InterpretResult run() {
             }
             case OP_JUMP_IF_FALSE: {
                 uint16_t offset = READ_SHORT();
-                if (isFalse(peek(0))) frame->ip += offset;
+                if (isFalse(peek(vm, 0))) frame->ip += offset;
                 break;
             }
             case OP_JUMP_IF_FALSE_2: { // Pops the condition always. Couldn't think of anything better
                 uint16_t offset = READ_SHORT();
-                if (isFalse(peek(0))) {
+                if (isFalse(peek(vm, 0))) {
                     frame->ip += offset;
-                    pop();
+                    pop(vm);
                 }
                 break;
             }
@@ -620,21 +599,21 @@ static InterpretResult run() {
             }
             case OP_CALL: {
                 int argCount = READ_BYTE();
-                if (!callValue(peek(argCount), argCount)) {
+                if (!callValue(vm, peek(vm, argCount), argCount)) {
                     return INTERPRET_RUNTIME_ERROR;
                 }
-                frame = &vm.frames[vm.frameCount - 1];
+                frame = &vm->frames[vm->frameCount - 1];
                 break;
             }
             case OP_CLOSURE: {
                 ObjFunction* function = AS_FUNCTION(READ_CONSTANT());
-                ObjClosure* closure = newClosure(function);
-                push(OBJ_VAL(closure));
+                ObjClosure* closure = newClosure(&vm->gc, function);
+                push(vm, OBJ_VAL(closure));
                 for (int i = 0; i < closure->upvalueCount; i++) {
                     uint8_t isLocal = READ_BYTE();
                     uint8_t index = READ_BYTE();
                     if (isLocal) {
-                        closure->upvalues[i] = captureUpvalue(frame->slots + index);
+                        closure->upvalues[i] = captureUpvalue(vm, frame->slots + index);
                     } else {
                         closure->upvalues[i] = frame->closure->upvalues[index];
                     }
@@ -642,105 +621,105 @@ static InterpretResult run() {
                 break;
             }
             case OP_CLOSE_UPVALUE: {
-                closeUpvalues(vm.stackTop - 1);
-                pop();
+                closeUpvalues(vm, vm->stackTop - 1);
+                pop(vm);
                 break;
             }
             case OP_RETURN: {
                 bool implicitReturn = READ_BYTE();
                 Value result;
                 if (implicitReturn) {
-                    result = vm.impReturnStash;
-                    vm.impReturnStash = NULL_VAL;
+                    result = vm->impReturnStash;
+                    vm->impReturnStash = NULL_VAL;
                 } else {
-                    result = pop();
+                    result = pop(vm);
                 }
 
-                closeUpvalues(frame->slots);
-                vm.frameCount--;
-                if (vm.frameCount == 0) {
-                    pop();
+                closeUpvalues(vm, frame->slots);
+                vm->frameCount--;
+                if (vm->frameCount == 0) {
+                    pop(vm);
                     return INTERPRET_OK;
                 }
 
-                vm.stackTop = frame->slots;
-                push(result);
-                frame = &vm.frames[vm.frameCount - 1];
+                vm->stackTop = frame->slots;
+                push(vm, result);
+                frame = &vm->frames[vm->frameCount - 1];
                 break;
             }
             case OP_STASH: {
-                vm.impReturnStash = pop();
+                vm->impReturnStash = pop(vm);
                 break;
             }
             case OP_SET_CREATE: {
-                ObjSet* set = newSet();
-                push(OBJ_VAL(set));
+                ObjSet* set = newSet(&vm->gc);
+                push(vm, OBJ_VAL(set));
                 break;
             }
             case OP_SET_INSERT: {
-                Value value = pop();
-                Value setVal = pop();
+                Value value = pop(vm);
+                Value setVal = pop(vm);
                 ObjSet* set = AS_SET(setVal);
-                setInsert(set, value);
-                push(setVal);
+                setInsert(&vm->gc, set, value);
+                push(vm, setVal);
                 break;
             }
             case OP_SET_INSERT_2: { // Inserts two values off the stack - not great and should probably be the same as OP_SET_INSERT
-                Value valueA = pop();
-                Value valueB = pop();
-                Value setVal = pop();
+                Value valueA = pop(vm);
+                Value valueB = pop(vm);
+                Value setVal = pop(vm);
                 ObjSet* set = AS_SET(setVal);
-                setInsert(set, valueB);
-                setInsert(set, valueA);
-                push(setVal);
+                setInsert(&vm->gc, set, valueB);
+                setInsert(&vm->gc, set, valueA);
+                push(vm, setVal);
                 break;
             }
             case OP_SET_OMISSION: {
                 bool omissionParameter = READ_BYTE();
-                int status = setOmission(omissionParameter);
+                int status = setOmission(vm, omissionParameter);
                 if (status != INTERPRET_OK) return status;
                 break;
             }
             case OP_SET_IN: {
-                if (!IS_SET(peek(0))) {
-                    runtimeError("Right hand operand must be a set");
+                if (!IS_SET(peek(vm, 0))) {
+                    runtimeError(vm, "Right hand operand must be a set");
                     return INTERPRET_RUNTIME_ERROR;
                 }
-                ObjSet* set = AS_SET(pop());
-                Value value = pop();
-                push(BOOL_VAL(setContains(set, value)));
+                ObjSet* set = AS_SET(pop(vm));
+                Value value = pop(vm);
+                push(vm, BOOL_VAL(setContains(set, value)));
                 break;
             }
-            case OP_SET_INTERSECT: SET_OP(OBJ_VAL, setIntersect); break;
-            case OP_SET_UNION: SET_OP(OBJ_VAL, setUnion); break;
-            case OP_SET_DIFFERENCE: SET_OP(OBJ_VAL, setDifference); break;
-            case OP_SUBSET: SET_OP(BOOL_VAL, isProperSubset); break;
-            case OP_SUBSETEQ: SET_OP(BOOL_VAL, isSubset); break;
+            case OP_SET_INTERSECT: SET_OP(vm, OBJ_VAL, setIntersect); break;
+            case OP_SET_UNION: SET_OP(vm, OBJ_VAL, setUnion); break;
+            case OP_SET_DIFFERENCE: SET_OP(vm, OBJ_VAL, setDifference); break;
+            case OP_SUBSET: SET_OP(vm, BOOL_VAL, isProperSubset); break;
+            case OP_SUBSETEQ: SET_OP(vm, BOOL_VAL, isSubset); break;
             case OP_SIZE: {
-                Value value = pop();
+                Value value = pop(vm);
                 switch (value.type) {
                     case VAL_NUMBER:
-                        push(NUMBER_VAL(fabs(AS_NUMBER(value))));
+                        push(vm, NUMBER_VAL(fabs(AS_NUMBER(value))));
                         break;
                     case VAL_OBJ:
                         switch (AS_OBJ(value)->type) {
                             case OBJ_STRING:
-                                push(NUMBER_VAL(AS_STRING(value)->length));
+                                push(vm, NUMBER_VAL(AS_STRING(value)->length));
                                 break;
                             case OBJ_SET:
-                                push(NUMBER_VAL(AS_SET(value)->count));
+                                push(vm, NUMBER_VAL(AS_SET(value)->count));
                                 break;
                             case OBJ_TUPLE:
-                                push(NUMBER_VAL(AS_TUPLE(value)->size));
+                                push(vm, NUMBER_VAL(AS_TUPLE(value)->size));
                                 break;
                             default:
-                                runtimeError("Invalid operand type");
+                                runtimeError(vm, "Invalid operand type");
                                 return INTERPRET_RUNTIME_ERROR;
                         }
                         break;
                     case VAL_NULL:
                     case VAL_BOOL:
-                        runtimeError("Invalid operand type");
+                        runtimeError(vm, "Invalid operand type");
                         return INTERPRET_RUNTIME_ERROR;
                     default: break;
                 }
@@ -748,57 +727,57 @@ static InterpretResult run() {
             }
             case OP_CREATE_TUPLE: {
                 int arity = READ_BYTE();
-                ObjTuple* tuple = newTuple(arity);
+                ObjTuple* tuple = newTuple(&vm->gc, arity);
                 for (int i = arity - 1; i >= 0; i--) {
-                    tuple->elements[i] = pop();
+                    tuple->elements[i] = pop(vm);
                 }
-                push(OBJ_VAL(tuple));
+                push(vm, OBJ_VAL(tuple));
                 break;
             }
             case OP_TUPLE_OMISSION: {
                 bool omissionParameter = READ_BYTE();
-                int status = tupleOmission(omissionParameter);
+                int status = tupleOmission(vm, omissionParameter);
                 if (status != INTERPRET_OK) return status;
                 break;
             }
             case OP_SUBSCRIPT: {
-                int status = subscript();
+                int status = subscript(vm);
                 if (status != INTERPRET_OK) return status;
                 break;
             }
             case OP_CREATE_ITERATOR: {
-                if (!IS_SET(peek(0))) {
-                    runtimeError("Generator must iterate over a set");
+                if (!IS_SET(peek(vm, 0))) {
+                    runtimeError(vm, "Generator must iterate over a set");
                     return INTERPRET_RUNTIME_ERROR;
                 }
-                ObjSet* set = AS_SET(pop());
-                ObjSetIterator* iterator = newSetIterator(set);
-                push(OBJ_VAL(iterator));
+                ObjSet* set = AS_SET(pop(vm));
+                ObjSetIterator* iterator = newSetIterator(&vm->gc, set);
+                push(vm, OBJ_VAL(iterator));
                 break;
             }
             case OP_ITERATE: {
-                if (!IS_SET_ITERATOR(peek(0))) {
-                    runtimeError("(Internal) Missing iterator");
+                if (!IS_SET_ITERATOR(peek(vm, 0))) {
+                    runtimeError(vm, "(Internal) Missing iterator");
                     return INTERPRET_RUNTIME_ERROR;
                 }
-                ObjSetIterator* iterator = AS_SET_ITERATOR(pop());
+                ObjSetIterator* iterator = AS_SET_ITERATOR(pop(vm));
                 Value value;
                 bool hasCurrentVal = iterateSetIterator(iterator, &value);
-                if (hasCurrentVal) push(value);
-                push(BOOL_VAL(hasCurrentVal));
+                if (hasCurrentVal) push(vm, value);
+                push(vm, BOOL_VAL(hasCurrentVal));
                 break;
             }
             case OP_ARB: {
-                if (!IS_SET(peek(0))) {
-                    runtimeError("Expected set after some keyword");
+                if (!IS_SET(peek(vm, 0))) {
+                    runtimeError(vm, "Expected set after some keyword");
                     return INTERPRET_RUNTIME_ERROR;
                 }
-                ObjSet* set = AS_SET(pop());
-                push(getArb(set));
+                ObjSet* set = AS_SET(pop(vm));
+                push(vm, getArb(set));
                 break;
             }
             default: {
-                runtimeError("(Internal) Invalid Opcode");
+                runtimeError(vm, "(Internal) Invalid Opcode");
                 return INTERPRET_RUNTIME_ERROR;
             }
         }
@@ -811,18 +790,18 @@ static InterpretResult run() {
 #undef SET_OP
 }
 
-InterpretResult interpret(const unsigned char* source) {
-    ObjFunction* function = compile(source);
+InterpretResult interpret(VM* vm, const unsigned char* source) {
+    ObjFunction* function = compile(source, &vm->gc, &vm->strings);
     if(function == NULL) {
         return INTERPRET_COMPILE_ERROR;
     }
 
-    push(OBJ_VAL(function));
+    push(vm, OBJ_VAL(function));
     
-    ObjClosure* closure = newClosure(function);
-    pop();
-    push(OBJ_VAL(closure));
-    call(closure, 0);
+    ObjClosure* closure = newClosure(&vm->gc, function);
+    pop(vm);
+    push(vm, OBJ_VAL(closure));
+    call(vm, closure, 0);
 
-    return run();
+    return run(vm);
 }

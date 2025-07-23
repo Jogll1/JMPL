@@ -7,6 +7,7 @@
 #include "set.h"
 #include "tuple.h"
 #include "memory.h"
+#include "table.h"
 
 void initValueArray(ValueArray* array) {
     array->values = NULL;
@@ -14,20 +15,20 @@ void initValueArray(ValueArray* array) {
     array->count = 0;
 }
 
-void writeValueArray(ValueArray* array, Value value) {
+void writeValueArray(GC* gc, ValueArray* array, Value value) {
     if(array->capacity < array->count + 1) {
         int oldCapacity = array->capacity;
 
         array->capacity = GROW_CAPACITY(oldCapacity);
-        array->values = GROW_ARRAY(Value, array->values, oldCapacity, array->capacity);
+        array->values = GROW_ARRAY(gc, Value, array->values, oldCapacity, array->capacity);
     }
 
     array->values[array->count] = value;
     array->count++;
 }
 
-void freeValueArray(ValueArray* array) {
-    FREE_ARRAY(Value, array->values, array->capacity);
+void freeValueArray(GC* gc, ValueArray* array) {
+    FREE_ARRAY(gc, Value, array->values, array->capacity);
     initValueArray(array);
 }
 
@@ -60,72 +61,59 @@ bool valuesEqual(Value a, Value b) {
 }
 
 /**
- * @brief Converts a value to an ObjString.
+ * @brief Converts a value to an array of chars.
  * 
  * @param value The value to convert
- * @return      A pointer to an ObjString
+ * @return      A pointer to an array of chars
+ * 
+ * Must be freed.
  */
-ObjString* valueToString(Value value) {
+unsigned char* valueToString(Value value) {
     // If its an object
     if (IS_STRING(value)) {
-        return AS_STRING(value);
+        return strdup(AS_STRING(value)->chars);
     }
 
     if (IS_FUNCTION(value)) {
-        return AS_FUNCTION(value)->name;
+        return strdup(AS_FUNCTION(value)->name->chars);
     }
 
     if (IS_CLOSURE(value)) {
-        return AS_CLOSURE(value)->function->name;
+        return strdup(AS_CLOSURE(value)->function->name->chars);
     }
 
     if (IS_NATIVE(value)) {
-        unsigned char* str = "native";
-        return AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
+        return strdup("native");
     }
 
     if (IS_SET(value)) {
-        unsigned char* str = setToString(AS_SET(value));
-        ObjString* res = AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
-        free(str);
-        return res;
+        // Must be freed
+        return setToString(AS_SET(value));
     }
 
     if (IS_TUPLE(value)) {
-        unsigned char* str = tupleToString(AS_TUPLE(value));
-        ObjString* res = AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
-        free(str);
-        return res;
+        // Must be freed
+        return tupleToString(AS_TUPLE(value));
     }
 
     if (IS_SET_ITERATOR(value)) {
-        unsigned char* str = "iterator";
-        return AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
+        return strdup("iterator");
     }
 
     // If its a value
-    unsigned char* str;
-    bool shouldFree = false;
     switch (value.type) {
         case VAL_BOOL:
-            str = BOOL_TO_STRING(AS_BOOL(value));
-            break;
+            return strdup(BOOL_TO_STRING(AS_BOOL(value)));
         case VAL_NULL:
-            str = NULL_TO_STRING;
-            break;
-        case VAL_NUMBER:
-            NUMBER_TO_STRING(AS_NUMBER(value), &str);
-            shouldFree = true;
-            break;
+            return strdup(NULL_TO_STRING);
+        case VAL_NUMBER: {
+            char buffer[64];
+            snprintf(buffer, sizeof(buffer), "%.14g", AS_NUMBER(value));
+            return strdup(buffer);
+        }
         default: 
-            str = "CAST_ERROR";
-            break;
+            return "CAST_ERROR";
     }
-    
-    ObjString* result = AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
-    if (shouldFree) free(str);
-
-    return result;
 }
 
 uint32_t hashValue(Value value) {

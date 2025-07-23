@@ -3,9 +3,9 @@
 
 #include "common.h"
 
+typedef struct GC GC;
 typedef struct Obj Obj;
 typedef struct ObjString ObjString;
-typedef struct Set Set;
 
 /**
  * @brief The type of a Value.
@@ -75,12 +75,12 @@ typedef struct {
 } ValueArray;
 
 void initValueArray(ValueArray* array);
-void writeValueArray(ValueArray* array, Value value);
-void freeValueArray(ValueArray* array);
+void writeValueArray(GC* gc, ValueArray* array, Value value);
+void freeValueArray(GC* gc, ValueArray* array);
 int findInValueArray(ValueArray* array, Value value);
 
 bool valuesEqual(Value a, Value b);
-ObjString* valueToString(Value value);
+unsigned char* valueToString(Value value);
 uint32_t hashValue(Value value);
 void printValue(Value value);
 

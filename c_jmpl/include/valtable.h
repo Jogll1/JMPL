@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "value.h"
+#include "gc.h"
 
 typedef struct {
     Value key;
@@ -16,11 +17,11 @@ typedef struct {
 } ValTable;
 
 void initValTable(ValTable* table);
-void freeValTable(ValTable* table);
+void freeValTable(GC* gc, ValTable* table);
 
 bool valTableGet(ValTable* table, Value key, Value* value);
-bool valTableSet(ValTable* table, Value key, Value value);
+bool valTableSet(GC* gc, ValTable* table, Value key, Value value);
 bool valTableDelete(ValTable* table, Value key);
-void valTableAddAll(ValTable* from, ValTable* to);
+void valTableAddAll(GC* gc, ValTable* from, ValTable* to);
 
 #endif

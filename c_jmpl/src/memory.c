@@ -201,7 +201,7 @@ static void sweep() {
     Obj* object = vm.objects;
 
     while (object != NULL) {
-        if (object->isMarked) {
+        if (object->isMarked || !object->isReady) {
             object->isMarked = false;
             previous = object;
             object = object->next;

@@ -9,6 +9,12 @@
 #include "value.h"
 #include "native.h"
 
+#ifdef _WIN32
+    #include <Windows.h>
+#else
+    #include <unistd.h>
+#endif
+
 #define JMPL_PI 3.14159265358979323846
 #define JMPL_EPSILON 1e-10
 
@@ -21,6 +27,29 @@
  */
 Value clockNative(int argCount, Value* args) {
     return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
+}
+
+/**
+ * sleep(x)
+ * 
+ * Sleeps for x seconds.
+ */
+Value sleepNative(int argCount, Value* args) {
+    if(!IS_NUMBER(args[0])) return NULL_VAL;
+
+    double seconds = AS_NUMBER(args[0]);
+    if (seconds < 0) return NULL_VAL;
+
+#ifdef _WIN32
+    Sleep((DWORD)(seconds * 1000));
+#else
+    struct timespec ts;
+    ts.tv_sec = (time_t)seconds;
+    ts.tv_nsec = (long)((seconds - ts.tv_sec) * 1e9);
+    nanosleep(&ts, NULL);
+#endif
+
+    return NULL_VAL;
 }
 
 // --- I/O ---

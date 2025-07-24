@@ -63,6 +63,7 @@
 - New native functions
     - `round(x)`
     - `print(x)` and `println(x)`
+    - `sleep(x)`
 - Strings can be indexed
 - Tuples can be concatenated
 ### Changed
@@ -75,3 +76,5 @@
 - Invalid infix operators no longer cause a crash
 - Optimised HashSet code
 - Fixed implicit return
+- Fixed garbage collector collecting sets while they are being created
+- Optimised Value code with NaN boxing

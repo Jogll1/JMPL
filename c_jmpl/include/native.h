@@ -9,6 +9,7 @@
 // --- General purpose ---
 
 Value clockNative(int argCount, Value* args);
+Value sleepNative(int argCount, Value* args);
 
 // --- I/O ---
 

@@ -69,7 +69,7 @@ void initVM() {
     resetStack();
     vm.objects = NULL;
     vm.bytesAllocated = 0;
-    vm.nextGC = 1024 * 1024;
+    vm.nextGC = INTIAL_GC;
 
     vm.greyCount = 0;
     vm.greyCapacity = 0;
@@ -84,6 +84,7 @@ void initVM() {
 
     // General purpose
     defineNative("clock", 0, clockNative);
+    defineNative("sleep", 1, sleepNative);
 
     // I/O
     defineNative("print", 1, printNative);

@@ -9,6 +9,8 @@
 #define FRAMES_MAX 64
 #define STACK_MAX (FRAMES_MAX * UINT8_COUNT)
 
+#define INTIAL_GC 1024 * 1024
+
 typedef struct {
     ObjClosure* closure;
     uint8_t* ip;

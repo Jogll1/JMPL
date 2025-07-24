@@ -11,15 +11,6 @@
 #include "debug.h"
 
 typedef struct {
-    Scanner scanner;
-
-    Token current;
-    Token previous;
-    bool hadError;
-    bool panicMode;
-} Parser;
-
-typedef struct {
     Token name;
     int depth;
     bool isCaptured;
@@ -47,6 +38,15 @@ typedef struct Compiler {
 
     bool implicitReturn;
 } Compiler;
+
+typedef struct {
+    Scanner scanner;
+
+    Token current;
+    Token previous;
+    bool hadError;
+    bool panicMode;
+} Parser;
 
 /**
  * @brief Precedence order of operations.
@@ -1458,12 +1458,12 @@ static void statement(bool blockAllowed, bool ignoreSeparator) {
 }
 
 ObjFunction* compile(const unsigned char* source) {
+    parser.hadError = false;
+    parser.panicMode = false;
+
     initScanner(&parser.scanner, source);
     Compiler compiler;
     initCompiler(&compiler, TYPE_SCRIPT);
-
-    parser.hadError = false;
-    parser.panicMode = false;
 
     advance();
 

@@ -73,7 +73,7 @@ static void adjustCapacity(ValTable* table, int capacity) {
     table->count = 0;
     for(int i = 0; i < table->capacity; i++) {
         ValEntry* entry = &table->entries[i];
-        if(entry->key.type == VAL_NULL) continue;
+        if(IS_NULL(entry->key)) continue;
 
         ValEntry* destination = findEntry(entries, capacity, entry->key);
         destination->key = entry->key;
@@ -122,7 +122,7 @@ void valTableAddAll(ValTable* from, ValTable* to) {
     for (int i = 0; i < from->capacity; i++) {
         ValEntry* entry = &from->entries[i];
 
-        if(entry->key.type != VAL_NULL) {
+        if(!IS_NULL(entry->key)) {
             valTableSet(to, entry->key, entry->value);
         }
     }

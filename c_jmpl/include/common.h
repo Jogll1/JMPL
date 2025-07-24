@@ -15,7 +15,7 @@
 
 // Args
 
-// #define NAN_BOXING
+#define NAN_BOXING
 
 // Misc
 

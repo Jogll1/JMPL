@@ -42,6 +42,21 @@ int findInValueArray(ValueArray* array, Value value) {
 }
 
 bool valuesEqual(Value a, Value b) {
+#ifdef NAN_BOXING
+    if (IS_OBJ(a) && IS_OBJ(b)) {
+        switch(AS_OBJ(a)->type) {
+            case OBJ_SET:   return setsEqual(AS_SET(a), AS_SET(b));
+            case OBJ_TUPLE: return tuplesEqual(AS_TUPLE(a), AS_TUPLE(b));
+            default:        return AS_OBJ(a) == AS_OBJ(b);
+        }
+    } else {
+        if (IS_NUMBER(a) && IS_NUMBER(b)) {
+            return AS_NUMBER(a) == AS_NUMBER(b);
+        }
+
+        return a == b;
+    }
+#else
     if(a.type != b.type) return false;
 
     switch(a.type) {
@@ -57,6 +72,7 @@ bool valuesEqual(Value a, Value b) {
 
         default: return false;
     }
+#endif
 }
 
 /**
@@ -106,6 +122,18 @@ ObjString* valueToString(Value value) {
     // If its a value
     unsigned char* str;
     bool shouldFree = false;
+#ifdef NAN_BOXING
+    if (IS_BOOL(value)) {
+        str = BOOL_TO_STRING(AS_BOOL(value));
+    } else if (IS_NULL(value)) {
+        str = NULL_TO_STRING;
+    } else if (IS_NUMBER(value)) {
+        NUMBER_TO_STRING(AS_NUMBER(value), &str);
+        shouldFree = true;
+    } else {
+        str = "CAST_ERROR";
+    }
+#else
     switch (value.type) {
         case VAL_BOOL:
             str = BOOL_TO_STRING(AS_BOOL(value));
@@ -121,6 +149,7 @@ ObjString* valueToString(Value value) {
             str = "CAST_ERROR";
             break;
     }
+#endif
     
     ObjString* result = AS_STRING(OBJ_VAL(copyString(str, strlen(str))));
     if (shouldFree) free(str);
@@ -129,6 +158,23 @@ ObjString* valueToString(Value value) {
 }
 
 uint32_t hashValue(Value value) {
+#ifdef NAN_BOXING
+    if (IS_BOOL(value)) {
+        return AS_BOOL(value) ? 0xAAAA : 0xBBBB;
+    } else if (IS_NULL(value)) {
+        return 0xCCCC;
+    } else if (IS_NUMBER(value)) {
+        uint64_t bits = AS_NUMBER(value);
+        return (uint32_t)(bits ^ (bits >> 32));
+    } else if (IS_OBJ(value)) {
+        switch(AS_OBJ(value)->type) {
+            case OBJ_SET:   return hashSet(AS_SET(value));
+            case OBJ_TUPLE: return hashTuple(AS_TUPLE(value));
+            default:        return (uint32_t)((uintptr_t)AS_OBJ(value) >> 2);
+        }
+    } 
+    return 0;
+#else
     switch(value.type) {
         case VAL_BOOL: return AS_BOOL(value) ? 0xAAAA : 0xBBBB;
         case VAL_NULL: return 0xCCCC;
@@ -144,9 +190,21 @@ uint32_t hashValue(Value value) {
             }
         default: return 0;
     }
+#endif
 }
 
 void printValue(Value value) {
+#ifdef NAN_BOXING
+    if (IS_BOOL(value)) {
+        printf(AS_BOOL(value) ? "true" : "false");
+    } else if (IS_NULL(value)) {
+        printf("null");
+    } else if (IS_NUMBER(value)) {
+        printf("%g", AS_NUMBER(value));
+    } else if (IS_OBJ(value)) {
+        printObject(value);
+    }
+#else
     switch(value.type) {
         case VAL_BOOL:   printf(AS_BOOL(value) ? "true" : "false"); break;
         case VAL_NULL:   printf("null"); break;
@@ -154,4 +212,5 @@ void printValue(Value value) {
         case VAL_OBJ:    printObject(value); break;
         default: return;
     }
+#endif
 }

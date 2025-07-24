@@ -67,7 +67,7 @@
 - Tuples can be concatenated
 ### Changed
 - `==` (equality operation) to be `=`
-- Removed `out` keyword and replaced it with a function
+- Removed `out` keyword and replaced it with the functions `print(x)` and `println(x)`
 ### Fixed
 - Bugs relating to upvalues and closures
     - Fixed crash when trying to free upvalues

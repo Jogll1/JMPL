@@ -335,6 +335,39 @@ static bool isFalse(Value value) {
            (IS_SET(value) && AS_SET(value)->count == 0));
 }
 
+static int getSize(Value value) {
+#ifdef NAN_BOXING
+    if (IS_NUMBER(value)) {
+        return fabs(AS_NUMBER(value));
+    } else if (IS_OBJ(value)) {
+        switch (AS_OBJ(value)->type) {
+            case OBJ_STRING: return AS_STRING(value)->length;
+            case OBJ_SET:    return AS_SET(value)->count;
+            case OBJ_TUPLE:  return AS_TUPLE(value)->size;
+            default:         return -1;
+        }
+    }
+#else
+    switch (value.type) {
+        case VAL_NUMBER:
+            return fabs(AS_NUMBER(value));
+        case VAL_OBJ:
+            switch (AS_OBJ(value)->type) {
+                case OBJ_STRING: return AS_STRING(value)->length;
+                case OBJ_SET:    return AS_SET(value)->count;
+                case OBJ_TUPLE:  return AS_TUPLE(value)->size;
+                default:         return -1;
+            }
+            break;
+        case VAL_NULL:
+        case VAL_BOOL:
+        default: break;
+    }
+#endif
+
+    return -1;
+}
+
 /**
  * @brief Concatenate strings a and b if either are a string.
  * 
@@ -721,33 +754,12 @@ static InterpretResult run() {
             case OP_SUBSET: SET_OP(BOOL_VAL, isProperSubset); break;
             case OP_SUBSETEQ: SET_OP(BOOL_VAL, isSubset); break;
             case OP_SIZE: {
-                Value value = pop();
-                switch (value.type) {
-                    case VAL_NUMBER:
-                        push(NUMBER_VAL(fabs(AS_NUMBER(value))));
-                        break;
-                    case VAL_OBJ:
-                        switch (AS_OBJ(value)->type) {
-                            case OBJ_STRING:
-                                push(NUMBER_VAL(AS_STRING(value)->length));
-                                break;
-                            case OBJ_SET:
-                                push(NUMBER_VAL(AS_SET(value)->count));
-                                break;
-                            case OBJ_TUPLE:
-                                push(NUMBER_VAL(AS_TUPLE(value)->size));
-                                break;
-                            default:
-                                runtimeError("Invalid operand type");
-                                return INTERPRET_RUNTIME_ERROR;
-                        }
-                        break;
-                    case VAL_NULL:
-                    case VAL_BOOL:
-                        runtimeError("Invalid operand type");
-                        return INTERPRET_RUNTIME_ERROR;
-                    default: break;
+                int size = getSize(pop());
+                if (size == -1) {
+                    runtimeError("Invalid operand type");
+                    return INTERPRET_RUNTIME_ERROR;
                 }
+                push(NUMBER_VAL(size));
                 break;
             }
             case OP_CREATE_TUPLE: {

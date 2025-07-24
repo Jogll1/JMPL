@@ -27,7 +27,7 @@ static void printDebugSet(ObjSet* set) {
 static Value* findElement(Value* elements, int capacity, Value value) {
     // Map the key's hash code to an index in the array
     uint32_t index = hashValue(value) & (capacity - 1);
-
+    
     while (true) {
         Value* element = &elements[index];
 
@@ -51,7 +51,7 @@ static void adjustCapacity(ObjSet* set, int capacity) {
     set->count = 0;
     for(int i = 0; i < set->capacity; i++) {
         Value element = set->elements[i];
-        if(element.type == VAL_NULL) continue;
+        if(IS_NULL(element)) continue;
 
         Value* destination = findElement(elements, capacity, element);
         *destination = element;
@@ -132,6 +132,7 @@ bool setsEqual(ObjSet* a, ObjSet* b) {
 
 ObjSet* setIntersect(ObjSet* a, ObjSet* b) {
     ObjSet* result = newSet();
+    result->obj.isReady = false;
 
     // Iterate through smaller set
     if (a->count > b->count) {
@@ -147,31 +148,35 @@ ObjSet* setIntersect(ObjSet* a, ObjSet* b) {
         if (setContains(b, valA)) setInsert(result, valA);
     }
 
+    result->obj.isReady = true;
     return result;
 }
 
 ObjSet* setUnion(ObjSet* a, ObjSet* b) {
     ObjSet* result = newSet();
-
+    result->obj.isReady = false;
+    printDebugSet(a);
+    printDebugSet(b);
     for (int i = 0; i < a->capacity; i++) {
         Value valA = a->elements[i];
         if (IS_NULL(valA)) continue;
-
         setInsert(result, valA);
     }
 
+    printf("\n***3***\n");
     for (int i = 0; i < b->capacity; i++) {
         Value valB = b->elements[i];
         if (IS_NULL(valB)) continue;
-
         setInsert(result, valB);
     }
-
+    printf("\n***4***\n");
+    result->obj.isReady = true;
     return result;
 }
 
 ObjSet* setDifference(ObjSet* a, ObjSet* b) {
     ObjSet* result = newSet();
+    result->obj.isReady = false;;
 
     for (int i = 0; i < a->capacity; i++) {
         Value valA = a->elements[i];
@@ -182,6 +187,7 @@ ObjSet* setDifference(ObjSet* a, ObjSet* b) {
         }
     }
 
+    result->obj.isReady = true;
     return result;
 }
 

@@ -56,7 +56,7 @@ unsigned char* tupleToString(ObjTuple* tuple) {
     int numElements = tuple->size;
     for (int i = 0; i < numElements; i++) {
         Value value = tuple->elements[i];
-
+                
         if (IS_OBJ(value) && IS_STRING(value)) {
             sb_appendf(sb, "\"%s\"", valueToString(value)->chars);
         } else {

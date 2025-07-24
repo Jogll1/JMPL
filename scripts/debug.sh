@@ -7,5 +7,4 @@ valgrind --leak-check=full \
          --verbose \
          --log-file=valgrind-out.txt \
          ./build/v0-2-1 ./test.jmpl 
-clear 
 cat valgrind-out.txt

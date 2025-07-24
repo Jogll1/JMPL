@@ -26,7 +26,7 @@ static void printDebugSet(ObjSet* set) {
 
 static Value* findElement(Value* elements, int capacity, Value value) {
     // Map the key's hash code to an index in the array
-    uint32_t index = hashValue(value) % capacity;
+    uint32_t index = hashValue(value) & (capacity - 1);
 
     while (true) {
         Value* element = &elements[index];
@@ -36,7 +36,7 @@ static Value* findElement(Value* elements, int capacity, Value value) {
         }
 
         // Collision, so start linear probing
-        index = (index + 1) % capacity;
+        index = (index + 1) & (capacity - 1);
     }
 }
 

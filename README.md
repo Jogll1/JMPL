@@ -5,7 +5,7 @@ This repository contains the JMPL interpreter (c_jmpl), example programs, and do
 JMPL has support for UTF-8 encoding and many operators have Unicode alternatives. It is recommended to use a text-editor with Unicode capabilities or a plugin that allows you to easily insert. If using a Windows terminal, the code page should be changed to `65001` to properly display any Unicode character that may be outputted.
 
 ## Running the Interpreter
-The current version of the interpreter is c_jmpl v0.2.0.
+The current version of the interpreter is c_jmpl v0.2.2.
 
 ### Prerequisites
 - CMake (Tested with version 4.1.0)
@@ -22,9 +22,9 @@ On Windows you may need to specify the generator: \
 ### Run
 To run the interpreter, run the exe:
 - Windows:
-  `./build/v0-2-0.exe path/to/file.jmpl`
+  `./build/v0-2-2.exe path/to/file.jmpl`
 - Linux/Mac:
-  `./build/v0-2-0 path/to/file.jmpl`
+  `./build/v0-2-2 path/to/file.jmpl`
 
 Running the interpreter with no source file will start the in-terminal REPL.
 

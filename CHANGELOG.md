@@ -56,7 +56,7 @@
 - Casting numbers to string no longer creates a memory leak
 - Indentation bugs
 
-## [v0.2.1] - 17/07/2025
+## [v0.2.1] - 24/07/2025
 ### Added
 - Added set-builder notation
 - Added quantifiers (`∀` or `forall`, `∃` or `exists`, and `some`)
@@ -66,6 +66,7 @@
     - `sleep(x)`
 - Strings can be indexed
 - Tuples can be concatenated
+- A 1-tuple can be created using `(x,)`
 ### Changed
 - `==` (equality operation) to be `=`
 - Removed `out` keyword and replaced it with the functions `print(x)` and `println(x)`

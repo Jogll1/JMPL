@@ -1070,7 +1070,7 @@ static void quantifier() {
     // =====================
 
     // Predicate
-    consume(TOKEN_COMMA, "Expected comma after generator of quantifier");
+    consume(TOKEN_PIPE, "Expected pipe after generator of quantifier");
     expression(false);
 
     // Invert expression for exists and some

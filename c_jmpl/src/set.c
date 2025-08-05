@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <assert.h>
 
 #include "set.h"
 #include "memory.h"
@@ -109,6 +110,8 @@ bool setContains(ObjSet* set, Value value) {
 }
 
 bool setsEqual(ObjSet* a, ObjSet* b) {
+    assert(a != NULL && b != NULL);
+
     if (a->count != b->count) return false;
     
     for (int i = 0; i < a->capacity; i++) {
@@ -124,6 +127,8 @@ bool setsEqual(ObjSet* a, ObjSet* b) {
 }
 
 ObjSet* setIntersect(ObjSet* a, ObjSet* b) {
+    assert(a != NULL && b != NULL);
+
     ObjSet* result = newSet();
     result->obj.isReady = false;
 
@@ -146,6 +151,8 @@ ObjSet* setIntersect(ObjSet* a, ObjSet* b) {
 }
 
 ObjSet* setUnion(ObjSet* a, ObjSet* b) {
+    assert(a != NULL && b != NULL);
+
     ObjSet* result = newSet();
     result->obj.isReady = false;
 
@@ -160,13 +167,16 @@ ObjSet* setUnion(ObjSet* a, ObjSet* b) {
         if (IS_NULL(valB)) continue;
         setInsert(result, valB);
     }
+
     result->obj.isReady = true;
     return result;
 }
 
 ObjSet* setDifference(ObjSet* a, ObjSet* b) {
+    assert(a != NULL && b != NULL);
+
     ObjSet* result = newSet();
-    result->obj.isReady = false;;
+    result->obj.isReady = false;
 
     for (int i = 0; i < a->capacity; i++) {
         Value valA = a->elements[i];
@@ -182,6 +192,8 @@ ObjSet* setDifference(ObjSet* a, ObjSet* b) {
 }
 
 bool isSubset(ObjSet* a, ObjSet* b) {
+    assert(a != NULL && b != NULL);
+    
     if (a->count > b->count) return false;
 
     for (int i = 0; i < a->capacity; i++) {
@@ -197,6 +209,7 @@ bool isSubset(ObjSet* a, ObjSet* b) {
 }
 
 bool isProperSubset(ObjSet* a, ObjSet* b) {
+    assert(a != NULL && b != NULL);
     if (a->count == b->count) return false;
 
     return isSubset(a, b);

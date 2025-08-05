@@ -13,6 +13,7 @@
 #include "memory.h"
 #include "native.h"
 #include "debug.h"
+#include "gc.h"
 
 // ToDo: swap this for a pointer
 VM vm;
@@ -58,22 +59,16 @@ static void runtimeError(const unsigned char* format, ...) {
  * @param function The C function that is called
  */
 static void defineNative(const unsigned char* name, int arity, NativeFn function) {
-    push(OBJ_VAL(copyString(name, (int)strlen(name))));
-    push(OBJ_VAL(newNative(function, arity)));
-    tableSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
+    push(OBJ_VAL(copyString(&vm.gc, name, (int)strlen(name))));
+    push(OBJ_VAL(newNative(&vm.gc, function, arity)));
+    tableSet(&vm.gc, &vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
     pop();
     pop();
 }
 
 void initVM() {
     resetStack();
-    vm.objects = NULL;
-    vm.bytesAllocated = 0;
-    vm.nextGC = INTIAL_GC;
-
-    vm.greyCount = 0;
-    vm.greyCapacity = 0;
-    vm.greyStack = NULL;
+    initGC(&vm.gc);
 
     vm.impReturnStash = NULL_VAL;
 
@@ -106,9 +101,9 @@ void initVM() {
 }
 
 void freeVM() {
-    freeTable(&vm.globals);
-    freeTable(&vm.strings);
-    freeObjects();
+    freeTable(&vm.gc, &vm.globals);
+    freeTable(&vm.gc, &vm.strings);
+    freeGC(&vm.gc);
 }
 
 void push(Value value) {
@@ -195,7 +190,7 @@ static ObjUpvalue* captureUpvalue(Value* local) {
         return upvalue;
     }
 
-    ObjUpvalue* createdUpvalue = newUpvalue(local);
+    ObjUpvalue* createdUpvalue = newUpvalue(&vm.gc, local);
     createdUpvalue->next = upvalue;
 
     if(prevUpvalue == NULL) {
@@ -250,11 +245,11 @@ static int setOmission(bool hasNext) {
 
     if (last > first) {
         for (int i = first; i <= last; i += gap) {
-            setInsert(set, NUMBER_VAL(i));
+            setInsert(&vm.gc, set, NUMBER_VAL(i));
         }   
     } else {
         for (int i = first; i >= last; i -= gap) {
-            setInsert(set, NUMBER_VAL(i));
+            setInsert(&vm.gc, set, NUMBER_VAL(i));
         }   
     }
 
@@ -299,7 +294,7 @@ static int tupleOmission(bool hasNext) {
     } 
     arity++;
     
-    ObjTuple* tuple = newTuple(arity);
+    ObjTuple* tuple = newTuple(&vm.gc, arity);
     tuple->obj.isReady = false;
     int i = 0;
     if (last > first) {
@@ -379,19 +374,20 @@ static void concatenateString() {
     Value b = pop();
     Value a = pop();
 
-    ObjString* aString = valueToString(a);
-    ObjString* bString = valueToString(b);
+    unsigned char* aStr = valueToString(a);
+    unsigned char* bStr = valueToString(b);
+    int aLen = strlen(aStr);
+    int bLen = strlen(bStr);
 
-    // Length of concatenated string
-    int length = aString->length + bString->length;
+    int length = aLen + bLen;
     // Allocated memory for concatenated string and null terminator
-    unsigned char* chars = ALLOCATE(unsigned char, length + 1);
+    unsigned char* chars = ALLOCATE(&vm.gc, unsigned char, length + 1);
 
-    memcpy(chars, aString->chars, aString->length);
-    memcpy(chars + aString->length, bString->chars, bString->length);
+    memcpy(chars, aStr, aLen);
+    memcpy(chars + aLen, bStr, bLen);
     chars[length] = '\0'; // Null terminator
 
-    ObjString* result = takeString(chars, length);
+    ObjString* result = takeString(&vm.gc, chars, length);
     push(OBJ_VAL(result));
 }
 
@@ -428,7 +424,7 @@ static int subscript() {
         strncpy(chars, string->chars + index, len);
         chars[len] = '\0';
 
-        push(OBJ_VAL(copyString(chars, len)));
+        push(OBJ_VAL(copyString(&vm.gc, chars, len)));
         free(chars);
 
     } else {
@@ -456,6 +452,16 @@ static InterpretResult run() {
         double b = AS_NUMBER(pop()); \
         double a = AS_NUMBER(pop()); \
         push(valueType(a op b)); \
+    } while (false)
+#define SET_OP_GC(valueType, setFunction) \
+    do { \
+        if (!IS_SET(peek(0)) || !IS_SET(peek(1))) { \
+            runtimeError("Operands must be sets"); \
+            return INTERPRET_RUNTIME_ERROR; \
+        } \
+        ObjSet* setB = AS_SET(pop()); \
+        ObjSet* setA = AS_SET(pop()); \
+        push(valueType(setFunction(&vm.gc, setA, setB))); \
     } while (false)
 #define SET_OP(valueType, setFunction) \
     do { \
@@ -515,13 +521,13 @@ static InterpretResult run() {
             }
             case OP_DEFINE_GLOBAL: {
                 ObjString* name = READ_STRING();
-                tableSet(&vm.globals, name, peek(0));
+                tableSet(&vm.gc, &vm.globals, name, peek(0));
                 pop();
                 break;
             }
             case OP_SET_GLOBAL: {
                 ObjString* name = READ_STRING();
-                if (tableSet(&vm.globals, name, peek(0))) {
+                if (tableSet(&vm.gc, &vm.globals, name, peek(0))) {
                     tableDelete(&vm.globals, name);
                     runtimeError("Undefined variable '%s'", name->chars);
                     return INTERPRET_RUNTIME_ERROR;
@@ -568,7 +574,7 @@ static InterpretResult run() {
                 } else if (IS_TUPLE(peek(0)) && IS_TUPLE(peek(1))) {
                     ObjTuple* b = AS_TUPLE(pop());
                     ObjTuple* a = AS_TUPLE(pop());
-                    push(OBJ_VAL(concatenateTuple(a, b)));
+                    push(OBJ_VAL(concatenateTuple(&vm.gc, a, b)));
                 } else if (IS_NUMBER(peek(0)) && IS_NUMBER(peek(1))) {
                     // Else, numerically add
                     double b = AS_NUMBER(pop());
@@ -666,7 +672,7 @@ static InterpretResult run() {
             }
             case OP_CLOSURE: {
                 ObjFunction* function = AS_FUNCTION(READ_CONSTANT());
-                ObjClosure* closure = newClosure(function);
+                ObjClosure* closure = newClosure(&vm.gc, function);
                 push(OBJ_VAL(closure));
                 for (int i = 0; i < closure->upvalueCount; i++) {
                     uint8_t isLocal = READ_BYTE();
@@ -711,7 +717,7 @@ static InterpretResult run() {
                 break;
             }
             case OP_SET_CREATE: {
-                ObjSet* set = newSet();
+                ObjSet* set = newSet(&vm.gc);
                 push(OBJ_VAL(set));
                 break;
             }
@@ -719,7 +725,7 @@ static InterpretResult run() {
                 Value value = pop();
                 Value setVal = pop();
                 ObjSet* set = AS_SET(setVal);
-                setInsert(set, value);
+                setInsert(&vm.gc, set, value);
                 push(setVal);
                 break;
             }
@@ -728,8 +734,8 @@ static InterpretResult run() {
                 Value valueB = pop();
                 Value setVal = pop();
                 ObjSet* set = AS_SET(setVal);
-                setInsert(set, valueB);
-                setInsert(set, valueA);
+                setInsert(&vm.gc, set, valueB);
+                setInsert(&vm.gc, set, valueA);
                 push(setVal);
                 break;
             }
@@ -749,9 +755,9 @@ static InterpretResult run() {
                 push(BOOL_VAL(setContains(set, value)));
                 break;
             }
-            case OP_SET_INTERSECT: SET_OP(OBJ_VAL, setIntersect); break;
-            case OP_SET_UNION: SET_OP(OBJ_VAL, setUnion); break;
-            case OP_SET_DIFFERENCE: SET_OP(OBJ_VAL, setDifference); break;
+            case OP_SET_INTERSECT: SET_OP_GC(OBJ_VAL, setIntersect); break;
+            case OP_SET_UNION: SET_OP_GC(OBJ_VAL, setUnion); break;
+            case OP_SET_DIFFERENCE: SET_OP_GC(OBJ_VAL, setDifference); break;
             case OP_SUBSET: SET_OP(BOOL_VAL, isProperSubset); break;
             case OP_SUBSETEQ: SET_OP(BOOL_VAL, isSubset); break;
             case OP_SIZE: {
@@ -765,7 +771,7 @@ static InterpretResult run() {
             }
             case OP_CREATE_TUPLE: {
                 int arity = READ_BYTE();
-                ObjTuple* tuple = newTuple(arity);
+                ObjTuple* tuple = newTuple(&vm.gc, arity);
                 for (int i = arity - 1; i >= 0; i--) {
                     tuple->elements[i] = pop();
                 }
@@ -789,7 +795,7 @@ static InterpretResult run() {
                     return INTERPRET_RUNTIME_ERROR;
                 }
                 ObjSet* set = AS_SET(pop());
-                ObjSetIterator* iterator = newSetIterator(set);
+                ObjSetIterator* iterator = newSetIterator(&vm.gc, set);
                 push(OBJ_VAL(iterator));
                 break;
             }
@@ -829,14 +835,15 @@ static InterpretResult run() {
 }
 
 InterpretResult interpret(const unsigned char* source) {
-    ObjFunction* function = compile(source);
+    ObjFunction* function = compile(&vm.gc, source);
+
     if(function == NULL) {
         return INTERPRET_COMPILE_ERROR;
     }
 
     push(OBJ_VAL(function));
     
-    ObjClosure* closure = newClosure(function);
+    ObjClosure* closure = newClosure(&vm.gc, function);
     pop();
     push(OBJ_VAL(closure));
     call(closure, 0);

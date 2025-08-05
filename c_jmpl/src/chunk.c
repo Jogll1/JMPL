@@ -4,6 +4,7 @@
 #include "chunk.h"
 #include "memory.h"
 #include "vm.h"
+#include "gc.h"
 
 /**
  * @brief Initialise empty chunk.
@@ -25,28 +26,30 @@ void initChunk(Chunk* chunk) {
 /**
  * @brief Deallocate all the memory of a chunk.
  * 
+ * @param gc    Pointer to the garbage collector
  * @param chunk Chunk to deallocate
  */ 
-void freeChunk(Chunk* chunk) {
-    FREE_ARRAY(uint8_t, chunk->code, chunk->capacity);
-    FREE_ARRAY(LineStart, chunk->lines, chunk->lineCapacity);
-    freeValueArray(&chunk->constants);
+void freeChunk(GC* gc, Chunk* chunk) {
+    FREE_ARRAY(gc, uint8_t, chunk->code, chunk->capacity);
+    FREE_ARRAY(gc, LineStart, chunk->lines, chunk->lineCapacity);
+    freeValueArray(gc, &chunk->constants);
     initChunk(chunk);
 }
 
 /**
  * @brief Append byte to the end of a chunk.
  * 
+ * @param gc    Pointer to the garbage collector
  * @param chunk Chunk to write to
  * @param byte  Byte to append to the chunk
  * @param line  Line of code where the byte is
  */
-void writeChunk(Chunk* chunk, uint8_t byte, int line) {
+void writeChunk(GC* gc, Chunk* chunk, uint8_t byte, int line) {
     if (chunk->capacity < chunk->count + 1) {
         int oldCapacity = chunk->capacity;
 
         chunk->capacity = GROW_CAPACITY(oldCapacity);
-        chunk->code = GROW_ARRAY(uint8_t, chunk->code, oldCapacity, chunk->capacity);
+        chunk->code = GROW_ARRAY(gc, uint8_t, chunk->code, oldCapacity, chunk->capacity);
     }
 
     chunk->code[chunk->count] = byte;
@@ -62,7 +65,7 @@ void writeChunk(Chunk* chunk, uint8_t byte, int line) {
     if (chunk->lineCapacity < chunk->lineCount + 1) {
         int oldCapacity = chunk->lineCapacity;
         chunk->lineCapacity = GROW_CAPACITY(oldCapacity);
-        chunk->lines = GROW_ARRAY(LineStart, chunk->lines, oldCapacity, chunk->lineCapacity);
+        chunk->lines = GROW_ARRAY(gc, LineStart, chunk->lines, oldCapacity, chunk->lineCapacity);
     }
 
     LineStart* lineStart = &chunk->lines[chunk->lineCount++];
@@ -72,13 +75,14 @@ void writeChunk(Chunk* chunk, uint8_t byte, int line) {
 
 /**
  *  @brief Add a new constant instruction to the value array of the chunk.
- * 
+ *
+ * @param gc    Pointer to the garbage collector 
  *  @param chunk The chunk to add the value to
  *  @param value Value being added to the chunk
  */ 
-int addConstant(Chunk* chunk, Value value) {
+int addConstant(GC* gc, Chunk* chunk, Value value) {
     push(value);
-    writeValueArray(&chunk->constants, value);
+    writeValueArray(gc, &chunk->constants, value);
     pop();
     return chunk->constants.count - 1;
 }

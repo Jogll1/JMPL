@@ -3,7 +3,7 @@
 
 #include "common.h"
 #include "object.h"
-#include "valtable.h"
+#include "gc.h"
 
 /**
  * @brief The JMPL representation of a Tuple.
@@ -14,10 +14,10 @@ typedef struct {
     Value* elements;
 } ObjTuple;
 
-ObjTuple* newTuple(int size);
+ObjTuple* newTuple(GC* gc, int size);
 bool tuplesEqual(ObjTuple* a, ObjTuple* b);
 unsigned char* tupleToString(ObjTuple* tuple);
-ObjTuple* concatenateTuple(ObjTuple* a, ObjTuple* b);
+ObjTuple* concatenateTuple(GC* gc, ObjTuple* a, ObjTuple* b);
 uint32_t hashTuple(ObjTuple* tuple);
 
 #endif

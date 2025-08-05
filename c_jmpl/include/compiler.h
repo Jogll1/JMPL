@@ -3,8 +3,9 @@
 
 #include "vm.h"
 #include "scanner.h"
+#include "gc.h"
 
-ObjFunction* compile(const unsigned char* source);
+ObjFunction* compile(GC* gc, const unsigned char* source);
 void markCompilerRoots();
 
 #endif

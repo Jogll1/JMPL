@@ -74,7 +74,7 @@ static void runFile(const unsigned char* path) {
 
 int main(int argc, const char* argv[]) {
     initVM();
-
+    
     if (argc == 1) {
         // If no file argument, run the REPL
         printf("JMPL v%s\n", CURRENT_VERSION);

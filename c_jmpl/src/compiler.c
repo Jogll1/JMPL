@@ -8,6 +8,7 @@
 #include "common.h"
 #include "compiler.h"
 #include "memory.h"
+#include "gc.h"
 #include "debug.h"
 
 typedef struct {
@@ -41,6 +42,7 @@ typedef struct Compiler {
 
 typedef struct {
     Scanner scanner;
+    GC* gc;
 
     Token current;
     Token previous;
@@ -220,7 +222,7 @@ static void consumeSeparator() {
 }
 
 static void emitByte(uint8_t byte) {
-    writeChunk(currentChunk(), byte, parser.previous.line);
+    writeChunk(parser.gc, currentChunk(), byte, parser.previous.line);
 }
 
 static void emitBytes(uint8_t byte1, uint8_t byte2) {
@@ -265,7 +267,7 @@ static void emitReturn() {
 static uint16_t makeConstant(Value value) {
     int constant = findConstant(currentChunk(), value);
     if (constant == -1) {
-        constant = addConstant(currentChunk(), value);
+        constant = addConstant(parser.gc, currentChunk(), value);
     }
 
     if (constant > UINT16_MAX) {
@@ -299,11 +301,11 @@ static void initCompiler(Compiler* compiler, FunctionType type) {
     compiler->localCount = 0;
     compiler->scopeDepth = 0;
     compiler->implicitReturn = false;
-    compiler->function = newFunction();
+    compiler->function = newFunction(parser.gc);
     current = compiler;
 
     if (type != TYPE_SCRIPT) {
-        current->function->name = copyString(parser.previous.start, parser.previous.length);
+        current->function->name = copyString(parser.gc, parser.previous.start, parser.previous.length);
     }
 
     Local* local = &current->locals[current->localCount++];
@@ -352,7 +354,7 @@ static ParseRule* getRule(TokenType type);
 static void parsePrecedence(Precedence precendence, bool ignoreNewlines);
 
 static uint16_t identifierConstant(Token* name) {
-    return makeConstant(OBJ_VAL(copyString(name->start, name->length)));
+    return makeConstant(OBJ_VAL(copyString(parser.gc, name->start, name->length)));
 }
 
 static bool identifiersEqual(Token* a, Token* b) {
@@ -784,7 +786,7 @@ static bool parseSetBuilderGenerator(int oldCount, uint8_t** generatorSlots, uin
  */
 static void setBuilder() {
     // Set anonymous function name and to implicit return
-    current->function->name = copyString("@setb", 5);
+    current->function->name = copyString(parser.gc, "@setb", 5);
     current->implicitReturn = true;
 
     // Store an opened set as a local
@@ -985,7 +987,7 @@ static void or_(bool canAssign) {
 
 static void string(bool canAssign) {
     // Copy the string from the source, +1 and -2 trim quotation marks
-    emitConstant(OBJ_VAL(copyString(parser.previous.start + 1, parser.previous.length - 2)));
+    emitConstant(OBJ_VAL(copyString(parser.gc, parser.previous.start + 1, parser.previous.length - 2)));
 }
 
 static void namedVariable(Token name, bool canAssign) {
@@ -1044,7 +1046,7 @@ static void unary(bool canAssign) {
 
 static void quantifier() {
     // Set anonymous function name and to implicit return
-    current->function->name = copyString("@quan", 5);
+    current->function->name = copyString(parser.gc, "@quan", 5);
     current->implicitReturn = true;
 
     TokenType operatorType = parser.previous.type;
@@ -1457,7 +1459,8 @@ static void statement(bool blockAllowed, bool ignoreSeparator) {
     }
 }
 
-ObjFunction* compile(const unsigned char* source) {
+ObjFunction* compile(GC* gc, const unsigned char* source) {
+    parser.gc = gc;
     parser.hadError = false;
     parser.panicMode = false;
 
@@ -1483,7 +1486,7 @@ void markCompilerRoots() {
     Compiler* compiler = current;
      
     while(compiler != NULL) {
-        markObject((Obj*)compiler->function);
+        markObject(parser.gc, (Obj*)compiler->function);
         compiler = compiler->enclosing;
     }
 }

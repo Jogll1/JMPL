@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "object.h"
+#include "gc.h"
 
 /**
  * @brief The JMPL representation of a Set.
@@ -31,17 +32,16 @@ typedef struct {
 } RangeSet;
 
 // --- ObjSet ---
-ObjSet* newSet();
-void freeSet(ObjSet* set);
-void markSet(ObjSet* set);
+ObjSet* newSet(GC* gc);
+void freeSet(GC* gc, ObjSet* set);
 
-bool setInsert(ObjSet* set, Value value);
+bool setInsert(GC* gc, ObjSet* set, Value value);
 bool setContains(ObjSet* set, Value value);
 
 bool setsEqual(ObjSet* a, ObjSet* b);
-ObjSet* setIntersect(ObjSet* a, ObjSet* b);
-ObjSet* setUnion(ObjSet* a, ObjSet* b);
-ObjSet* setDifference(ObjSet* a, ObjSet* b);
+ObjSet* setIntersect(GC* gc, ObjSet* a, ObjSet* b);
+ObjSet* setUnion(GC* gc, ObjSet* a, ObjSet* b);
+ObjSet* setDifference(GC* gc, ObjSet* a, ObjSet* b);
 bool isSubset(ObjSet* a, ObjSet* b);
 bool isProperSubset(ObjSet* a, ObjSet* b);
 
@@ -51,8 +51,8 @@ uint32_t hashSet(ObjSet* set);
 unsigned char* setToString(ObjSet* set);
 
 // --- ObjSetIterator ---
-ObjSetIterator* newSetIterator(ObjSet* set);
-void freeSetIterator(ObjSetIterator* iterator);
+ObjSetIterator* newSetIterator(GC* gc, ObjSet* set);
+void freeSetIterator(GC* gc, ObjSetIterator* iterator);
 bool iterateSetIterator(ObjSetIterator* iterator, Value* value);
 
 #endif

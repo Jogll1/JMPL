@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "value.h"
+#include "gc.h"
 
 typedef struct {
     ObjString* key;
@@ -16,16 +17,16 @@ typedef struct {
 } Table;
 
 void initTable(Table* table);
-void freeTable(Table* table);
+void freeTable(GC* gc, Table* table);
 
 bool tableGet(Table* table, ObjString* key, Value* value);
-bool tableSet(Table* table, ObjString* key, Value value);
+bool tableSet(GC* gc, Table* table, ObjString* key, Value value);
 bool tableDelete(Table* table, ObjString* key);
-void tableAddAll(Table* from, Table* to);
+void tableAddAll(GC* gc, Table* from, Table* to);
 
 ObjString* tableFindString(Table* table, const unsigned char* chars, int length, uint32_t hash);
 void tableRemoveWhite(Table* table);
-void markTable(Table* table);
+void markTable(GC* gc, Table* table);
 void tableDebugStats(Table* table);
 
 #endif

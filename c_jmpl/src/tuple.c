@@ -4,12 +4,13 @@
 #include "memory.h"
 #include "object.h"
 #include "tuple.h"
+#include "gc.h"
 #include "../lib/c-stringbuilder/sb.h"
 
-ObjTuple* newTuple(int size) {
-    ObjTuple* tuple = (ObjTuple*)allocateObject(sizeof(ObjTuple), OBJ_TUPLE);
+ObjTuple* newTuple(GC* gc, int size) {
+    ObjTuple* tuple = (ObjTuple*)allocateObject(gc, sizeof(ObjTuple), OBJ_TUPLE);
     tuple->size = size;
-    tuple->elements = ALLOCATE(Value, size); 
+    tuple->elements = ALLOCATE(gc, Value, size); 
     
     for (int i = 0; i < size; i++) {
         tuple->elements[i] = NULL_VAL;
@@ -56,12 +57,14 @@ unsigned char* tupleToString(ObjTuple* tuple) {
     int numElements = tuple->size;
     for (int i = 0; i < numElements; i++) {
         Value value = tuple->elements[i];
-                
+        
+        unsigned char* str = valueToString(value);
         if (IS_OBJ(value) && IS_STRING(value)) {
-            sb_appendf(sb, "\"%s\"", valueToString(value)->chars);
+            sb_appendf(sb, "\"%s\"", str);
         } else {
-            sb_appendf(sb, "%s", valueToString(value)->chars);
+            sb_appendf(sb, "%s", str);
         }
+        free(str);
 
         if (i < numElements - 1) sb_append(sb, ", ");
     }
@@ -82,11 +85,11 @@ unsigned char* tupleToString(ObjTuple* tuple) {
  * @param b A tuple
  * @return  The concatenated tuple
  */
-ObjTuple* concatenateTuple(ObjTuple* a, ObjTuple* b) {
-    ObjTuple* tuple = (ObjTuple*)allocateObject(sizeof(ObjTuple), OBJ_TUPLE);
+ObjTuple* concatenateTuple(GC* gc, ObjTuple* a, ObjTuple* b) {
+    ObjTuple* tuple = (ObjTuple*)allocateObject(gc, sizeof(ObjTuple), OBJ_TUPLE);
     int size = a->size + b->size;
     tuple->size = size;
-    tuple->elements = ALLOCATE(Value, size); 
+    tuple->elements = ALLOCATE(gc, Value, size); 
     
     for (int i = 0; i < a->size; i++) {
         tuple->elements[i] = a->elements[i];

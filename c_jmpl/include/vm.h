@@ -5,11 +5,10 @@
 #include "object.h"
 #include "table.h"
 #include "value.h"
+#include "gc.h"
 
 #define FRAMES_MAX 64
 #define STACK_MAX (FRAMES_MAX * UINT8_COUNT)
-
-#define INTIAL_GC 1024 * 1024
 
 typedef struct {
     ObjClosure* closure;
@@ -27,13 +26,7 @@ typedef struct {
     Table strings; // Table for string interning
     ObjUpvalue* openUpvalues;
 
-    size_t bytesAllocated;
-    size_t nextGC;
-    Obj* objects;
-
-    int greyCount;
-    int greyCapacity;
-    Obj** greyStack;
+    GC gc;
 
     Value impReturnStash; // Register for storing implicit return value
 } VM;
@@ -48,8 +41,10 @@ extern VM vm;
 
 void initVM();
 void freeVM();
-InterpretResult interpret(const unsigned char* source);
+
 void push(Value value);
 Value pop();
+
+InterpretResult interpret(const unsigned char* source);
 
 #endif

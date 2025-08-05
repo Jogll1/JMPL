@@ -987,7 +987,11 @@ static void or_(bool canAssign) {
 
 static void string(bool canAssign) {
     // Copy the string from the source, +1 and -2 trim quotation marks
-    emitConstant(OBJ_VAL(copyString(parser.gc, parser.previous.start + 1, parser.previous.length - 2)));
+    Value s = OBJ_VAL(copyString(parser.gc, parser.previous.start + 1, parser.previous.length - 2));
+
+    pushTemp(parser.gc, s);
+    emitConstant(s);
+    popTemp(parser.gc);
 }
 
 static void namedVariable(Token name, bool canAssign) {

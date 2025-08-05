@@ -81,7 +81,8 @@ void freeSet(GC* gc, ObjSet* set) {
 }
 
 bool setInsert(GC* gc, ObjSet* set, Value value) {
-    set->obj.isReady = false;
+    pushTemp(gc, (Value)set);
+
     if(set->count + 1 > set->capacity * SET_MAX_LOAD) {
         int capacity = GROW_CAPACITY(set->capacity);
         adjustCapacity(gc, set, capacity);
@@ -93,7 +94,7 @@ bool setInsert(GC* gc, ObjSet* set, Value value) {
 
     *element = value;
 
-    set->obj.isReady = true;
+    popTemp(gc);
     return isNewKey;
 }
 
@@ -126,7 +127,7 @@ ObjSet* setIntersect(GC* gc, ObjSet* a, ObjSet* b) {
     assert(a != NULL && b != NULL);
 
     ObjSet* result = newSet(gc);
-    result->obj.isReady = false;
+    pushTemp(gc, (Value)result);
 
     // Iterate through smaller set
     if (a->count > b->count) {
@@ -142,7 +143,7 @@ ObjSet* setIntersect(GC* gc, ObjSet* a, ObjSet* b) {
         if (setContains(b, valA)) setInsert(gc, result, valA);
     }
 
-    result->obj.isReady = true;
+    popTemp(gc);
     return result;
 }
 
@@ -150,7 +151,7 @@ ObjSet* setUnion(GC* gc, ObjSet* a, ObjSet* b) {
     assert(a != NULL && b != NULL);
 
     ObjSet* result = newSet(gc);
-    result->obj.isReady = false;
+    pushTemp(gc, (Value)result);
 
     for (int i = 0; i < a->capacity; i++) {
         Value valA = a->elements[i];
@@ -164,7 +165,7 @@ ObjSet* setUnion(GC* gc, ObjSet* a, ObjSet* b) {
         setInsert(gc, result, valB);
     }
 
-    result->obj.isReady = true;
+    popTemp(gc);
     return result;
 }
 
@@ -172,7 +173,7 @@ ObjSet* setDifference(GC* gc, ObjSet* a, ObjSet* b) {
     assert(a != NULL && b != NULL);
 
     ObjSet* result = newSet(gc);
-    result->obj.isReady = false;
+    pushTemp(gc, (Value)result);
 
     for (int i = 0; i < a->capacity; i++) {
         Value valA = a->elements[i];
@@ -183,7 +184,7 @@ ObjSet* setDifference(GC* gc, ObjSet* a, ObjSet* b) {
         }
     }
 
-    result->obj.isReady = true;
+    popTemp(gc);
     return result;
 }
 

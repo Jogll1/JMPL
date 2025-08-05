@@ -81,9 +81,9 @@ void writeChunk(GC* gc, Chunk* chunk, uint8_t byte, int line) {
  *  @param value Value being added to the chunk
  */ 
 int addConstant(GC* gc, Chunk* chunk, Value value) {
-    push(value);
+    pushTemp(gc, value);
     writeValueArray(gc, &chunk->constants, value);
-    pop();
+    popTemp(gc);
     return chunk->constants.count - 1;
 }
 

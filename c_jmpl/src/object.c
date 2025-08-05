@@ -19,7 +19,6 @@ Obj* allocateObject(GC* gc, size_t size, ObjType type) {
     Obj* object = (Obj*)reallocate(gc, NULL, 0, size);
     object->type = type;
     object->isMarked = false;
-    object->isReady = true;
 
     object->next = gc->objects;
     gc->objects = object;

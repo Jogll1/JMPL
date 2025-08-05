@@ -204,7 +204,7 @@ static void sweep(GC* gc) {
     Obj* object = gc->objects;
 
     while (object != NULL) {
-        if (object->isMarked || !object->isReady) {
+        if (object->isMarked) {
             object->isMarked = false;
             previous = object;
             object = object->next;

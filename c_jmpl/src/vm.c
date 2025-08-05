@@ -231,7 +231,7 @@ static int setOmission(bool hasNext) {
     }
     int first = (int)AS_NUMBER(pop());
     ObjSet* set = AS_SET(pop());
-    set->obj.isReady = false;
+    pushTemp(&vm.gc, (Value)set);
 
     int gap = 1;
     if (hasNext) {
@@ -253,7 +253,7 @@ static int setOmission(bool hasNext) {
         }   
     }
 
-    set->obj.isReady = true;
+    popTemp(&vm.gc);
     push(OBJ_VAL(set));
     return INTERPRET_OK;
 }
@@ -295,7 +295,7 @@ static int tupleOmission(bool hasNext) {
     arity++;
     
     ObjTuple* tuple = newTuple(&vm.gc, arity);
-    tuple->obj.isReady = false;
+    
     int i = 0;
     if (last > first) {
         int i = 0;
@@ -310,7 +310,6 @@ static int tupleOmission(bool hasNext) {
         }   
     }
 
-    tuple->obj.isReady = true;
     push(OBJ_VAL(tuple));
     return INTERPRET_OK;
 }

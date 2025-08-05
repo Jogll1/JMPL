@@ -100,7 +100,7 @@ static int constantInstruction(const char* name, Chunk* chunk, int offset) {
     uint16_t constant = (uint16_t)(chunk->code[offset + 1] << 8);
     constant |= chunk->code[offset + 2];
     printf("%-16s %4d '", name, constant);
-    printValue(chunk->constants.values[constant]);
+    printValue(chunk->constants.values[constant], false);
     printf("'\n");
     return offset + 3;
 }
@@ -128,7 +128,7 @@ static int closureInstruction(const char* name, Chunk* chunk, int offset) {
     uint16_t constant = (uint16_t)(chunk->code[offset++] << 8);
     constant |= chunk->code[offset++];
     printf("%-16s %4d ", name, constant);
-    printValue(chunk->constants.values[constant]);
+    printValue(chunk->constants.values[constant], false);
     printf("\n");
 
     ObjFunction* function = AS_FUNCTION(chunk->constants.values[constant]);

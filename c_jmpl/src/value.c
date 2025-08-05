@@ -44,6 +44,11 @@ int findInValueArray(ValueArray* array, Value value) {
 bool valuesEqual(Value a, Value b) {
 #ifdef NAN_BOXING
     if (IS_OBJ(a) && IS_OBJ(b)) {
+        ObjType aType = AS_OBJ(a)->type;
+        ObjType bType = AS_OBJ(b)->type;
+
+        if (aType != bType) return false;
+
         switch(AS_OBJ(a)->type) {
             case OBJ_SET:   return setsEqual(AS_SET(a), AS_SET(b));
             case OBJ_TUPLE: return tuplesEqual(AS_TUPLE(a), AS_TUPLE(b));
@@ -193,7 +198,7 @@ uint32_t hashValue(Value value) {
 #endif
 }
 
-void printValue(Value value) {
+void printValue(Value value, bool simple) {
 #ifdef NAN_BOXING
     if (IS_BOOL(value)) {
         printf(AS_BOOL(value) ? "true" : "false");
@@ -202,7 +207,7 @@ void printValue(Value value) {
     } else if (IS_NUMBER(value)) {
         printf("%g", AS_NUMBER(value));
     } else if (IS_OBJ(value)) {
-        printObject(value);
+        printObject(value, simple);
     }
 #else
     switch(value.type) {

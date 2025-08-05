@@ -185,7 +185,7 @@ void printJMPLString(ObjString* string) {
     free(result);
 }
 
-void printObject(Value value) {
+void printObject(Value value, bool simple) {
     switch(OBJ_TYPE(value)) {
         case OBJ_CLOSURE:
             printFunction(AS_CLOSURE(value)->function);
@@ -203,14 +203,22 @@ void printObject(Value value) {
             printf("<upvalue>");
             break;
         case OBJ_SET:
-            unsigned char* setStr = setToString(AS_SET(value));
-            printf("%s", setStr);
-            free(setStr);
+            if (simple) {
+                printf("<set>");
+            } else {
+                unsigned char* setStr = setToString(AS_SET(value));
+                printf("%s", setStr);
+                free(setStr);
+            }
             break;
         case OBJ_TUPLE:
-            unsigned char* tupleStr = tupleToString(AS_TUPLE(value));
-            printf("%s", tupleStr);
-            free(tupleStr);
+            if (simple) {
+                printf("<tuple>");
+            } else {
+                unsigned char* tupleStr = tupleToString(AS_TUPLE(value));
+                printf("%s", tupleStr);
+                free(tupleStr);
+            }
             break;
         case OBJ_SET_ITERATOR:
             printf("<iterator>");

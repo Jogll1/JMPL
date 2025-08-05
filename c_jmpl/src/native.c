@@ -61,7 +61,7 @@ Value sleepNative(int argCount, Value* args) {
  * Returns null.
  */
 Value printNative(int argCount, Value* args) {
-    printValue(args[0]);
+    printValue(args[0], false);
 
     return NULL_VAL;
 }
@@ -73,7 +73,7 @@ Value printNative(int argCount, Value* args) {
  * Returns null.
  */
 Value printlnNative(int argCount, Value* args) {
-    printValue(args[0]);
+    printValue(args[0], false);
     printf("\n");
 
     return NULL_VAL;

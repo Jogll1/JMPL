@@ -84,6 +84,7 @@ void markSet(ObjSet* set) {
 }
 
 bool setInsert(ObjSet* set, Value value) {
+    set->obj.isReady = false;
     if(set->count + 1 > set->capacity * SET_MAX_LOAD) {
         int capacity = GROW_CAPACITY(set->capacity);
         adjustCapacity(set, capacity);
@@ -95,6 +96,7 @@ bool setInsert(ObjSet* set, Value value) {
 
     *element = value;
 
+    set->obj.isReady = true;
     return isNewKey;
 }
 
@@ -112,19 +114,10 @@ bool setsEqual(ObjSet* a, ObjSet* b) {
     for (int i = 0; i < a->capacity; i++) {
         Value valA = a->elements[i];
         if (IS_NULL(valA)) continue;
-        bool found = false;
 
-        for (int j = 0; j < a->capacity; j++) {
-            Value valB = b->elements[j];
-            if (IS_NULL(valB)) continue;
-
-            if (valuesEqual(valA, valB)) {
-                found = true;
-                break;
-            }
+        if (!setContains(b, valA)) {
+            return false;
         }
-
-        if (!found) return false;
     }
 
     return true;
@@ -155,21 +148,18 @@ ObjSet* setIntersect(ObjSet* a, ObjSet* b) {
 ObjSet* setUnion(ObjSet* a, ObjSet* b) {
     ObjSet* result = newSet();
     result->obj.isReady = false;
-    printDebugSet(a);
-    printDebugSet(b);
+
     for (int i = 0; i < a->capacity; i++) {
         Value valA = a->elements[i];
         if (IS_NULL(valA)) continue;
         setInsert(result, valA);
     }
 
-    printf("\n***3***\n");
     for (int i = 0; i < b->capacity; i++) {
         Value valB = b->elements[i];
         if (IS_NULL(valB)) continue;
         setInsert(result, valB);
     }
-    printf("\n***4***\n");
     result->obj.isReady = true;
     return result;
 }
@@ -213,7 +203,7 @@ bool isProperSubset(ObjSet* a, ObjSet* b) {
 }
 
 Value getArb(ObjSet* set) {
-    for (int i = 0; i < set->count; i++) {
+    for (int i = 0; i < set->capacity; i++) {
         Value val = set->elements[i];
         if (IS_NULL(val)) continue;
 

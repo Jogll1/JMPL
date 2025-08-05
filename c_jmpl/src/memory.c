@@ -45,10 +45,9 @@ void markObject(Obj* object) {
 
 #ifdef DEBUG_LOG_GC
     printf("%p mark ", (void*)object);
-    printValue(OBJ_VAL(object));
+    printValue(OBJ_VAL(object), true);
     printf("\n");
 #endif
-
     object->isMarked = true;
 
     // Marking roots using the tricolour abstraction
@@ -75,7 +74,7 @@ static void markArray(ValueArray* array) {
 static void blackenObject(Obj* object) {
 #ifdef DEBUG_LOG_GC
     printf("%p blacken ", (void*)object);
-    printValue(OBJ_VAL(object));
+    printValue(OBJ_VAL(object), true);
     printf("\n");
 #endif
 

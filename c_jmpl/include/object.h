@@ -103,7 +103,7 @@ ObjString* copyString(const unsigned char* chars, int length);
 ObjUpvalue* newUpvalue(Value* slot);
 
 void printJMPLString(ObjString* string);
-void printObject(Value value);
+void printObject(Value value, bool simple);
 
 static inline bool isObjType(Value value, ObjType type) {
     return IS_OBJ(value) && AS_OBJ(value)->type == type;

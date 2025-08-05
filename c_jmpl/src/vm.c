@@ -474,7 +474,7 @@ static InterpretResult run() {
         printf("          ");
         for(Value* slot = vm.stack; slot < vm.stackTop; slot++) {
             printf("[ ");
-            printValue(*slot);
+            printValue(*slot, true);
             printf(" ]");
         }
         printf("\n");

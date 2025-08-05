@@ -134,6 +134,6 @@ int findInValueArray(ValueArray* array, Value value);
 bool valuesEqual(Value a, Value b);
 ObjString* valueToString(Value value);
 uint32_t hashValue(Value value);
-void printValue(Value value);
+void printValue(Value value, bool simple);
 
 #endif

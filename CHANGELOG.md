@@ -84,6 +84,7 @@
 ### Added
 - New native functions
     - `type(x)`
+    - `input()`
 ### Changed
 - Quantfiers now use a pipe (`|`) instead of a comma (`,`) to be consistent with set-builder and for-loop syntax
 ### Fixed

@@ -138,12 +138,14 @@ Value inputNative(VM* vm, int argCount, Value* args) {
                 free(buffer);
                 exit(INTERNAL_SOFTWARE_ERROR);
             }
-            
+
             buffer = temp;
         }
     }
     
-    return OBJ_VAL(copyString(&vm->gc, buffer, strlen(buffer)));
+    ObjString* str = copyString(&vm->gc, buffer, len);
+    free(buffer);
+    return OBJ_VAL(str);
 }
 
 // --- Maths library ---

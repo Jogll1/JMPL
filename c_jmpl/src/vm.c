@@ -740,16 +740,15 @@ static InterpretResult run() {
                     Value value = pop();
                     pushTemp(&vm.gc, value);
                 }
-
+                
                 ObjSet* set = AS_SET(pop());
-                pushTemp(&vm.gc, OBJ_VAL(set));
 
                 for (int i = 0; i < count; i++) {
-                    setInsert(&vm.gc, set, vm.gc.tempStack[vm.gc.tempCount]);
+                    setInsert(&vm.gc, set, vm.gc.tempStack[vm.gc.tempCount - 1]);
+                    popTemp(&vm.gc);
                 }
                 
                 push(OBJ_VAL(set));
-                popTemp(&vm.gc);
                 break;
             }
             case OP_SET_OMISSION: {

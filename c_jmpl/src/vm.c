@@ -44,7 +44,7 @@ static void runtimeError(const unsigned char* format, ...) {
     va_list args;
     va_start(args, format);
     // Prints the arguments
-    printf(ANSI_RED "RuntimeError" ANSI_RESET ": ");
+    fprintf(stderr, ANSI_RED "RuntimeError" ANSI_RESET ": ");
     vfprintf(stderr, format, args);
     va_end(args);
     fputs(".\n", stderr);

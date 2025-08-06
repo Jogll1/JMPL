@@ -8,10 +8,7 @@ func get(M, k) =
 
 func add(M, k, v) = M ∪ {(k, v)}
 
-func remove(M, k) =
-    for t ∈ M | t[0] = k do
-        M := M \ {(t[0], t[1])}
-    M
+func remove(M, k) = {t ∈ M | t[0] ≠ k}
 
 // Examples
 Map := add(Map, 6, "z")

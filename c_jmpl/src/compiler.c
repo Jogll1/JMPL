@@ -940,8 +940,9 @@ static void set(bool canAssign) {
                     int count = 0;
                     while (match(TOKEN_COMMA)) {
                         expression(true);
+                        count++;
                     }
-                    emitBytes(OP_SET_INSERT, count);
+                    if (count > 0) emitBytes(OP_SET_INSERT, count);
                 }
             } else {
                 // Singleton set

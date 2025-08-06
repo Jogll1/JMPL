@@ -129,35 +129,32 @@ unsigned char* valueToString(Value value) {
     }
 
     // If its a value
-    unsigned char* str;
 #ifdef NAN_BOXING
     if (IS_BOOL(value)) {
-        str = BOOL_TO_STRING(AS_BOOL(value));
+        return strdup(BOOL_TO_STRING(AS_BOOL(value)));
     } else if (IS_NULL(value)) {
-        str = NULL_TO_STRING;
+        return strdup(NULL_TO_STRING);
     } else if (IS_NUMBER(value)) {
+        unsigned char* str;
         NUMBER_TO_STRING(AS_NUMBER(value), &str);
-    } else {
-        str = "<CAST_ERROR>";
+        return str;
     }
 #else
     switch (value.type) {
         case VAL_BOOL:
-            str = BOOL_TO_STRING(AS_BOOL(value));
-            break;
+            return strdup(BOOL_TO_STRING(AS_BOOL(value)));
         case VAL_NULL:
-            str = NULL_TO_STRING;
-            break;
+            return strdup(NULL_TO_STRING);
         case VAL_NUMBER:
+            unsigned char* str;
             NUMBER_TO_STRING(AS_NUMBER(value), &str);
-            break;
+            return str;
         default: 
-            str = "<CAST_ERROR>";
             break;
     }
 #endif
 
-    return str;
+    return strdup("<CAST_ERROR>");
 }
 
 uint32_t hashValue(Value value) {
@@ -212,7 +209,7 @@ void printValue(Value value, bool simple) {
         case VAL_BOOL:   printf(AS_BOOL(value) ? "true" : "false"); break;
         case VAL_NULL:   printf("null"); break;
         case VAL_NUMBER: printf("%g", AS_NUMBER(value)); break;
-        case VAL_OBJ:    printObject(value); break;
+        case VAL_OBJ:    printObject(value, simple); break;
         default: return;
     }
 #endif

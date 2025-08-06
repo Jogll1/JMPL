@@ -63,7 +63,7 @@ let v = (11, 4 ... -17)
 println("v = " + v)
 println("")
 println("t[0] = " + t[0])
-println("u[5] = " + u[3])
+println("u[3] = " + u[3])
 
 // Operators
 println("\n--- Operators ---")

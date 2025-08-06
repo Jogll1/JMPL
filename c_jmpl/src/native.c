@@ -112,6 +112,40 @@ Value printlnNative(VM* vm, int argCount, Value* args) {
     return NULL_VAL;
 }
 
+/**
+ * input()
+ * 
+ * Reads a line of input.
+ */
+Value inputNative(VM* vm, int argCount, Value* args) {
+    size_t size = 32;
+    size_t len = 0;
+    unsigned char* buffer = malloc(size);
+
+    if (!buffer) {
+        exit(INTERNAL_SOFTWARE_ERROR);
+    }
+
+    int c;
+    while((c = getchar()) != EOF && c != '\n') {
+        buffer[len++] = c; 
+
+        if (len == size) {
+            size *= 2;
+            char* temp = realloc(buffer, size);
+
+            if (!temp) {
+                free(buffer);
+                exit(INTERNAL_SOFTWARE_ERROR);
+            }
+            
+            buffer = temp;
+        }
+    }
+    
+    return OBJ_VAL(copyString(&vm->gc, buffer, strlen(buffer)));
+}
+
 // --- Maths library ---
 
 /**

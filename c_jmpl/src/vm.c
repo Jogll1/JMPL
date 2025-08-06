@@ -88,6 +88,8 @@ void initVM() {
     defineNative("print", 1, printNative);
     defineNative("println", 1, printlnNative);
 
+    defineNative("input", 0, inputNative);
+
     // Maths library
     defineNative("pi", 0, piNative);
     defineNative("sin", 1, sinNative);
@@ -131,7 +133,11 @@ static Value peek(int distance) {
 
 static bool call(ObjClosure* closure, int argCount) {
     if(argCount != closure->function->arity) {
-        runtimeError("Expected %d arguments but got %d", closure->function->arity, argCount);
+        if (closure->function->arity != 1) {
+            runtimeError("Expected %d arguments but got %d", closure->function->arity, argCount);
+        } else {
+            runtimeError("Expected %d argument but got %d", closure->function->arity, argCount);
+        }
         return false;
     }
 
@@ -162,7 +168,11 @@ static bool callValue(Value callee, int argCount) {
                 ObjNative* objNative = AS_NATIVE(callee);
 
                 if(argCount != objNative->arity) {
-                    runtimeError("Expected %d arguments but got %d", objNative->arity, argCount);
+                    if (objNative->arity != 1) {
+                        runtimeError("Expected %d arguments but got %d", objNative->arity, argCount);
+                    } else {
+                        runtimeError("Expected %d argument but got %d", objNative->arity, argCount);
+                    }
                     return false;
                 }
 

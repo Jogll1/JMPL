@@ -81,7 +81,10 @@
 - Optimised Value code with NaN boxing
 
 ## [v0.2.2] - 06/08/2025
+### Added
+- New native functions
+    - `type(x)`
 ### Changed
-- Quantfiers now use a pipe ('|') instead of a comma to be consistent with set-builder and for-loop syntax
+- Quantfiers now use a pipe (`|`) instead of a comma (`,`) to be consistent with set-builder and for-loop syntax
 ### Fixed
 - Multiple garabage collection errors

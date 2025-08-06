@@ -19,6 +19,8 @@ Value typeNative(VM* vm, int argCount, Value* args);
 Value printNative(VM* vm, int argCount, Value* args);
 Value printlnNative(VM* vm, int argCount, Value* args);
 
+Value inputNative(VM* vm, int argCount, Value* args);
+
 // --- Maths library (built-in by design) ---
 
 Value piNative(VM* vm, int argCount, Value* args);

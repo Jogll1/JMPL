@@ -937,11 +937,11 @@ static void set(bool canAssign) {
                     // Normal set construction
                     emitBytes(OP_SET_INSERT, 2);
 
+                    int count = 0;
                     while (match(TOKEN_COMMA)) {
                         expression(true);
-
-                        emitBytes(OP_SET_INSERT, 1);
                     }
+                    emitBytes(OP_SET_INSERT, count);
                 }
             } else {
                 // Singleton set

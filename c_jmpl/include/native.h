@@ -3,34 +3,37 @@
 
 #include "common.h"
 #include "value.h"
+#include "vm.h"
 
 // NATIVE FUNCTIONS
 
 // --- General purpose ---
 
-Value clockNative(int argCount, Value* args);
-Value sleepNative(int argCount, Value* args);
+Value clockNative(VM* vm, int argCount, Value* args);
+Value sleepNative(VM* vm, int argCount, Value* args);
+
+Value typeNative(VM* vm, int argCount, Value* args);
 
 // --- I/O ---
 
-Value printNative(int argCount, Value* args);
-Value printlnNative(int argCount, Value* args);
+Value printNative(VM* vm, int argCount, Value* args);
+Value printlnNative(VM* vm, int argCount, Value* args);
 
 // --- Maths library (built-in by design) ---
 
-Value piNative(int argCount, Value* args);
+Value piNative(VM* vm, int argCount, Value* args);
 
-Value sinNative(int argCount, Value* args);
-Value cosNative(int argCount, Value* args);
-Value tanNative(int argCount, Value* args);
-Value arcsinNative(int argCount, Value* args);
-Value arccosNative(int argCount, Value* args);
-Value arctanNative(int argCount, Value* args);
+Value sinNative(VM* vm, int argCount, Value* args);
+Value cosNative(VM* vm, int argCount, Value* args);
+Value tanNative(VM* vm, int argCount, Value* args);
+Value arcsinNative(VM* vm, int argCount, Value* args);
+Value arccosNative(VM* vm, int argCount, Value* args);
+Value arctanNative(VM* vm, int argCount, Value* args);
 
-Value maxNative(int argCount, Value* args);
-Value minNative(int argCount, Value* args);
-Value floorNative(int argCount, Value* args);
-Value ceilNative(int argCount, Value* args);
-Value roundNative(int argCount, Value* args);
+Value maxNative(VM* vm, int argCount, Value* args);
+Value minNative(VM* vm, int argCount, Value* args);
+Value floorNative(VM* vm, int argCount, Value* args);
+Value ceilNative(VM* vm, int argCount, Value* args);
+Value roundNative(VM* vm, int argCount, Value* args);
 
 #endif

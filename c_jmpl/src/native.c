@@ -7,6 +7,7 @@
 #include "common.h"
 #include "object.h"
 #include "value.h"
+#include "vm.h"
 #include "native.h"
 
 #ifdef _WIN32
@@ -25,7 +26,7 @@
  * 
  * Returns how long the program has elapsed in seconds.
  */
-Value clockNative(int argCount, Value* args) {
+Value clockNative(VM* vm, int argCount, Value* args) {
     return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
 }
 
@@ -34,7 +35,7 @@ Value clockNative(int argCount, Value* args) {
  * 
  * Sleeps for x seconds.
  */
-Value sleepNative(int argCount, Value* args) {
+Value sleepNative(VM* vm, int argCount, Value* args) {
     if(!IS_NUMBER(args[0])) return NULL_VAL;
 
     double seconds = AS_NUMBER(args[0]);
@@ -52,6 +53,37 @@ Value sleepNative(int argCount, Value* args) {
     return NULL_VAL;
 }
 
+/**
+ * type(x)
+ * 
+ * Returns the type of a value as a string.
+ */
+Value typeNative(VM* vm, int argCount, Value* args) {
+    Value value = args[0];
+
+    unsigned char* str;
+    if (IS_BOOL(value)) {
+        str = "bool";
+    } else if (IS_NULL(value)) {
+        str = "null";
+    } else if (IS_NUMBER(value)) {
+        str = "number";
+    } else if (IS_OBJ(value)) {
+        switch(AS_OBJ(value)->type) {
+            case OBJ_FUNCTION: str = "function"; break;
+            case OBJ_NATIVE:   str = "native";   break;
+            case OBJ_SET:      str = "set";      break;
+            case OBJ_TUPLE:    str = "tuple";    break;
+            case OBJ_STRING:   str = "string";   break;
+            default:                             break;
+        }
+    } else {
+        str = "unknown";
+    }
+
+    return OBJ_VAL(takeString(&vm->gc, str, strlen(str)));
+}
+
 // --- I/O ---
 
 /**
@@ -60,7 +92,7 @@ Value sleepNative(int argCount, Value* args) {
  * Prints a value to the console.
  * Returns null.
  */
-Value printNative(int argCount, Value* args) {
+Value printNative(VM* vm, int argCount, Value* args) {
     printValue(args[0], false);
 
     return NULL_VAL;
@@ -72,7 +104,7 @@ Value printNative(int argCount, Value* args) {
  * Prints a value to the console with a newline.
  * Returns null.
  */
-Value printlnNative(int argCount, Value* args) {
+Value printlnNative(VM* vm, int argCount, Value* args) {
     printValue(args[0], false);
     printf("\n");
 
@@ -86,7 +118,7 @@ Value printlnNative(int argCount, Value* args) {
  * 
  * Returns the numerical value of pi.
  */
-Value piNative(int argCount, Value* args) {
+Value piNative(VM* vm, int argCount, Value* args) {
     return NUMBER_VAL(JMPL_PI);
 }
 
@@ -97,7 +129,7 @@ Value piNative(int argCount, Value* args) {
  * Returns null if x is not a number.
  * Manually returns 0 for all +/- n * pi
  */
-Value sinNative(int argCount, Value* args) {
+Value sinNative(VM* vm, int argCount, Value* args) {
     if(!IS_NUMBER(args[0])) return NULL_VAL;
 
     double arg = AS_NUMBER(args[0]);
@@ -116,7 +148,7 @@ Value sinNative(int argCount, Value* args) {
  * Returns null if x is not a number.
  * Manually returns 0 for all +/- (2n + 1) * pi / 2
  */
-Value cosNative(int argCount, Value* args) {
+Value cosNative(VM* vm, int argCount, Value* args) {
     if(!IS_NUMBER(args[0])) return NULL_VAL;
     
     double arg = AS_NUMBER(args[0]);
@@ -135,7 +167,7 @@ Value cosNative(int argCount, Value* args) {
  * Returns null if x is not a number.
  * Manually returns 0 for all +/- n * pi
  */
-Value tanNative(int argCount, Value* args) {
+Value tanNative(VM* vm, int argCount, Value* args) {
     if(!IS_NUMBER(args[0])) return NULL_VAL;
     
     double arg = AS_NUMBER(args[0]);
@@ -156,7 +188,7 @@ Value tanNative(int argCount, Value* args) {
  * Returns the arcsine of x (in radians).
  * Returns null if x is not a number.
  */
-Value arcsinNative(int argCount, Value* args) {
+Value arcsinNative(VM* vm, int argCount, Value* args) {
     if(!IS_NUMBER(args[0])) return NULL_VAL; 
 
     return NUMBER_VAL(asin(AS_NUMBER(args[0])));
@@ -168,7 +200,7 @@ Value arcsinNative(int argCount, Value* args) {
  * Returns the arccosine of x (in radians).
  * Returns null if x is not a number.
  */
-Value arccosNative(int argCount, Value* args) {
+Value arccosNative(VM* vm, int argCount, Value* args) {
     if(!IS_NUMBER(args[0])) return NULL_VAL; 
 
     return NUMBER_VAL(acos(AS_NUMBER(args[0])));
@@ -180,7 +212,7 @@ Value arccosNative(int argCount, Value* args) {
  * Returns the arctangent of x (in radians).
  * Returns null if x is not a number.
  */
-Value arctanNative(int argCount, Value* args) {
+Value arctanNative(VM* vm, int argCount, Value* args) {
     if(!IS_NUMBER(args[0])) return NULL_VAL; 
 
     return NUMBER_VAL(atan(AS_NUMBER(args[0])));
@@ -192,7 +224,7 @@ Value arctanNative(int argCount, Value* args) {
  * Returns the maximum of x and y.
  * Returns null if either x or y is not a number.
  */
-Value maxNative(int argCount, Value* args) {
+Value maxNative(VM* vm, int argCount, Value* args) {
     if(!IS_NUMBER(args[0]) || !IS_NUMBER(args[1])) return NULL_VAL;
     
     double arg1 = AS_NUMBER(args[0]);
@@ -207,7 +239,7 @@ Value maxNative(int argCount, Value* args) {
  * Returns the minimum of x and y.
  * Returns null if either x or y is not a number.
  */
-Value minNative(int argCount, Value* args) {
+Value minNative(VM* vm, int argCount, Value* args) {
     if(!IS_NUMBER(args[0]) || !IS_NUMBER(args[1])) return NULL_VAL;
     
     double arg1 = AS_NUMBER(args[0]);
@@ -222,7 +254,7 @@ Value minNative(int argCount, Value* args) {
  * Returns the floor of x.
  * Returns null if x is not a number.
  */
-Value floorNative(int argCount, Value* args) {
+Value floorNative(VM* vm, int argCount, Value* args) {
     if(!IS_NUMBER(args[0])) return NULL_VAL;
     
     return NUMBER_VAL(floor(AS_NUMBER(args[0])));
@@ -234,7 +266,7 @@ Value floorNative(int argCount, Value* args) {
  * Returns the ceiling of x.
  * Returns null if x is not a number.
  */
-Value ceilNative(int argCount, Value* args) {
+Value ceilNative(VM* vm, int argCount, Value* args) {
     if(!IS_NUMBER(args[0])) return NULL_VAL;
     
     return NUMBER_VAL(ceil(AS_NUMBER(args[0])));
@@ -246,7 +278,7 @@ Value ceilNative(int argCount, Value* args) {
  * Returns the rounded value of x.
  * Returns null if x is not a number.
  */
-Value roundNative(int argCount, Value* args) {
+Value roundNative(VM* vm, int argCount, Value* args) {
     if(!IS_NUMBER(args[0])) return NULL_VAL;
     
     return NUMBER_VAL(round(AS_NUMBER(args[0])));

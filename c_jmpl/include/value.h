@@ -6,6 +6,7 @@
 #include "common.h"
 
 typedef struct GC GC;
+typedef struct VM VM;
 typedef struct Obj Obj;
 typedef struct ObjString ObjString;
 

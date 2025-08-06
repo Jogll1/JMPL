@@ -82,6 +82,8 @@ void initVM() {
     defineNative("clock", 0, clockNative);
     defineNative("sleep", 1, sleepNative);
 
+    defineNative("type", 1, typeNative);
+
     // I/O
     defineNative("print", 1, printNative);
     defineNative("println", 1, printlnNative);
@@ -165,7 +167,7 @@ static bool callValue(Value callee, int argCount) {
                 }
 
                 NativeFn native = objNative->function;
-                Value result = native(argCount, vm.stackTop - argCount);
+                Value result = native(&vm, argCount, vm.stackTop - argCount);
                 vm.stackTop -= argCount + 1;
                 push(result);
                 return true;

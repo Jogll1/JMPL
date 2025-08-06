@@ -71,17 +71,18 @@ Value typeNative(VM* vm, int argCount, Value* args) {
     } else if (IS_OBJ(value)) {
         switch(AS_OBJ(value)->type) {
             case OBJ_FUNCTION: str = "function"; break;
+            case OBJ_CLOSURE:  str = "function"; break;
             case OBJ_NATIVE:   str = "native";   break;
             case OBJ_SET:      str = "set";      break;
             case OBJ_TUPLE:    str = "tuple";    break;
             case OBJ_STRING:   str = "string";   break;
-            default:                             break;
+            default:           str = "unknown";  break;
         }
     } else {
         str = "unknown";
     }
 
-    return OBJ_VAL(takeString(&vm->gc, str, strlen(str)));
+    return OBJ_VAL(copyString(&vm->gc, str, strlen(str)));
 }
 
 // --- I/O ---

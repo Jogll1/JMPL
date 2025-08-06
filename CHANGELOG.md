@@ -56,7 +56,7 @@
 - Casting numbers to string no longer creates a memory leak
 - Indentation bugs
 
-## [v0.2.1] - 24/07/2025
+## [v0.2.1] - 3/08/2025
 ### Added
 - Added set-builder notation
 - Added quantifiers (`∀` or `forall`, `∃` or `exists`, and `some`)
@@ -79,3 +79,7 @@
 - Fixed implicit return
 - Fixed garbage collector collecting sets while they are being created
 - Optimised Value code with NaN boxing
+
+## [v0.2.2] - 06/08/2025
+### Fixed
+- Multiple garabage collection errors

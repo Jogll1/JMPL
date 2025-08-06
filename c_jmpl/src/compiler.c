@@ -845,7 +845,7 @@ static void setBuilder() {
     } else {
         expression(false);
     }
-    emitByte(OP_SET_INSERT); // This seems to update without OP_SET_LOCAL - pointer fault?
+    emitBytes(OP_SET_INSERT, 1); // This seems to update without OP_SET_LOCAL - pointer fault?
     emitByte(OP_POP);
 
     // Patch jumps and emit loops
@@ -935,17 +935,17 @@ static void set(bool canAssign) {
                     emitBytes(OP_SET_OMISSION, 1);
                 } else {
                     // Normal set construction
-                    emitByte(OP_SET_INSERT_2);
+                    emitBytes(OP_SET_INSERT, 2);
 
                     while (match(TOKEN_COMMA)) {
                         expression(true);
 
-                        emitByte(OP_SET_INSERT);
+                        emitBytes(OP_SET_INSERT, 1);
                     }
                 }
             } else {
                 // Singleton set
-                emitByte(OP_SET_INSERT);
+                emitBytes(OP_SET_INSERT, 1);
             }
         }
     } else {

@@ -81,7 +81,7 @@ void freeSet(GC* gc, ObjSet* set) {
 }
 
 bool setInsert(GC* gc, ObjSet* set, Value value) {
-    pushTemp(gc, (Value)set);
+    pushTemp(gc, OBJ_VAL(set));
 
     if(set->count + 1 > set->capacity * SET_MAX_LOAD) {
         int capacity = GROW_CAPACITY(set->capacity);
@@ -127,7 +127,7 @@ ObjSet* setIntersect(GC* gc, ObjSet* a, ObjSet* b) {
     assert(a != NULL && b != NULL);
 
     ObjSet* result = newSet(gc);
-    pushTemp(gc, (Value)result);
+    pushTemp(gc, OBJ_VAL(result));
 
     // Iterate through smaller set
     if (a->count > b->count) {
@@ -151,7 +151,7 @@ ObjSet* setUnion(GC* gc, ObjSet* a, ObjSet* b) {
     assert(a != NULL && b != NULL);
 
     ObjSet* result = newSet(gc);
-    pushTemp(gc, (Value)result);
+    pushTemp(gc, OBJ_VAL(result));
 
     for (int i = 0; i < a->capacity; i++) {
         Value valA = a->elements[i];
@@ -173,7 +173,7 @@ ObjSet* setDifference(GC* gc, ObjSet* a, ObjSet* b) {
     assert(a != NULL && b != NULL);
 
     ObjSet* result = newSet(gc);
-    pushTemp(gc, (Value)result);
+    pushTemp(gc, OBJ_VAL(result));
 
     for (int i = 0; i < a->capacity; i++) {
         Value valA = a->elements[i];

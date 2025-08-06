@@ -3,6 +3,7 @@
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include "common.h"
 #include "compiler.h"
@@ -230,8 +231,9 @@ static int setOmission(bool hasNext) {
         next = (int)AS_NUMBER(pop());
     }
     int first = (int)AS_NUMBER(pop());
+
     ObjSet* set = AS_SET(pop());
-    pushTemp(&vm.gc, (Value)set);
+    pushTemp(&vm.gc, OBJ_VAL(set));
 
     int gap = 1;
     if (hasNext) {
@@ -385,6 +387,8 @@ static void concatenateString() {
     memcpy(chars, aStr, aLen);
     memcpy(chars + aLen, bStr, bLen);
     chars[length] = '\0'; // Null terminator
+    free(aStr);
+    free(bStr);
 
     ObjString* result = takeString(&vm.gc, chars, length);
     push(OBJ_VAL(result));
@@ -460,7 +464,11 @@ static InterpretResult run() {
         } \
         ObjSet* setB = AS_SET(pop()); \
         ObjSet* setA = AS_SET(pop()); \
+        pushTemp(&vm.gc, OBJ_VAL(setA)); \
+        pushTemp(&vm.gc, OBJ_VAL(setB)); \
         push(valueType(setFunction(&vm.gc, setA, setB))); \
+        popTemp(&vm.gc); \
+        popTemp(&vm.gc); \
     } while (false)
 #define SET_OP(valueType, setFunction) \
     do { \
@@ -477,9 +485,9 @@ static InterpretResult run() {
     while(true) {
 #ifdef DEBUG_TRACE_EXECUTION
         printf("          ");
-        for(Value* slot = vm.stack; slot < vm.stackTop; slot++) {
+        for (Value* slot = vm.stack; slot < vm.stackTop; slot++) {
             printf("[ ");
-            printValue(*slot, true);
+            printValue(*slot, false);
             printf(" ]");
         }
         printf("\n");
@@ -573,7 +581,11 @@ static InterpretResult run() {
                 } else if (IS_TUPLE(peek(0)) && IS_TUPLE(peek(1))) {
                     ObjTuple* b = AS_TUPLE(pop());
                     ObjTuple* a = AS_TUPLE(pop());
+                    pushTemp(&vm.gc, OBJ_VAL(a));
+                    pushTemp(&vm.gc, OBJ_VAL(b));
                     push(OBJ_VAL(concatenateTuple(&vm.gc, a, b)));
+                    popTemp(&vm.gc);
+                    popTemp(&vm.gc);
                 } else if (IS_NUMBER(peek(0)) && IS_NUMBER(peek(1))) {
                     // Else, numerically add
                     double b = AS_NUMBER(pop());
@@ -720,22 +732,24 @@ static InterpretResult run() {
                 push(OBJ_VAL(set));
                 break;
             }
-            case OP_SET_INSERT: {
-                Value value = pop();
-                Value setVal = pop();
-                ObjSet* set = AS_SET(setVal);
-                setInsert(&vm.gc, set, value);
-                push(setVal);
-                break;
-            }
-            case OP_SET_INSERT_2: { // Inserts two values off the stack - not great and should probably be the same as OP_SET_INSERT
-                Value valueA = pop();
-                Value valueB = pop();
-                Value setVal = pop();
-                ObjSet* set = AS_SET(setVal);
-                setInsert(&vm.gc, set, valueB);
-                setInsert(&vm.gc, set, valueA);
-                push(setVal);
+            case OP_SET_INSERT: { 
+                // Uses the temp stack to protect values about to be inserted from being freed too soon
+                uint8_t count = READ_BYTE();
+                assert(count > 0);
+                for (int i = 0; i < count; i++) {
+                    Value value = pop();
+                    pushTemp(&vm.gc, value);
+                }
+
+                ObjSet* set = AS_SET(pop());
+                pushTemp(&vm.gc, OBJ_VAL(set));
+
+                for (int i = 0; i < count; i++) {
+                    setInsert(&vm.gc, set, vm.gc.tempStack[vm.gc.tempCount]);
+                }
+                
+                push(OBJ_VAL(set));
+                popTemp(&vm.gc);
                 break;
             }
             case OP_SET_OMISSION: {

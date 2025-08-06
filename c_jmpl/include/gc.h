@@ -1,3 +1,4 @@
+#pragma once
 #ifndef c_jmpl_gc_h
 #define c_jmpl_gc_h
 
@@ -26,6 +27,6 @@ void initGC(GC* gc);
 void freeGC(GC* gc);
 
 void pushTemp(GC* gc, Value value);
-void popTemp(GC* gc);
+Value popTemp(GC* gc);
 
 #endif

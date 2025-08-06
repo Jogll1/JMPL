@@ -100,7 +100,7 @@ unsigned char* valueToString(Value value) {
             return strdup(name->chars);
         }
 
-        return strdup("unknown");
+        return strdup("<anon>");
     }
 
     if (IS_CLOSURE(value)) {
@@ -109,11 +109,11 @@ unsigned char* valueToString(Value value) {
             return strdup(name->chars);
         }
 
-        return strdup("unknown");
+        return strdup("<anon>");
     }
 
     if (IS_NATIVE(value)) {
-        return strdup("native");
+        return strdup("<native>");
     }
 
     if (IS_SET(value)) {
@@ -125,7 +125,7 @@ unsigned char* valueToString(Value value) {
     }
 
     if (IS_SET_ITERATOR(value)) {
-        return strdup("iterator");
+        return strdup("<iterator>");
     }
 
     // If its a value
@@ -138,7 +138,7 @@ unsigned char* valueToString(Value value) {
     } else if (IS_NUMBER(value)) {
         NUMBER_TO_STRING(AS_NUMBER(value), &str);
     } else {
-        str = "CAST_ERROR";
+        str = "<CAST_ERROR>";
     }
 #else
     switch (value.type) {
@@ -152,7 +152,7 @@ unsigned char* valueToString(Value value) {
             NUMBER_TO_STRING(AS_NUMBER(value), &str);
             break;
         default: 
-            str = "CAST_ERROR";
+            str = "<CAST_ERROR>";
             break;
     }
 #endif

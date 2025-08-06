@@ -47,8 +47,7 @@ typedef enum {
     OP_RETURN, // b
     OP_STASH,
     OP_SET_CREATE,
-    OP_SET_INSERT,
-    OP_SET_INSERT_2,
+    OP_SET_INSERT, // b
     OP_SET_OMISSION, // b
     OP_SET_IN,
     OP_SET_INTERSECT,

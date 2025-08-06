@@ -187,6 +187,8 @@ static void markRoots(GC* gc) {
         markObject(gc, (Obj*)upvalue);
     }
 
+    markValue(gc, vm.impReturnStash);
+
     markTable(gc, &vm.globals);
     markTable(gc, &vm.strings);
     markCompilerRoots();

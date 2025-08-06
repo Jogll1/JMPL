@@ -192,8 +192,7 @@ int disassembleInstruction(Chunk* chunk, int offset) {
         case OP_RETURN:          return byteInstruction("OP_RETURN", chunk, offset);
         case OP_STASH:           return simpleInstruction("OP_STASH", offset);
         case OP_SET_CREATE:      return simpleInstruction("OP_SET_CREATE", offset);
-        case OP_SET_INSERT:      return simpleInstruction("OP_SET_INSERT", offset);
-        case OP_SET_INSERT_2:    return simpleInstruction("OP_SET_INSERT_2", offset);
+        case OP_SET_INSERT:      return byteInstruction("OP_SET_INSERT", chunk, offset);
         case OP_SET_OMISSION:    return byteInstruction("OP_SET_OMISSION", chunk, offset);
         case OP_SET_IN:          return simpleInstruction("OP_SET_IN", offset);
         case OP_SET_INTERSECT:   return simpleInstruction("OP_SET_INTERSECT", offset);

@@ -13,7 +13,7 @@ typedef struct ObjString ObjString;
 #ifdef NAN_BOXING
 
 #define SIGN_BIT ((uint64_t)0x8000000000000000)
-#define QNAN     ((uint64_t)0x7ffc000000000000)
+#define QNAN     ((uint64_t)0x7ffc000000000000) // Quiet NaN
 
 #define TAG_NULL  1 // 01
 #define TAG_FALSE 2 // 10
@@ -27,8 +27,6 @@ typedef uint64_t Value;
 #define IS_NULL(value)   ((value) == NULL_VAL)
 #define IS_NUMBER(value) (((value) & QNAN) != QNAN)
 #define IS_OBJ(value)    (((value) & (QNAN | SIGN_BIT)) == (QNAN | SIGN_BIT))
-
-#define IS_INTEGER(value) (IS_NUMBER(value) && (int)(AS_NUMBER(value)) == AS_NUMBER(value))
 
 // JMPL Value to C value
 
@@ -88,8 +86,6 @@ typedef struct {
 #define IS_NUMBER(value)  ((value).type == VAL_NUMBER)
 #define IS_OBJ(value)     ((value).type == VAL_OBJ)
 
-#define IS_INTEGER(value) (IS_NUMBER(value) && (int)(AS_NUMBER(value)) == AS_NUMBER(value))
-
 // JMPL Value to C value
 
 #define AS_BOOL(value)    ((value).as.boolean)
@@ -104,6 +100,8 @@ typedef struct {
 #define OBJ_VAL(object)   ((Value){VAL_OBJ, {.obj = (Obj*)object}})
 
 #endif
+
+#define IS_INTEGER(value) (IS_NUMBER(value) && (int)(AS_NUMBER(value)) == AS_NUMBER(value))
 
 // Convert values to strings
 

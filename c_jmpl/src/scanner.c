@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 
 #include "common.h"
 #include "scanner.h"
@@ -75,6 +76,7 @@ static int advance(Scanner* scanner) {
 
     // Get the length of the character's byte sequence
     int byteLength = getCharByteCount(scanner->current[-1]);
+    assert(byteLength != -1);
 
     // Initialise c as current byte
     int c = (int)scanner->current[-1];

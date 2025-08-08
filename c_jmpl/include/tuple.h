@@ -1,16 +1,14 @@
 #ifndef c_jmpl_tuple_h
 #define c_jmpl_tuple_h
 
-#include "common.h"
-#include "object.h"
-#include "gc.h"
+#include "value.h"
 
 /**
  * @brief The JMPL representation of a Tuple.
  */
 typedef struct {
     Obj obj;
-    int size;
+    size_t size;
     Value* elements;
 } ObjTuple;
 

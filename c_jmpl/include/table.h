@@ -1,9 +1,7 @@
 #ifndef c_jmpl_table_h
 #define c_jmpl_table_h
 
-#include "common.h"
 #include "value.h"
-#include "gc.h"
 
 typedef struct {
     ObjString* key;

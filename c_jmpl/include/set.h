@@ -1,9 +1,7 @@
 #ifndef c_jmpl_set_h
 #define c_jmpl_set_h
 
-#include "common.h"
 #include "object.h"
-#include "gc.h"
 
 /**
  * @brief The JMPL representation of a Set.
@@ -37,11 +35,12 @@ void freeSet(GC* gc, ObjSet* set);
 
 bool setInsert(GC* gc, ObjSet* set, Value value);
 bool setContains(ObjSet* set, Value value);
-
 bool setsEqual(ObjSet* a, ObjSet* b);
+
 ObjSet* setIntersect(GC* gc, ObjSet* a, ObjSet* b);
 ObjSet* setUnion(GC* gc, ObjSet* a, ObjSet* b);
 ObjSet* setDifference(GC* gc, ObjSet* a, ObjSet* b);
+
 bool isSubset(ObjSet* a, ObjSet* b);
 bool isProperSubset(ObjSet* a, ObjSet* b);
 

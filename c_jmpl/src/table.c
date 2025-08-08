@@ -6,6 +6,7 @@
 #include "memory.h"
 #include "object.h"
 #include "table.h"
+#include "obj_string.h"
 #include "value.h"
 #include "gc.h"
 

@@ -4,6 +4,7 @@
 #include "compiler.h"
 #include "memory.h"
 #include "set.h"
+#include "obj_string.h"
 #include "tuple.h"
 #include "vm.h"
 

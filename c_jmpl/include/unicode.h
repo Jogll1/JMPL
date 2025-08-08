@@ -1,7 +1,7 @@
-#ifndef c_jmpl_unicode
-#define c_jmpl_unicode
+#ifndef c_jmpl_unicode_h
+#define c_jmpl_unicode_h
 
-#include <stdint.h>
+#include "common.h"
 
 #define UNICODE_MAX (0x10FFFF)
 

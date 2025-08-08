@@ -69,7 +69,7 @@ static void adjustCapacity(GC* gc, ObjSet* set, int capacity) {
 
 // --- Sets --- 
 ObjSet* newSet(GC* gc) {
-    ObjSet* set = (ObjSet*)allocateObject(gc, sizeof(ObjSet), OBJ_SET);
+    ObjSet* set = ALLOCATE_OBJ(gc, ObjSet, OBJ_SET);
     initSet(set);
     return set;
 }
@@ -296,7 +296,7 @@ unsigned char* setToString(ObjSet* set) {
 
 // --- Set Iterator --- 
 ObjSetIterator* newSetIterator(GC* gc, ObjSet* set) {
-    ObjSetIterator* iterator = (ObjSetIterator*)allocateObject(gc, sizeof(ObjSetIterator), OBJ_SET_ITERATOR);
+    ObjSetIterator* iterator = ALLOCATE_OBJ(gc, ObjSetIterator, OBJ_SET_ITERATOR);
     iterator->set = set;
     iterator->currentIndex = -1;
 

@@ -1,7 +1,6 @@
 #ifndef c_jmpl_memory_h
 #define c_jmpl_memory_h
 
-#include "common.h"
 #include "object.h"
 
 #define ALLOCATE(gc, type, count) \

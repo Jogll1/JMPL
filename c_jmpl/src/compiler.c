@@ -2,10 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <assert.h>
 #include <uchar.h>
 
 #include "object.h"
+#include "obj_string.h"
 #include "common.h"
 #include "compiler.h"
 #include "memory.h"

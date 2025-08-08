@@ -1,9 +1,7 @@
 #ifndef c_jmpl_chunk_h
 #define c_jmpl_chunk_h
 
-#include "common.h"
 #include "value.h"
-#include "gc.h"
 
 /**
  * @brief Opcodes for the VM.

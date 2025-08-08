@@ -1,7 +1,6 @@
 #ifndef c_jmpl_vm_h
 #define c_jmpl_vm_h
 
-#include "chunk.h"
 #include "object.h"
 #include "table.h"
 #include "value.h"

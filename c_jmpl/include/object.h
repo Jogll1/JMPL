@@ -1,13 +1,15 @@
 #ifndef c_jmpl_object_h
 #define c_jmpl_object_h
 
-#include "chunk.h"
 #include "common.h"
+#include "chunk.h"
 #include "value.h"
+
+#define ALLOCATE_OBJ(gc, type, objectType) (type*)allocateObject(gc, sizeof(type), objectType)
 
 // Get type
 
-#define OBJ_TYPE(value)    (AS_OBJ(value)->type)
+#define OBJ_TYPE(value) (AS_OBJ(value)->type)
 
 // Type check
 
@@ -69,13 +71,6 @@ typedef struct {
     NativeFn function;
 } ObjNative;
 
-struct ObjString {
-    Obj obj;
-    int length;
-    unsigned char* chars;
-    uint32_t hash;
-};
-
 typedef struct ObjUpvalue {
     Obj obj;
     Value* location;
@@ -97,11 +92,8 @@ Obj* allocateObject(GC* gc, size_t size, ObjType type);
 ObjClosure* newClosure(GC* gc, ObjFunction* function);
 ObjFunction* newFunction(GC* gc);
 ObjNative* newNative(GC* gc, NativeFn function, int arity);
-ObjString* takeString(GC* gc, unsigned char* chars, int length);
-ObjString* copyString(GC* gc, const unsigned char* chars, int length);
 ObjUpvalue* newUpvalue(GC* gc, Value* slot);
 
-void printJMPLString(ObjString* string);
 void printObject(Value value, bool simple);
 
 static inline bool isObjType(Value value, ObjType type) {

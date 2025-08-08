@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <string.h>
-#include <assert.h>
 
 #include "unicode.h"
 #include "common.h"

@@ -3,12 +3,12 @@
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
-#include <assert.h>
 
 #include "common.h"
 #include "compiler.h"
 #include "vm.h"
 #include "object.h"
+#include "obj_string.h"
 #include "set.h"
 #include "tuple.h"
 #include "memory.h"

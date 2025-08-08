@@ -15,9 +15,10 @@ typedef struct ObjString ObjString;
 #define SIGN_BIT ((uint64_t)0x8000000000000000)
 #define QNAN     ((uint64_t)0x7ffc000000000000) // Quiet NaN
 
-#define TAG_NULL  1 // 01
-#define TAG_FALSE 2 // 10
-#define TAG_TRUE  3 // 11
+#define TAG_NULL  1 // 001
+#define TAG_FALSE 2 // 010
+#define TAG_TRUE  3 // 011
+#define TAG_CHAR  4 // 100
 
 typedef uint64_t Value;
 
@@ -26,12 +27,14 @@ typedef uint64_t Value;
 #define IS_BOOL(value)   (((value) | 1) == TRUE_VAL)
 #define IS_NULL(value)   ((value) == NULL_VAL)
 #define IS_NUMBER(value) (((value) & QNAN) != QNAN)
+#define IS_CHAR(value)   (((value) & (QNAN | TAG_CHAR)) == (QNAN | TAG_CHAR))
 #define IS_OBJ(value)    (((value) & (QNAN | SIGN_BIT)) == (QNAN | SIGN_BIT))
 
 // JMPL Value to C value
 
 #define AS_BOOL(value)   ((value == TRUE_VAL))
 #define AS_NUMBER(value) valueToNum(value)
+#define AS_CHAR(value)   ((uint32_t)(((value) & ~(TAG_CHAR | QNAN)) >> 8)) // Back to a unicode code
 #define AS_OBJ(value)    ((Obj*)(uintptr_t)((value) & ~(SIGN_BIT | QNAN)))
 
 // C value to JMPL Value
@@ -41,6 +44,7 @@ typedef uint64_t Value;
 #define TRUE_VAL         ((Value)(uint64_t)(QNAN | TAG_TRUE))
 #define NULL_VAL         ((Value)(uint64_t)(QNAN | TAG_NULL))
 #define NUMBER_VAL(num)  numToValue(num)
+#define CHAR_VAL(char)   ((Value)(uint64_t)(QNAN | (char << 8) | TAG_CHAR))
 #define OBJ_VAL(obj)     ((Value)(SIGN_BIT | QNAN | (uint64_t)(uintptr_t)(obj)))
 
 static inline double valueToNum(Value value) {
@@ -64,6 +68,7 @@ typedef enum {
     VAL_BOOL,
     VAL_NULL,
     VAL_NUMBER,
+    VAL_CHAR,
     VAL_OBJ
 } ValueType;
 
@@ -75,6 +80,7 @@ typedef struct {
     union {
         bool boolean;
         double number;
+        uint32_t character;
         Obj* obj;
     } as;
 } Value;
@@ -84,12 +90,14 @@ typedef struct {
 #define IS_BOOL(value)    ((value).type == VAL_BOOL)
 #define IS_NULL(value)    ((value).type == VAL_NULL)
 #define IS_NUMBER(value)  ((value).type == VAL_NUMBER)
+#define IS_CHAR(value)    ((value).type == VAL_CHAR)
 #define IS_OBJ(value)     ((value).type == VAL_OBJ)
 
 // JMPL Value to C value
 
 #define AS_BOOL(value)    ((value).as.boolean)
 #define AS_NUMBER(value)  ((value).as.number)
+#define AS_CHAR(value)    ((value).as.character)
 #define AS_OBJ(value)     ((value).as.obj)
 
 // C value to JMPL Value
@@ -97,6 +105,7 @@ typedef struct {
 #define BOOL_VAL(value)   ((Value){VAL_BOOL, {.boolean = value}})
 #define NULL_VAL          ((Value){VAL_NULL, {.number = 0}})
 #define NUMBER_VAL(value) ((Value){VAL_NUMBER, {.number = value}})
+#define CHAR_VAL(value)   ((Value){VAL_CHAR, {.character = value}})
 #define OBJ_VAL(object)   ((Value){VAL_OBJ, {.obj = (Obj*)object}})
 
 #endif
@@ -132,6 +141,7 @@ void freeValueArray(GC* gc, ValueArray* array);
 int findInValueArray(ValueArray* array, Value value);
 
 bool valuesEqual(Value a, Value b);
+uint32_t utf8ToUnicode(unsigned char* input, int numBytes);
 unsigned char* valueToString(Value value);
 uint32_t hashValue(Value value);
 void printValue(Value value, bool simple);

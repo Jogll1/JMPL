@@ -16,18 +16,18 @@ typedef enum {
     TOKEN_CARET, TOKEN_MOD,                 // ^ %
     TOKEN_SEMICOLON, TOKEN_COLON,           // ; :
     TOKEN_PIPE, TOKEN_IN, TOKEN_HASHTAG,    // | ∈ #
-    TOKEN_INTERSECT, TOKEN_UNION,           // ∩, ∪
-    TOKEN_SUBSET, TOKEN_SUBSETEQ,           // ⊂, ⊆
-    TOKEN_FORALL, TOKEN_EXISTS,             // ∀, ∃
+    TOKEN_INTERSECT, TOKEN_UNION,           // ∩ ∪
+    TOKEN_SUBSET, TOKEN_SUBSETEQ,           // ⊂ ⊆
+    TOKEN_FORALL, TOKEN_EXISTS,             // ∀ ∃
     
-    TOKEN_ASSIGN, TOKEN_ELLIPSIS,           // :=, ...
+    TOKEN_ASSIGN, TOKEN_ELLIPSIS,           // := ...
     TOKEN_NOT, TOKEN_NOT_EQUAL,             // ¬ ¬= (≠)
     TOKEN_GREATER, TOKEN_GREATER_EQUAL,     // > >= (≥)
     TOKEN_LESS, TOKEN_LESS_EQUAL,           // < <= (≤)
-    TOKEN_MAPS_TO, TOKEN_IMPLIES,           // -> => (→, ⇒)
+    TOKEN_MAPS_TO, TOKEN_IMPLIES,           // -> => (→ ⇒)
 
     // Literals
-    TOKEN_IDENTIFIER, TOKEN_STRING, TOKEN_NUMBER,
+    TOKEN_IDENTIFIER, TOKEN_STRING, TOKEN_NUMBER, TOKEN_CHAR,
 
     // Keywords
     TOKEN_AND, TOKEN_OR, TOKEN_XOR,

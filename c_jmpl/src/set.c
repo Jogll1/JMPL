@@ -273,6 +273,8 @@ unsigned char* setToString(ObjSet* set) {
             unsigned char* str = valueToString(value);
             if (IS_OBJ(value) && IS_STRING(value)) {
                 sb_appendf(sb, "\"%s\"", str);
+            } else if (IS_CHAR(value)) {
+                sb_appendf(sb, "'%s'", str);
             } else {
                 sb_appendf(sb, "%s", str);
             }

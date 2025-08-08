@@ -986,6 +986,15 @@ static void or_(bool canAssign) {
     patchJump(endJump);
 }
 
+static void character(bool canAssign) {
+    // Copy the char bytes from the source, +1 and -2 trim quotation marks
+    uint32_t value = utf8ToUnicode(parser.previous.start + 1, parser.previous.length - 2);
+    if (value > UNICODE_MAX) {
+        errorAtCurrent("Invalid character");
+    }
+    emitConstant(CHAR_VAL(value));
+}
+
 static void string(bool canAssign) {
     // Copy the string from the source, +1 and -2 trim quotation marks
     Value s = OBJ_VAL(copyString(parser.gc, parser.previous.start + 1, parser.previous.length - 2));
@@ -1166,6 +1175,7 @@ ParseRule rules[] = {
     [TOKEN_IDENTIFIER]    = {variable,   implMult,  PREC_TERM},
     [TOKEN_STRING]        = {string,     NULL,      PREC_NONE},
     [TOKEN_NUMBER]        = {number,     NULL,      PREC_NONE},
+    [TOKEN_CHAR]          = {character,  NULL,      PREC_NONE},
     [TOKEN_AND]           = {NULL,       and_,      PREC_AND},
     [TOKEN_OR]            = {NULL,       or_,       PREC_OR},
     [TOKEN_XOR]           = {NULL,       NULL,      PREC_NONE},

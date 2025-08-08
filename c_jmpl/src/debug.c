@@ -55,6 +55,7 @@ const unsigned char* getTokenName(TokenType type) {
         case TOKEN_IDENTIFIER:    return "IDENTIFIER";
         case TOKEN_STRING:        return "STRING";
         case TOKEN_NUMBER:        return "NUMBER";
+        case TOKEN_CHAR:          return "CHAR";
 
         case TOKEN_AND:           return "AND";
         case TOKEN_OR:            return "OR";

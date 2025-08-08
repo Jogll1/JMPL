@@ -35,16 +35,16 @@ bool isTokenQueueFull(TokenQueue* queue) {
  * @returns    How long the character's byte sequence is
  */
 static int getCharByteCount(unsigned char byte) {
-    if(byte < 0x80) {
+    if (byte < 0x80) {
         return 1; // ASCII
-    } else if((byte & 0xE0) == 0xC0) {
+    } else if ((byte & 0xE0) == 0xC0) {
         return 2;
-    } else if((byte & 0xF0) == 0xE0) {
+    } else if ((byte & 0xF0) == 0xE0) {
         return 3;
-    } else if((byte & 0xF8) == 0xF0) {
+    } else if ((byte & 0xF8) == 0xF0) {
         return 4;
     } else {
-        return -1; // Invalid
+        return 0; // Invalid
     }
 }
 
@@ -56,10 +56,10 @@ static int getCharByteCount(unsigned char byte) {
  * An identifier can include: the alphabet (a-z, A-Z), the Greek alphabet (a-ω, Α-Ω), and underscores (_).
  */
 static bool isAlpha(unsigned int c) {
-    return (c >= 'a' && c <= 'z') ||
-           (c >= 'A' && c <= 'Z') ||
-           (c >= 0xCEB1 && c <= 0xCF89) || // α (U+03B1, UTF-8: 0xCEB1) to ω (U+03C9, UTF-8: 0xCF89)
+    return (c >= 'A' && c <= 'Z') ||
+           (c >= 'a' && c <= 'z') || 
            (c >= 0xCE91 && c <= 0xCEA9) || // Α (U+0391, UTF-8: 0xCE91) to Ω (U+03A9, UTF-8: 0xCEA9)
+           (c >= 0xCEB1 && c <= 0xCF89) || // α (U+03B1, UTF-8: 0xCEB1) to ω (U+03C9, UTF-8: 0xCF89)
            (c == '_');
 }
 
@@ -76,7 +76,7 @@ static int advance(Scanner* scanner) {
 
     // Get the length of the character's byte sequence
     int byteLength = getCharByteCount(scanner->current[-1]);
-    assert(byteLength != -1);
+    assert(byteLength > 0);
 
     // Initialise c as current byte
     int c = (int)scanner->current[-1];
@@ -96,13 +96,13 @@ static char peek(Scanner* scanner) {
 }
 
 static char peekNext(Scanner* scanner) {
-    if(isAtEnd(scanner)) return '\0';
+    if (isAtEnd(scanner)) return '\0';
     return scanner->current[1];
 }
 
 static bool match(Scanner* scanner, unsigned char expected) {
-    if(isAtEnd(scanner)) return false;
-    if(*scanner->current != expected) return false;
+    if (isAtEnd(scanner)) return false;
+    if (*scanner->current != expected) return false;
 
     scanner->current++;
     return true;
@@ -150,7 +150,7 @@ static void skipWhitespace(Scanner* scanner) {
     while (true) {
         unsigned int c = peek(scanner);
 
-        switch(c) {
+        switch (c) {
             case ' ':
             case '\r':
             case '\t':
@@ -185,7 +185,7 @@ static bool isKeyword(Scanner* scanner, unsigned int start, int length, const un
 }
 
 static TokenType checkKeyword(Scanner* scanner, unsigned int start, int length, const unsigned char* rest, TokenType type) {
-    if(isKeyword(scanner, start, length, rest)) {
+    if (isKeyword(scanner, start, length, rest)) {
         return type;
     }
 
@@ -196,28 +196,28 @@ static TokenType checkKeyword(Scanner* scanner, unsigned int start, int length, 
  * @brief Switch identifier to possibly match it to a keyword.
  */
 static TokenType identifierType(Scanner* scanner) {
-    switch(scanner->start[0]) {
+    switch (scanner->start[0]) {
         case 'a': 
-            if(scanner->current - scanner->start > 1) {
-                switch(scanner->start[1]) {
+            if (scanner->current - scanner->start > 1) {
+                switch (scanner->start[1]) {
                     case 'n': return checkKeyword(scanner, 2, 1, "d", TOKEN_AND);
                     case 'r': return checkKeyword(scanner, 2, 1, "b", TOKEN_ARB);
                 }
             }
         case 'd': return checkKeyword(scanner, 1, 1, "o", TOKEN_DO);
         case 'e':
-            if(scanner->current - scanner->start > 1) {
-                switch(scanner->start[1]) {
+            if (scanner->current - scanner->start > 1) {
+                switch (scanner->start[1]) {
                     case 'l': return checkKeyword(scanner, 2, 2, "se", TOKEN_ELSE);
                     case 'x': return checkKeyword(scanner, 2, 4, "ists", TOKEN_EXISTS);
                 }
             }
         case 'f': 
-            if(scanner->current - scanner->start > 1) {
-                switch(scanner->start[1]) {
+            if (scanner->current - scanner->start > 1) {
+                switch (scanner->start[1]) {
                     case 'a': return checkKeyword(scanner, 2, 3, "lse", TOKEN_FALSE);
                     case 'o':
-                    if(scanner->current - scanner->start > 1) {
+                    if (scanner->current - scanner->start > 1) {
                         if (isKeyword(scanner, 2, 1, "r")) return TOKEN_FOR;
                         else if (isKeyword(scanner, 2, 4, "rall")) return TOKEN_FORALL;
                         else return TOKEN_IDENTIFIER;
@@ -227,12 +227,12 @@ static TokenType identifierType(Scanner* scanner) {
             }
             break;
         case 'i': 
-            if(scanner->current - scanner->start > 1) {
-                switch(scanner->start[1]) {
+            if (scanner->current - scanner->start > 1) {
+                switch (scanner->start[1]) {
                     case 'f': return TOKEN_IF;
                     case 'n': 
                         if(scanner->current - scanner->start > 2) {
-                            switch(scanner->start[2]) {
+                            switch (scanner->start[2]) {
                                 case 't': return checkKeyword(scanner, 3, 6, "ersect", TOKEN_INTERSECT);
                                 default: return TOKEN_IDENTIFIER;
                             }
@@ -244,8 +244,8 @@ static TokenType identifierType(Scanner* scanner) {
         case 'l': return checkKeyword(scanner, 1, 2, "et", TOKEN_LET);
         case 'm': return checkKeyword(scanner, 1, 2, "od", TOKEN_MOD);
         case 'n': 
-            if(scanner->current - scanner->start > 1) {
-                switch(scanner->start[1]) {
+            if (scanner->current - scanner->start > 1) {
+                switch (scanner->start[1]) {
                     case 'o': return checkKeyword(scanner, 2, 1, "t", TOKEN_NOT);
                     case 'u': return checkKeyword(scanner, 2, 2, "ll", TOKEN_NULL);
                 }
@@ -254,7 +254,7 @@ static TokenType identifierType(Scanner* scanner) {
         case 'o': return checkKeyword(scanner, 1, 1, "r", TOKEN_OR);
         case 'r': return checkKeyword(scanner, 1, 5, "eturn", TOKEN_RETURN);
         case 's':
-            if(scanner->current - scanner->start > 1) {
+            if (scanner->current - scanner->start > 1) {
                 if (isKeyword(scanner, 1, 7, "ubseteq")) return TOKEN_SUBSETEQ;
                 else if (isKeyword(scanner, 1, 5, "ubset")) return TOKEN_SUBSET;
                 else if (isKeyword(scanner, 1, 3, "ome")) return TOKEN_SOME;
@@ -262,8 +262,8 @@ static TokenType identifierType(Scanner* scanner) {
             }
             break;
         case 't': 
-            if(scanner->current - scanner->start > 1) {
-                switch(scanner->start[1]) {
+            if (scanner->current - scanner->start > 1) {
+                switch (scanner->start[1]) {
                     case 'h': return checkKeyword(scanner, 2, 2, "en", TOKEN_THEN);
                     case 'r': return checkKeyword(scanner, 2, 2, "ue", TOKEN_TRUE);
                 }
@@ -277,32 +277,43 @@ static TokenType identifierType(Scanner* scanner) {
 }
 
 static Token identifier(Scanner* scanner) {
-    while(isAlpha(peek(scanner)) || isDigit(peek(scanner))) advance(scanner);
+    while (isAlpha(peek(scanner)) || isDigit(peek(scanner))) advance(scanner);
 
     return makeToken(scanner, identifierType(scanner));
 }
 
 static Token number(Scanner* scanner) {
-    while(isDigit(peek(scanner))) advance(scanner);
+    while (isDigit(peek(scanner))) advance(scanner);
 
     // Look for fractional part
-    if(peek(scanner) == '.' && isDigit(peekNext(scanner))) {
+    if (peek(scanner) == '.' && isDigit(peekNext(scanner))) {
         // Consume the '.'
         advance(scanner);
 
-        while(isDigit(peek(scanner))) advance(scanner);
+        while (isDigit(peek(scanner))) advance(scanner);
     }
 
     return makeToken(scanner, TOKEN_NUMBER);
 }
 
-static Token string(Scanner* scanner) {
-    while(peek(scanner) != '"' && !isAtEnd(scanner)) {
-        if(peek(scanner) == '\n') scanner->line++;
+static Token character(Scanner* scanner) {
+    if (peek(scanner) != '\'' && !isAtEnd(scanner)) {
         advance(scanner);
     }
 
-    if(isAtEnd(scanner)) return errorToken(scanner, "Unterminated string.");
+    if (isAtEnd(scanner)) return errorToken(scanner, "Unterminated character.");
+
+    advance(scanner); // The closing quote
+    return makeToken(scanner, TOKEN_CHAR);
+}
+
+static Token string(Scanner* scanner) {
+    while (peek(scanner) != '"' && !isAtEnd(scanner)) {
+        if (peek(scanner) == '\n') scanner->line++;
+        advance(scanner);
+    }
+
+    if (isAtEnd(scanner)) return errorToken(scanner, "Unterminated string.");
 
     advance(scanner); // The closing quote
     return makeToken(scanner, TOKEN_STRING);
@@ -463,6 +474,7 @@ Token scanToken(Scanner* scanner) {
             }
             return makeToken(scanner, TOKEN_DOT);
         // Literals
+        case '\'': return character(scanner);
         case '"': return string(scanner);
     }
 

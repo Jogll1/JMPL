@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include "value.h"
 #include "object.h"
@@ -68,6 +69,7 @@ bool valuesEqual(Value a, Value b) {
         case VAL_BOOL:   return AS_BOOL(a) == AS_BOOL(b);
         case VAL_NULL:   return true;
         case VAL_NUMBER: return AS_NUMBER(a) == AS_NUMBER(b);
+        case VAL_CHAR:   return AS_CHAR(a) == AS_CHAR(b);
         case VAL_OBJ:    
             switch(AS_OBJ(a)->type) {
                 case OBJ_SET:   return setsEqual(AS_SET(a), AS_SET(b));
@@ -78,6 +80,65 @@ bool valuesEqual(Value a, Value b) {
         default: return false;
     }
 #endif
+}
+
+/**
+ * @brief Converts a Unicode code point to its UTF-8 encoding.
+ * 
+ * @param codePoint The Unicode code point of a character
+ * @param output    A char pointer (string) for the output
+ * @return          The number of bytes 
+ */
+static size_t unicodeToUtf8(uint32_t codePoint, unsigned char* output) {
+    if (codePoint <= 0x7F) {
+        // 1-byte sequence
+        output[0] = codePoint & 0x7F;
+        output[1] = '\0';
+        return 1;
+    } else if (codePoint <= 0x7FF) {
+        // 2-byte sequence
+        output[0] = 0xC0 | ((codePoint >> 6) & 0x1F);
+        output[1] = 0x80 | (codePoint & 0x3F);
+        output[2] = '\0';
+        return 2;
+    } else if (codePoint <= 0xFFFF) {
+        // 3-byte sequence
+        output[0] = 0xE0 | ((codePoint >> 12) & 0x0F);
+        output[1] = 0x80 | ((codePoint >> 6) & 0x3F);
+        output[2] = 0x80 | (codePoint & 0x3F);
+        output[3] = '\0';
+        return 3;
+    } else if (codePoint <= 0x10FFFF) {
+        // 4-byte sequence
+        output[0] = 0xF0 | ((codePoint >> 18) & 0x07);
+        output[1] = 0x80 | ((codePoint >> 12) & 0x3F);
+        output[2] = 0x80 | ((codePoint >> 6) & 0x3F);
+        output[3] = 0x80 | (codePoint & 0x3F);
+        output[4] = '\0';
+        return 4;
+    } else {
+        // Invalid code point
+        output['\0'];
+        return 0;
+    }
+}
+
+uint32_t utf8ToUnicode(unsigned char* input, int numBytes) {
+    assert(numBytes > 0);
+
+    return 0x0041;
+}
+
+static void charToString(uint32_t charCodePoint, unsigned char* output) {
+    size_t numBytes = unicodeToUtf8(charCodePoint, output);
+    assert(numBytes > 0);
+    output[numBytes] = '\0'; // Terminate correctly
+}
+
+static void printChar(uint32_t codePoint) {
+    unsigned char str[5];
+    charToString(codePoint, str);
+    printf("%s", str);
 }
 
 /**
@@ -138,6 +199,10 @@ unsigned char* valueToString(Value value) {
         unsigned char* str;
         NUMBER_TO_STRING(AS_NUMBER(value), &str);
         return str;
+    } else if (IS_CHAR(value)) {
+        unsigned char str[5];
+        charToString(AS_CHAR(value), str);
+        return strdup(str);
     }
 #else
     switch (value.type) {
@@ -149,6 +214,10 @@ unsigned char* valueToString(Value value) {
             unsigned char* str;
             NUMBER_TO_STRING(AS_NUMBER(value), &str);
             return str;
+        case VAL_CHAR:
+            unsigned char str[5];
+            charToString(AS_CHAR(value), str);
+            return strdup(str);
         default: 
             break;
     }
@@ -166,6 +235,8 @@ uint32_t hashValue(Value value) {
     } else if (IS_NUMBER(value)) {
         uint64_t bits = AS_NUMBER(value);
         return (uint32_t)(bits ^ (bits >> 32));
+    } else if (IS_CHAR(value)) {
+        return AS_CHAR(value);
     } else if (IS_OBJ(value)) {
         switch(AS_OBJ(value)->type) {
             case OBJ_SET:   return hashSet(AS_SET(value));
@@ -181,6 +252,9 @@ uint32_t hashValue(Value value) {
         case VAL_NUMBER: {
             uint64_t bits = *(uint64_t*)&value.as.number;
             return (uint32_t)(bits ^ (bits >> 32));
+        }
+        case VAL_CHAR: {
+            return *(uint32_t*)&value.as.character;
         }
         case VAL_OBJ:  
             switch(AS_OBJ(value)->type) {
@@ -201,6 +275,8 @@ void printValue(Value value, bool simple) {
         printf("null");
     } else if (IS_NUMBER(value)) {
         printf("%g", AS_NUMBER(value));
+    } else if (IS_CHAR(value)) {
+        printChar(AS_CHAR(value));
     } else if (IS_OBJ(value)) {
         printObject(value, simple);
     }
@@ -209,6 +285,7 @@ void printValue(Value value, bool simple) {
         case VAL_BOOL:   printf(AS_BOOL(value) ? "true" : "false"); break;
         case VAL_NULL:   printf("null"); break;
         case VAL_NUMBER: printf("%g", AS_NUMBER(value)); break;
+        case VAL_CHAR:   printChar(AS_CHAR(value)); break;
         case VAL_OBJ:    printObject(value, simple); break;
         default: return;
     }

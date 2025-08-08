@@ -394,35 +394,6 @@ static int getSize(Value value) {
     return -1;
 }
 
-/**
- * @brief Concatenate strings a and b if either are a string.
- * 
- * Pops two strings from the stack and pushes the concatenated
- * string to the stack.
- */
-static void concatenateString() {
-    Value b = pop();
-    Value a = pop();
-
-    unsigned char* aStr = valueToString(a);
-    unsigned char* bStr = valueToString(b);
-    int aLen = strlen(aStr);
-    int bLen = strlen(bStr);
-
-    int length = aLen + bLen;
-    // Allocated memory for concatenated string and null terminator
-    unsigned char* chars = ALLOCATE(&vm.gc, unsigned char, length + 1);
-
-    memcpy(chars, aStr, aLen);
-    memcpy(chars + aLen, bStr, bLen);
-    chars[length] = '\0'; // Null terminator
-    free(aStr);
-    free(bStr);
-
-    ObjString* result = takeString(&vm.gc, chars, length);
-    push(OBJ_VAL(result));
-}
-
 static int subscript() {
     if (!IS_INTEGER(peek(0))) {
         runtimeError("Tuple index must be an integer");
@@ -606,15 +577,13 @@ static InterpretResult run() {
             case OP_ADD: {
                 if (IS_STRING(peek(0)) || IS_STRING(peek(1))) {
                     // Concatenate if at least one operand is a string
-                    concatenateString();
+                    Value b = pop();
+                    Value a = pop();
+                    push(OBJ_VAL(concatenateString(&vm.gc, a, b)));
                 } else if (IS_TUPLE(peek(0)) && IS_TUPLE(peek(1))) {
                     ObjTuple* b = AS_TUPLE(pop());
                     ObjTuple* a = AS_TUPLE(pop());
-                    pushTemp(&vm.gc, OBJ_VAL(a));
-                    pushTemp(&vm.gc, OBJ_VAL(b));
                     push(OBJ_VAL(concatenateTuple(&vm.gc, a, b)));
-                    popTemp(&vm.gc);
-                    popTemp(&vm.gc);
                 } else if (IS_NUMBER(peek(0)) && IS_NUMBER(peek(1))) {
                     // Else, numerically add
                     double b = AS_NUMBER(pop());

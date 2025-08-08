@@ -7,6 +7,7 @@
 #include "common.h"
 #include "object.h"
 #include "value.h"
+#include "obj_string.h"
 #include "vm.h"
 #include "native.h"
 

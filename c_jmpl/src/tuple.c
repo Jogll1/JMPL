@@ -88,6 +88,9 @@ unsigned char* tupleToString(ObjTuple* tuple) {
  * @return  The concatenated tuple
  */
 ObjTuple* concatenateTuple(GC* gc, ObjTuple* a, ObjTuple* b) {
+    pushTemp(gc, OBJ_VAL(a));
+    pushTemp(gc, OBJ_VAL(b));
+
     ObjTuple* tuple = ALLOCATE_OBJ(gc, ObjTuple, OBJ_TUPLE);
     int size = a->size + b->size;
     tuple->size = size;
@@ -100,6 +103,9 @@ ObjTuple* concatenateTuple(GC* gc, ObjTuple* a, ObjTuple* b) {
     for (int i = 0; i < b->size; i++) {
         tuple->elements[i + a->size] = b->elements[i];
     }
+
+    popTemp(gc);
+    popTemp(gc);
     
     return tuple;
 }

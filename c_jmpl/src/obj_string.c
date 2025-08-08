@@ -66,6 +66,38 @@ ObjString* copyString(GC* gc, const unsigned char* chars, int length) {
 }
 
 /**
+ * @brief Concatenate strings a and b if either are a string.
+ * 
+ * @param a Value a
+ * @param b Value b
+ * @return  A pointer to the concatenated string
+ */
+ObjString* concatenateString(GC* gc, Value a, Value b) {
+    pushTemp(gc, b);
+    pushTemp(gc, a);
+
+    unsigned char* aStr = valueToString(a);
+    unsigned char* bStr = valueToString(b);
+    int aLen = strlen(aStr);
+    int bLen = strlen(bStr);
+
+    int length = aLen + bLen;
+    unsigned char* chars = ALLOCATE(gc, unsigned char, length + 1);
+
+    memcpy(chars, aStr, aLen);
+    memcpy(chars + aLen, bStr, bLen);
+    chars[length] = '\0'; // Null terminator
+
+    free(aStr);
+    free(bStr);
+    popTemp(gc);
+    popTemp(gc);
+
+    ObjString* result = takeString(gc, chars, length);
+    return result;
+}
+
+/**
  * @brief Returns the corresponding escaped character given a character.
  * 
  * @param esc The character to escape

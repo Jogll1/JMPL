@@ -2,6 +2,7 @@
 #include <string.h>
 #include <assert.h>
 
+#include "unicode.h"
 #include "common.h"
 #include "scanner.h"
 
@@ -26,26 +27,6 @@ bool isTokenQueueEmpty(TokenQueue* queue) {
 
 bool isTokenQueueFull(TokenQueue* queue) {
     return (queue->tail + 1) % TOKEN_QUEUE_SIZE == queue->head;
-}
-
-/**
- * @brief Determine the length of a character in bytes that is encoded with UTF-8.
- * 
- * @param byte The first byte of the character
- * @returns    How long the character's byte sequence is
- */
-static int getCharByteCount(unsigned char byte) {
-    if (byte < 0x80) {
-        return 1; // ASCII
-    } else if ((byte & 0xE0) == 0xC0) {
-        return 2;
-    } else if ((byte & 0xF0) == 0xE0) {
-        return 3;
-    } else if ((byte & 0xF8) == 0xF0) {
-        return 4;
-    } else {
-        return 0; // Invalid
-    }
 }
 
 /**
@@ -204,6 +185,7 @@ static TokenType identifierType(Scanner* scanner) {
                     case 'r': return checkKeyword(scanner, 2, 1, "b", TOKEN_ARB);
                 }
             }
+            break;
         case 'd': return checkKeyword(scanner, 1, 1, "o", TOKEN_DO);
         case 'e':
             if (scanner->current - scanner->start > 1) {
@@ -212,6 +194,7 @@ static TokenType identifierType(Scanner* scanner) {
                     case 'x': return checkKeyword(scanner, 2, 4, "ists", TOKEN_EXISTS);
                 }
             }
+            break;
         case 'f': 
             if (scanner->current - scanner->start > 1) {
                 switch (scanner->start[1]) {
@@ -299,9 +282,11 @@ static Token number(Scanner* scanner) {
 static Token character(Scanner* scanner) {
     if (peek(scanner) != '\'' && !isAtEnd(scanner)) {
         advance(scanner);
+    } else {
+        return errorToken(scanner, "Invalid syntax");
     }
-
-    if (isAtEnd(scanner)) return errorToken(scanner, "Unterminated character.");
+    
+    if (peek(scanner) != '\'' || isAtEnd(scanner)) return errorToken(scanner, "Invalid character");
 
     advance(scanner); // The closing quote
     return makeToken(scanner, TOKEN_CHAR);
@@ -313,7 +298,7 @@ static Token string(Scanner* scanner) {
         advance(scanner);
     }
 
-    if (isAtEnd(scanner)) return errorToken(scanner, "Unterminated string.");
+    if (isAtEnd(scanner)) return errorToken(scanner, "Unterminated string");
 
     advance(scanner); // The closing quote
     return makeToken(scanner, TOKEN_STRING);

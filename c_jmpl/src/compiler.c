@@ -3,6 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
+#include <uchar.h>
 
 #include "object.h"
 #include "common.h"
@@ -10,6 +11,7 @@
 #include "memory.h"
 #include "gc.h"
 #include "debug.h"
+#include "unicode.h"
 
 typedef struct {
     Token name;
@@ -987,8 +989,9 @@ static void or_(bool canAssign) {
 }
 
 static void character(bool canAssign) {
-    // Copy the char bytes from the source, +1 and -2 trim quotation marks
+    // Copy the char bytes from the source, +1 and -2 to trim quotation mark
     uint32_t value = utf8ToUnicode(parser.previous.start + 1, parser.previous.length - 2);
+
     if (value > UNICODE_MAX) {
         errorAtCurrent("Invalid character");
     }
@@ -996,7 +999,7 @@ static void character(bool canAssign) {
 }
 
 static void string(bool canAssign) {
-    // Copy the string from the source, +1 and -2 trim quotation marks
+    // Copy the string from the source, +1 and -2 to trim quotation marks
     Value s = OBJ_VAL(copyString(parser.gc, parser.previous.start + 1, parser.previous.length - 2));
 
     pushTemp(parser.gc, s);

@@ -224,6 +224,23 @@ static void closeUpvalues(Value* last) {
     }
 }
 
+static void setInsertN(int count) {
+    // Uses the temp stack to protect values about to be inserted from being freed too soon
+    for (int i = 0; i < count; i++) {
+        Value value = pop();
+        pushTemp(&vm.gc, value);
+    }
+    
+    ObjSet* set = AS_SET(pop());
+
+    for (int i = 0; i < count; i++) {
+        setInsert(&vm.gc, set, vm.gc.tempStack[vm.gc.tempCount - 1]);
+        popTemp(&vm.gc);
+    }
+    
+    push(OBJ_VAL(set));
+}
+
 static int setOmission(bool hasNext) {
     if (hasNext) {
         if (!IS_INTEGER(peek(0)) || !IS_INTEGER(peek(1)) || !IS_INTEGER(peek(2)) || !IS_SET(peek(3))) {
@@ -744,23 +761,10 @@ static InterpretResult run() {
                 push(OBJ_VAL(set));
                 break;
             }
-            case OP_SET_INSERT: { 
-                // Uses the temp stack to protect values about to be inserted from being freed too soon
+            case OP_SET_INSERT: {
                 uint8_t count = READ_BYTE();
                 assert(count > 0);
-                for (int i = 0; i < count; i++) {
-                    Value value = pop();
-                    pushTemp(&vm.gc, value);
-                }
-                
-                ObjSet* set = AS_SET(pop());
-
-                for (int i = 0; i < count; i++) {
-                    setInsert(&vm.gc, set, vm.gc.tempStack[vm.gc.tempCount - 1]);
-                    popTemp(&vm.gc);
-                }
-                
-                push(OBJ_VAL(set));
+                setInsertN(count);
                 break;
             }
             case OP_SET_OMISSION: {

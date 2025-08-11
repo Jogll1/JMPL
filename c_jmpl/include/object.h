@@ -41,6 +41,7 @@ typedef enum {
     OBJ_FUNCTION,
     OBJ_NATIVE,
     OBJ_STRING,
+    OBJ_STRING_UNICODE,
     OBJ_UPVALUE,
     OBJ_SET,
     OBJ_SET_ITERATOR,

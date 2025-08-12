@@ -49,12 +49,9 @@ static uint32_t hashString(const unsigned char* key, int length) {
 }
 
 void freeUnicodeString(GC* gc, ObjUnicodeString* string) {
-    if (string->kind > KIND_ASCII) {
-        FREE_ARRAY(gc, char, string->utf8, string->utf8Length + 1);
-    }
+    FREE_ARRAY(gc, char, string->utf8, string->utf8Length + 1);
             
     switch (string->kind) {
-        case KIND_ASCII:
         case KIND_1_BYTE: FREE_ARRAY(gc, UCS1, string->as.ucs1, string->length); break;
         case KIND_2_BYTE: FREE_ARRAY(gc, UCS2, string->as.ucs2, string->length); break;
         case KIND_4_BYTE: FREE_ARRAY(gc, UCS4, string->as.ucs4, string->length); break;
@@ -93,14 +90,14 @@ static StringKind getUtf8CharacterKind(const unsigned char leadingByte) {
     }
 }
 
-static void printCodePoints(StringKind kind, void* codePoints, size_t length) {
-    printf("Output (%d): ", length);
+static void printCodePoints(StringKind kind, const void* codePoints, size_t length) {
+    printf("Output (%d): ", (int)length);
     for (size_t i = 0; i < length; i++) {
         switch (kind) {
             case KIND_ASCII: 
             case KIND_1_BYTE: printf("U+%04x ", ((UCS1*)codePoints)[i]); break;
-            case KIND_2_BYTE: printf("U+%04x ", ((UCS1*)codePoints)[i]); break;
-            case KIND_4_BYTE: printf("U+%06x ", ((UCS1*)codePoints)[i]); break;
+            case KIND_2_BYTE: printf("U+%04x ", ((UCS2*)codePoints)[i]); break;
+            case KIND_4_BYTE: printf("U+%06x ", ((UCS4*)codePoints)[i]); break;
         }
     }
     printf("\n");
@@ -150,7 +147,6 @@ static size_t utf8ToUCS(void* output, StringKind kind, const unsigned char* utf8
     while (i < utf8Length) {
         size_t numBytes = getCharByteCount(utf8[i]);
         uint32_t codePoint = utf8ToUnicode(&utf8[i], numBytes);
-        printf("Point: %x\n", codePoint);
 
         if (kind <= KIND_1_BYTE) {
             ((UCS1*)output)[numPoints] = (UCS1)(codePoint & 0xFF);
@@ -177,19 +173,19 @@ static size_t utf8ToUCS(void* output, StringKind kind, const unsigned char* utf8
  * @param utf8Length The size of the byte sequence
  * @returns          The size of the code point list
  */
-static size_t createCodePointArray(GC* gc, StringKind kind, const void* output, const unsigned char* utf8, int utf8Length) {
+static size_t createCodePointArray(GC* gc, StringKind kind, const void** output, const unsigned char* utf8, int utf8Length) {
     size_t length = 0;
 
 #define COPY_STRING(type) \
     do { \
         type* codePoints = ALLOCATE(gc, type, utf8Length); \
         length = utf8ToUCS(codePoints, kind, utf8, utf8Length); \
-        output = codePoints; \
+        *output = codePoints; \
     } while (false)
 
     switch (kind) {
         case KIND_ASCII: {
-            output = utf8;
+            *output = (void*)utf8;
             length = utf8Length;
             break;
         }
@@ -240,12 +236,6 @@ static ObjUnicodeString* allocateUnicodeString(GC* gc, StringKind kind, const vo
 ObjUnicodeString* copyUnicodeString(GC* gc, const unsigned char* utf8, int utf8Length) {
     uint32_t hash = hashString(utf8, utf8Length);
 
-    printf("Input: ");
-    for (size_t i = 0; i < utf8Length; i++) {
-        printf("U+%02x ", utf8[i]);
-    }
-    printf("\n");
-
     ObjUnicodeString* interned = tableFindString(&vm.strings, utf8, utf8Length, hash);
     if(interned != NULL) return interned;
 
@@ -256,10 +246,8 @@ ObjUnicodeString* copyUnicodeString(GC* gc, const unsigned char* utf8, int utf8L
 
     // Create the code point array
     StringKind kind = getUtf8StringKind(utf8, utf8Length);
-    void* heapCodePoints = NULL;
-    size_t length = createCodePointArray(gc, kind, heapCodePoints, utf8, utf8Length);
-
-    printCodePoints(kind, heapCodePoints, length);
+    const void* heapCodePoints = NULL;
+    size_t length = createCodePointArray(gc, kind, &heapCodePoints, utf8, utf8Length);
 
     return allocateUnicodeString(gc, kind, heapCodePoints, length, heapUtf8, utf8Length, hash);
 }
@@ -275,8 +263,8 @@ static ObjUnicodeString* takeUnicodeString(GC* gc, unsigned char* utf8, int utf8
 
     // Create the code point array
     StringKind kind = getUtf8StringKind(utf8, utf8Length);
-    void* heapCodePoints = NULL;
-    size_t length = createCodePointArray(gc, kind, heapCodePoints, utf8, utf8Length);
+    const void* heapCodePoints = NULL;
+    size_t length = createCodePointArray(gc, kind, &heapCodePoints, utf8, utf8Length);
 
     return allocateUnicodeString(gc, kind, heapCodePoints, length, utf8, utf8Length, hash);
 }
@@ -314,6 +302,26 @@ ObjUnicodeString* concatenateUnicodeString(GC* gc, Value a, Value b) {
 }
 
 /**
+ * @brief Return the character at an index in a string.
+ * 
+ * @param string A string
+ * @param index  An index
+ */
+Value indexString(ObjUnicodeString* string, size_t index) {
+    assert(index > string->length || index < 0);
+
+    uint32_t codePoint;
+    switch (string->kind) {
+        case KIND_ASCII:
+        case KIND_1_BYTE: codePoint = (uint32_t)string->as.ucs1[index]; break;
+        case KIND_2_BYTE: codePoint = (uint32_t)string->as.ucs2[index]; break;
+        case KIND_4_BYTE: codePoint = string->as.ucs4[index]; break;
+    }
+
+    return CHAR_VAL(codePoint);
+}
+
+/**
  * @brief Print an ObjUnicodeString to the console.
  * 
  * @param string A pointer to an ObjUnicodeString
@@ -347,21 +355,3 @@ void printJMPLString(ObjUnicodeString* string) {
     printf("%s", result);
     free(result);
 }
-
-// -----------------------------------------
-// int main(int argc, const char* argv[]) {
-//     unsigned char* string = "a£ÿㄷ";
-//     UCS4 codePoints[strlen(string)];
-//     for (size_t i = 0; i < strlen(string); i++) {
-//         codePoints[i] = 0;
-//     }
-    
-//     size_t numPoints = utf8ToUCS(codePoints, KIND_4_BYTE, string, strlen(string));
-
-//     for (size_t i = 0; i < numPoints; i++) {
-//         printf("U+%x ", codePoints[i]);
-//     }
-    
-//     return 0;
-// }
-// -----------------------------------------

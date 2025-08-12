@@ -45,6 +45,7 @@ void freeUnicodeString(GC* gc, ObjUnicodeString* string);
 ObjUnicodeString* copyUnicodeString(GC* gc, const unsigned char* utf8, int utf8Length);
 ObjUnicodeString* concatenateUnicodeString(GC* gc, Value a, Value b);
 
+Value indexString(ObjUnicodeString* string, size_t index);
 void printJMPLString(ObjUnicodeString* string);
 
 #endif

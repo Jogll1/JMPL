@@ -412,24 +412,14 @@ static int subscript() {
         push(tuple->elements[index]);
     } else if (IS_STRING(value)) {
         ObjUnicodeString* string = AS_STRING(value);
-        if (index > string->length - 1 || index < 0) {
+        if (index > string->length || index < 0) {
             runtimeError("String index out of range");
             return INTERPRET_RUNTIME_ERROR;
         }
 
-        // Probably make this a function
-        int len = 1;
-        unsigned char* chars = (char*)malloc(len + 1);
-        if (!chars) {
-            runtimeError("Out of memory :(");
-            return INTERNAL_SOFTWARE_ERROR;
-        }
-        strncpy(chars, string->utf8 + index, len);
-        chars[len] = '\0';
+        Value character = indexString(string, index);
 
-        push(OBJ_VAL(copyUnicodeString(&vm.gc, chars, len)));
-        free(chars);
-
+        push(character);
     } else {
         runtimeError("Object cannot be subscripted");
         return INTERPRET_RUNTIME_ERROR;

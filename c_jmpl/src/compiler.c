@@ -307,7 +307,7 @@ static void initCompiler(Compiler* compiler, FunctionType type) {
     current = compiler;
 
     if (type != TYPE_SCRIPT) {
-        current->function->name = copyString(parser.gc, parser.previous.start, parser.previous.length);
+        current->function->name = copyUnicodeString(parser.gc, parser.previous.start, parser.previous.length);
     }
 
     Local* local = &current->locals[current->localCount++];
@@ -356,7 +356,7 @@ static ParseRule* getRule(TokenType type);
 static void parsePrecedence(Precedence precendence, bool ignoreNewlines);
 
 static uint16_t identifierConstant(Token* name) {
-    return makeConstant(OBJ_VAL(copyString(parser.gc, name->start, name->length)));
+    return makeConstant(OBJ_VAL(copyUnicodeString(parser.gc, name->start, name->length)));
 }
 
 static bool identifiersEqual(Token* a, Token* b) {
@@ -788,7 +788,7 @@ static bool parseSetBuilderGenerator(int oldCount, uint8_t** generatorSlots, uin
  */
 static void setBuilder() {
     // Set anonymous function name and to implicit return
-    current->function->name = copyString(parser.gc, "@setb", 5);
+    current->function->name = copyUnicodeString(parser.gc, "@setb", 5);
     current->implicitReturn = true;
 
     // Store an opened set as a local
@@ -1000,7 +1000,7 @@ static void character(bool canAssign) {
 
 static void string(bool canAssign) {
     // Copy the string from the source, +1 and -2 to trim quotation marks
-    Value s = OBJ_VAL(copyString(parser.gc, parser.previous.start + 1, parser.previous.length - 2));
+    Value s = OBJ_VAL(copyUnicodeString(parser.gc, parser.previous.start + 1, parser.previous.length - 2));
 
     pushTemp(parser.gc, s);
     emitConstant(s);
@@ -1063,7 +1063,7 @@ static void unary(bool canAssign) {
 
 static void quantifier() {
     // Set anonymous function name and to implicit return
-    current->function->name = copyString(parser.gc, "@quan", 5);
+    current->function->name = copyUnicodeString(parser.gc, "@quan", 5);
     current->implicitReturn = true;
 
     TokenType operatorType = parser.previous.type;

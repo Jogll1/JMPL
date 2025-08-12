@@ -73,19 +73,19 @@ Value typeNative(VM* vm, int argCount, Value* args) {
         str = "NUMBER";
     } else if (IS_OBJ(value)) {
         switch(AS_OBJ(value)->type) {
-            case OBJ_FUNCTION: str = "FUNCTION"; break;
-            case OBJ_CLOSURE:  str = "FUNCTION"; break;
-            case OBJ_NATIVE:   str = "NATIVE";   break;
-            case OBJ_SET:      str = "SET";      break;
-            case OBJ_TUPLE:    str = "TUPLE";    break;
-            case OBJ_STRING:   str = "STRING";   break;
-            default:           str = "UNKNOWN";  break;
+            case OBJ_FUNCTION:       str = "FUNCTION"; break;
+            case OBJ_CLOSURE:        str = "FUNCTION"; break;
+            case OBJ_NATIVE:         str = "NATIVE";   break;
+            case OBJ_SET:            str = "SET";      break;
+            case OBJ_TUPLE:          str = "TUPLE";    break;
+            case OBJ_UNICODE_STRING: str = "STRING";   break;
+            default:                 str = "UNKNOWN";  break;
         }
     } else {
         str = "UNKNOWN";
     }
 
-    return OBJ_VAL(copyString(&vm->gc, str, strlen(str)));
+    return OBJ_VAL(copyUnicodeString(&vm->gc, str, strlen(str)));
 }
 
 // --- I/O ---
@@ -146,7 +146,7 @@ Value inputNative(VM* vm, int argCount, Value* args) {
         }
     }
     
-    ObjString* str = copyString(&vm->gc, buffer, len);
+    ObjUnicodeString* str = copyUnicodeString(&vm->gc, buffer, len);
     free(buffer);
     return OBJ_VAL(str);
 }

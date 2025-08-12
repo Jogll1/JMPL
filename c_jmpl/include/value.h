@@ -8,7 +8,7 @@
 typedef struct GC GC;
 typedef struct VM VM;
 typedef struct Obj Obj;
-typedef struct ObjString ObjString;
+typedef struct ObjUnicodeString ObjUnicodeString;
 
 #ifdef NAN_BOXING
 

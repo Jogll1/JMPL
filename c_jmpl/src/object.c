@@ -69,7 +69,7 @@ static void printFunction(ObjFunction* function) {
     if(function->name == NULL) {
         printf("<script>");
     } else {
-        printf("<fn %s>", function->name->chars);
+        printf("<fn %s>", function->name->utf8);
     }
 }
 
@@ -84,7 +84,7 @@ void printObject(Value value, bool simple) {
         case OBJ_NATIVE:
             printf("<native>");
             break;
-        case OBJ_STRING:
+        case OBJ_UNICODE_STRING:
             printJMPLString(AS_STRING(value));
             break;
         case OBJ_UPVALUE:

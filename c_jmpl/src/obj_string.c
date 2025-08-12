@@ -48,153 +48,178 @@ static uint32_t hashString(const unsigned char* key, int length) {
     return hash;
 }
 
-// ======================================================================
-// =================        Unicode String              =================
-// ======================================================================
-
-// static uint32_t hashUCS1(UCS1* codePoints, size_t length) {
-//     uint32_t hash = FNV_INIT_HASH;
-
-//     for (int i = 0; i < length; i++) {
-//         hash ^= (uint8_t)codePoints[i];
-//         hash *= FNV_PRIME;
-//     }
-
-//     return hash;
-// }
-
-// static uint32_t hashUCS2(UCS2* codePoints, size_t length) {
-//     uint32_t hash = FNV_INIT_HASH;
-
-//     for (int i = 0; i < length; i++) {
-//         UCS2 c = codePoints[i];
-//         hash ^= (uint8_t)(c & 0xFF);
-//         hash *= FNV_PRIME;
-//         hash ^= (uint8_t)(c >> 8);
-//         hash *= FNV_PRIME;
-//     }
-
-//     return hash;
-// }
-
-// static uint32_t hashUCS4(UCS4* codePoints, size_t length) {
-//     uint32_t hash = FNV_INIT_HASH;
-
-//     for (int i = 0; i < length; i++) {
-//         UCS4 c = codePoints[i];
-//         hash ^= (uint8_t)(c & 0xFF);
-//         hash *= FNV_PRIME;
-//         hash ^= (uint8_t)((c >> 8) & 0xFF);
-//         hash *= FNV_PRIME;
-//         hash ^= (uint8_t)((c >> 16) & 0xFF);
-//         hash *= FNV_PRIME;
-//         hash ^= (uint8_t)((c >> 24) & 0xFF);
-//         hash *= FNV_PRIME;
-//     }
-
-//     return hash;
-// }
-
-// /**
-//  * @brief Hashes a unicode code point array using the FNV-1a hashing algorithm.
-//  * 
-//  * @param string The string to hash
-//  * @return       A hashed form of the string
-//  */
-// static uint32_t hashUnicodeString(StringKind kind, void* codePoints, size_t length) {
-//     uint32_t hash = FNV_INIT_HASH;
-
-//     switch(kind) {
-//         case KIND_1_BYTE: {
-//             return hashUCS1(codePoints, length);
-//         }
-//         case KIND_2_BYTE: {
-//             return hashUCS2(codePoints, length);
-//         }
-//         case KIND_4_BYTE: {
-//             return hashUCS4(codePoints, length);
-//         }
-//     }
-// }
-
-static ObjUnicodeString* allocateUnicodeString(GC* gc, StringKind kind, void* codePoints, size_t length, unsigned char* utf8, size_t utf8Length, uint32_t hash) {
-    ObjUnicodeString* string = ALLOCATE_OBJ(gc, ObjUnicodeString, OBJ_STRING_UNICODE);
-    string->kind = kind;
-    string->length = length;
-
-    // IF ASCII -> no need for utf8 ?
-    
-    switch(kind) {
-        case KIND_1_BYTE: {
-            string->as.ucs1 = codePoints;
-
-            string->utf8 = NULL;
-            break;
-        }
-        case KIND_2_BYTE: {
-            string->as.ucs2 = codePoints;
-            break;
-        }
-        case KIND_4_BYTE: {
-            string->as.ucs4 = codePoints;
-            break;
-        }
+void freeUnicodeString(GC* gc, ObjUnicodeString* string) {
+    if (string->kind > KIND_ASCII) {
+        FREE_ARRAY(gc, char, string->utf8, string->utf8Length + 1);
+    }
+            
+    switch (string->kind) {
+        case KIND_ASCII:
+        case KIND_1_BYTE: FREE_ARRAY(gc, UCS1, string->as.ucs1, string->length); break;
+        case KIND_2_BYTE: FREE_ARRAY(gc, UCS2, string->as.ucs2, string->length); break;
+        case KIND_4_BYTE: FREE_ARRAY(gc, UCS4, string->as.ucs4, string->length); break;
     }
 
-    string->hash = hash;
-
-    // pushTemp(gc, OBJ_VAL(string));
-    // tableSet(gc, &vm.strings, string, NULL_VAL);
-    // popTemp(gc);
-
-    return string;
+    FREE(gc, ObjUnicodeString, string);
 }
 
 /**
- * @brief Takes in an array of UTF-8 encoded bytes and returns a ObjUnicodeString pointer.
+ * @brief Get the kind of a UTF-8 character.
  * 
- * @param gc     The garbage collector
- * @param chars  A UTF-8 byte sequence
- * @param length The size of the byte sequence
- * 
- * Strings are interned and hashed by their UTF-8 sequence.
+ * @param utf8       The leading byte of a UTF-8 character
+ * @return           The kind of the character
  */
-ObjUnicodeString* copyUnicodeString(GC* gc, const unsigned char* utf8Bytes, int utf8Length) {
-    uint32_t hash = hashString(utf8Bytes, utf8Length);
-
-    // ObjString* interned = tableFindString(&vm.strings, chars, length, hash);
-    // if(interned != NULL) return interned;
-
-    // Convert the utf8 byte sequence into code points
-
-
-// #define COPY_STRING(type) \
-//     do { \
-//         heapCodePoints = ALLOCATE(gc, type, length + 1); \
-//         memcpy(heapCodePoints, codePoints, length); \
-//         ((type*)heapCodePoints)[length] = '\0'; \
-//     } while (false)
-
-//     void* heapCodePoints = NULL;
-//     switch (kind) {
-//         case KIND_1_BYTE: COPY_STRING(UCS1); break;
-//         case KIND_2_BYTE: COPY_STRING(UCS2); break;
-//         case KIND_4_BYTE: COPY_STRING(UCS4); break;
-//     }
-// #undef COPY_STRING
-
-//     return allocateUnicodeString(gc, kind, heapCodePoints, length, hash);
+static StringKind getUtf8CharacterKind(const unsigned char leadingByte) {
+    if (leadingByte < 0x80) {
+        // 1 byte in UTF-8, 1 byte code point
+        // U+0000 - U+007F
+        return KIND_ASCII;
+    } else if (leadingByte < 0xC4) {
+        // 2 bytes in UTF-8, 1 byte code point
+        // U+0080 - U+00FF
+        return KIND_1_BYTE;
+    } else if (leadingByte < 0xE0) {
+        // 2 bytes in UTF-8, 2 byte code point
+        // U+0100 - U+07FF
+        return KIND_2_BYTE;
+    } else if (leadingByte <= 0xEF) {
+        // 3 bytes in UTF-8, 2 byte code point
+        // U+0800 - U+FFFF
+        return KIND_2_BYTE;
+    } else {
+        // 4 bytes in UTF-8, 4 byte code point
+        // U+100000 - U+10FFFF
+        return KIND_4_BYTE;
+    }
 }
 
-// ======================================================================
-// =================        ASCII String                =================
-// ======================================================================
+static void printCodePoints(StringKind kind, void* codePoints, size_t length) {
+    printf("Output (%d): ", length);
+    for (size_t i = 0; i < length; i++) {
+        switch (kind) {
+            case KIND_ASCII: 
+            case KIND_1_BYTE: printf("U+%04x ", ((UCS1*)codePoints)[i]); break;
+            case KIND_2_BYTE: printf("U+%04x ", ((UCS1*)codePoints)[i]); break;
+            case KIND_4_BYTE: printf("U+%06x ", ((UCS1*)codePoints)[i]); break;
+        }
+    }
+    printf("\n");
+}
 
-static ObjString* allocateString(GC* gc, unsigned char* chars, int length, uint32_t hash) {
-    ObjString* string = ALLOCATE_OBJ(gc, ObjString, OBJ_STRING);
+/**
+ * @brief Get the kind of a UTF-8 byte sequence.
+ * 
+ * @param utf8       A UTF-8 byte sequence (null-terminated)
+ * @param utf8Length Length of the UTF-8 byte sequence
+ * @return           The kind of the string
+ */
+static StringKind getUtf8StringKind(const unsigned char* utf8, size_t utf8Length) {
+    StringKind kind = KIND_ASCII;
+
+    size_t i = 0;
+    while (i < utf8Length) {
+        size_t numBytes = getCharByteCount(utf8[i]);
+        StringKind charKind = getUtf8CharacterKind(utf8[i]);
+
+        if (charKind == KIND_4_BYTE){
+            return KIND_4_BYTE;
+        } else if (charKind > kind) {
+            kind = charKind;
+        }
+        
+        i += numBytes;
+    }
+    
+    return kind;
+}
+
+/**
+ * @brief Convert an array of UTF-8 bytes to a UCS code point array.
+ * 
+ * @param output     An empty UCS array
+ * @param kind       The target kind
+ * @param utf8       A UTF-8 byte sequence (null-terminated)
+ * @param utf8Length Length of the UTF-8 byte sequence
+ * @return           The number of code points
+ */
+static size_t utf8ToUCS(void* output, StringKind kind, const unsigned char* utf8, size_t utf8Length) {
+    assert(utf8 != NULL);
+
+    size_t numPoints = 0; 
+    size_t i = 0;
+    while (i < utf8Length) {
+        size_t numBytes = getCharByteCount(utf8[i]);
+        uint32_t codePoint = utf8ToUnicode(&utf8[i], numBytes);
+        printf("Point: %x\n", codePoint);
+
+        if (kind <= KIND_1_BYTE) {
+            ((UCS1*)output)[numPoints] = (UCS1)(codePoint & 0xFF);
+        } else if (kind == KIND_2_BYTE) {
+            ((UCS2*)output)[numPoints] = (UCS2)(codePoint & 0xFFFF);
+        } else if (KIND_4_BYTE) {
+            ((UCS4*)output)[numPoints] = codePoint;
+        }
+
+        numPoints++;
+        i += numBytes;
+    }
+
+    return numPoints;
+}
+
+/**
+ * @brief Convert an array of UTF-8 bytes to a UCS code point array (allocates).
+ * 
+ * @param gc         The garbage collector
+ * @param kind       The kind of the string
+ * @param output     An empty array of code points
+ * @param utf8       A UTF-8 byte sequence
+ * @param utf8Length The size of the byte sequence
+ * @returns          The size of the code point list
+ */
+static size_t createCodePointArray(GC* gc, StringKind kind, const void* output, const unsigned char* utf8, int utf8Length) {
+    size_t length = 0;
+
+#define COPY_STRING(type) \
+    do { \
+        type* codePoints = ALLOCATE(gc, type, utf8Length); \
+        length = utf8ToUCS(codePoints, kind, utf8, utf8Length); \
+        output = codePoints; \
+    } while (false)
+
+    switch (kind) {
+        case KIND_ASCII: {
+            output = utf8;
+            length = utf8Length;
+            break;
+        }
+        case KIND_1_BYTE: COPY_STRING(UCS1); break;
+        case KIND_2_BYTE: COPY_STRING(UCS2); break;
+        case KIND_4_BYTE: COPY_STRING(UCS4); break;
+    }
+#undef COPY_STRING
+
+    return length;
+}
+
+static ObjUnicodeString* allocateUnicodeString(GC* gc, StringKind kind, const void* codePoints, size_t length, unsigned char* utf8, size_t utf8Length, uint32_t hash) {
+    assert(codePoints != NULL);
+
+    ObjUnicodeString* string = ALLOCATE_OBJ(gc, ObjUnicodeString, OBJ_UNICODE_STRING);
+    string->kind = kind;
     string->length = length;
-    string->chars = chars;
     string->hash = hash;
+
+    switch (kind) {
+        case KIND_ASCII:
+        case KIND_1_BYTE: string->as.ucs1 = (UCS1*)codePoints; break;
+        case KIND_2_BYTE: string->as.ucs2 = (UCS2*)codePoints; break;
+        case KIND_4_BYTE: string->as.ucs4 = (UCS4*)codePoints; break;
+    }
+
+    // Will be the same pointer for ascii
+    string->utf8 = utf8;
+    string->utf8Length = utf8Length;
 
     pushTemp(gc, OBJ_VAL(string));
     tableSet(gc, &vm.strings, string, NULL_VAL);
@@ -203,30 +228,57 @@ static ObjString* allocateString(GC* gc, unsigned char* chars, int length, uint3
     return string;
 }
 
-ObjString* takeString(GC* gc, unsigned char* chars, int length) {
-    uint32_t hash = hashString(chars, length);
+/**
+ * @brief Takes in an array of UTF-8 encoded bytes and returns a ObjUnicodeString pointer.
+ * 
+ * @param gc         The garbage collector
+ * @param utf8       A UTF-8 byte sequence
+ * @param utf8Length The size of the byte sequence
+ * 
+ * Strings are interned and hashed by their UTF-8 sequence.
+ */
+ObjUnicodeString* copyUnicodeString(GC* gc, const unsigned char* utf8, int utf8Length) {
+    uint32_t hash = hashString(utf8, utf8Length);
 
-    ObjString* interned = tableFindString(&vm.strings, chars, length, hash);
+    printf("Input: ");
+    for (size_t i = 0; i < utf8Length; i++) {
+        printf("U+%02x ", utf8[i]);
+    }
+    printf("\n");
+
+    ObjUnicodeString* interned = tableFindString(&vm.strings, utf8, utf8Length, hash);
+    if(interned != NULL) return interned;
+
+    // Store the UTF-8 encoded string (null-terminated)
+    unsigned char* heapUtf8 = ALLOCATE(gc, unsigned char, utf8Length + 1);
+    memcpy(heapUtf8, utf8, utf8Length);
+    heapUtf8[utf8Length] = '\0';
+
+    // Create the code point array
+    StringKind kind = getUtf8StringKind(utf8, utf8Length);
+    void* heapCodePoints = NULL;
+    size_t length = createCodePointArray(gc, kind, heapCodePoints, utf8, utf8Length);
+
+    printCodePoints(kind, heapCodePoints, length);
+
+    return allocateUnicodeString(gc, kind, heapCodePoints, length, heapUtf8, utf8Length, hash);
+}
+
+static ObjUnicodeString* takeUnicodeString(GC* gc, unsigned char* utf8, int utf8Length) {
+    uint32_t hash = hashString(utf8, utf8Length);
+
+    ObjUnicodeString* interned = tableFindString(&vm.strings, utf8, utf8Length, hash);
     if(interned != NULL) {
-        FREE_ARRAY(gc, char, chars, length + 1);
+        FREE_ARRAY(gc, unsigned char, utf8, utf8Length + 1);
         return interned;
     }
 
-    return allocateString(gc, chars, length, hash);
-}
+    // Create the code point array
+    StringKind kind = getUtf8StringKind(utf8, utf8Length);
+    void* heapCodePoints = NULL;
+    size_t length = createCodePointArray(gc, kind, heapCodePoints, utf8, utf8Length);
 
-ObjString* copyString(GC* gc, const unsigned char* chars, int length) {
-    uint32_t hash = hashString(chars, length);
-
-    ObjString* interned = tableFindString(&vm.strings, chars, length, hash);
-    if(interned != NULL) return interned;
-
-    unsigned char* heapChars = ALLOCATE(gc, char, length + 1);
-    memcpy(heapChars, chars, length);
-
-    heapChars[length] = '\0';
-
-    return allocateString(gc, heapChars, length, hash);
+    return allocateUnicodeString(gc, kind, heapCodePoints, length, utf8, utf8Length, hash);
 }
 
 /**
@@ -236,7 +288,7 @@ ObjString* copyString(GC* gc, const unsigned char* chars, int length) {
  * @param b Value b
  * @return  A pointer to the concatenated string
  */
-ObjString* concatenateString(GC* gc, Value a, Value b) {
+ObjUnicodeString* concatenateUnicodeString(GC* gc, Value a, Value b) {
     pushTemp(gc, b);
     pushTemp(gc, a);
 
@@ -257,21 +309,21 @@ ObjString* concatenateString(GC* gc, Value a, Value b) {
     popTemp(gc);
     popTemp(gc);
 
-    ObjString* result = takeString(gc, chars, length);
+    ObjUnicodeString* result = takeUnicodeString(gc, chars, length);
     return result;
 }
 
 /**
- * @brief Print an ObjString to the console.
+ * @brief Print an ObjUnicodeString to the console.
  * 
- * @param string A pointer to an ObjString
+ * @param string A pointer to an ObjUnicodeString
  * 
  * Decodes each character in the string object, including escape characters.
  * For printing the raw characters, use printf().
  */
-void printJMPLString(ObjString* string) {
+void printJMPLString(ObjUnicodeString* string) {
     int length = string->length;
-    unsigned char* chars = string->chars;
+    unsigned char* chars = string->utf8;
 
     char* result = malloc(length + 1);
     if (result == NULL) {
@@ -295,3 +347,21 @@ void printJMPLString(ObjString* string) {
     printf("%s", result);
     free(result);
 }
+
+// -----------------------------------------
+// int main(int argc, const char* argv[]) {
+//     unsigned char* string = "a£ÿㄷ";
+//     UCS4 codePoints[strlen(string)];
+//     for (size_t i = 0; i < strlen(string); i++) {
+//         codePoints[i] = 0;
+//     }
+    
+//     size_t numPoints = utf8ToUCS(codePoints, KIND_4_BYTE, string, strlen(string));
+
+//     for (size_t i = 0; i < numPoints; i++) {
+//         printf("U+%x ", codePoints[i]);
+//     }
+    
+//     return 0;
+// }
+// -----------------------------------------

@@ -24,7 +24,7 @@ void freeTable(GC* gc, Table* table) {
     initTable(table);
 }
 
-static Entry* findEntry(Entry* entries, int capacity, ObjString* key) {
+static Entry* findEntry(Entry* entries, int capacity, ObjUnicodeString* key) {
     // Map the key's hash code to an index in the array
     uint32_t index = key->hash & (capacity - 1);
     Entry* tombstone = NULL;
@@ -54,7 +54,7 @@ static Entry* findEntry(Entry* entries, int capacity, ObjString* key) {
     }
 }
 
-bool tableGet(Table* table, ObjString* key, Value* value) {
+bool tableGet(Table* table, ObjUnicodeString* key, Value* value) {
     if (table->count == 0) return false;
 
     Entry* entry = findEntry (table->entries, table->capacity, key);
@@ -90,7 +90,7 @@ static void adjustCapacity(GC* gc, Table* table, int capacity) {
     table->capacity = capacity;
 }
 
-bool tableSet(GC* gc, Table* table, ObjString* key, Value value) {
+bool tableSet(GC* gc, Table* table, ObjUnicodeString* key, Value value) {
     // Grow the array when load factor reaches TABLE_MAX_LOAD
     if (table->count + 1 > table->capacity * TABLE_MAX_LOAD) {
         int capacity = GROW_CAPACITY(table->capacity);
@@ -107,7 +107,7 @@ bool tableSet(GC* gc, Table* table, ObjString* key, Value value) {
     return isNewKey;
 }
 
-bool tableDelete(Table* table, ObjString* key) {
+bool tableDelete(Table* table, ObjUnicodeString* key) {
     if (table->count == 0) return false;
 
     // Find the entry
@@ -132,7 +132,7 @@ void tableAddAll(GC* gc, Table* from, Table* to) {
     }
 }
 
-ObjString* tableFindString(Table* table, const unsigned char* chars, int length, uint32_t hash) {
+ObjUnicodeString* tableFindString(Table* table, const unsigned char* chars, int length, uint32_t hash) {
     if (table->count == 0) return NULL;
     uint32_t index = hash & (table->capacity - 1);
 
@@ -143,7 +143,7 @@ ObjString* tableFindString(Table* table, const unsigned char* chars, int length,
         if (entry->key == NULL) {
             // Stop when an empty non-tombstone entry is found
             if (IS_NULL(entry->value)) return NULL;
-        } else if (entry->key->length == length && entry->key->hash == hash && memcmp(entry->key->chars, chars, length) == 0) {
+        } else if (entry->key->length == length && entry->key->hash == hash && memcmp(entry->key->utf8, chars, length) == 0) {
             return entry->key;
         }
 

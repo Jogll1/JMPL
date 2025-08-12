@@ -85,7 +85,7 @@ bool valuesEqual(Value a, Value b) {
 }
 
 static void charToString(uint32_t charCodePoint, unsigned char* output) {
-    size_t numBytes = unicodeToUtf8(charCodePoint, output);
+    size_t numBytes = unicodeToUtf8(charCodePoint, output); // assign the output and numBytes
     assert(numBytes > 0);
     output[numBytes] = '\0'; // Terminate correctly 
 }
@@ -152,18 +152,18 @@ unsigned char* valueToString(Value value) {
     }
 
     if (IS_FUNCTION(value)) {
-        ObjString* name = AS_FUNCTION(value)->name;
+        ObjUnicodeString* name = AS_FUNCTION(value)->name;
         if (name != NULL) {
-            return strdup(name->chars);
+            return strdup(name->utf8);
         }
 
         return strdup("<anon>");
     }
 
     if (IS_CLOSURE(value)) {
-        ObjString* name = AS_CLOSURE(value)->function->name;
+        ObjUnicodeString* name = AS_CLOSURE(value)->function->name;
         if (name != NULL) {
-            return strdup(name->chars);
+            return strdup(name->utf8);
         }
 
         return strdup("<anon>");

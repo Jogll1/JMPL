@@ -40,25 +40,21 @@ size_t getCharByteCount(unsigned char byte) {
 size_t unicodeToUtf8(uint32_t codePoint, unsigned char* output) {
     codePoint = (uint64_t)codePoint;
     if (codePoint <= 0x7F) {
-        // 1-byte sequence
         output[0] = codePoint & 0x7F;
         output[1] = '\0';
         return 1;
     } else if (codePoint <= 0x7FF) {
-        // 2-byte sequence
         output[0] = 0xC0 | ((codePoint >> 6) & 0x1F);
         output[1] = 0x80 | (codePoint & 0x3F);
         output[2] = '\0';
         return 2;
     } else if (codePoint <= 0xFFFF) {
-        // 3-byte sequence
         output[0] = 0xE0 | ((codePoint >> 12) & 0x0F);
         output[1] = 0x80 | ((codePoint >> 6) & 0x3F);
         output[2] = 0x80 | (codePoint & 0x3F);
         output[3] = '\0';
         return 3;
     } else if (codePoint <= UNICODE_MAX) {
-        // 4-byte sequence
         output[0] = 0xF0 | ((codePoint >> 18) & 0x07);
         output[1] = 0x80 | ((codePoint >> 12) & 0x3F);
         output[2] = 0x80 | ((codePoint >> 6) & 0x3F);

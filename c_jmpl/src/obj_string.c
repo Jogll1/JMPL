@@ -308,7 +308,7 @@ ObjUnicodeString* concatenateUnicodeString(GC* gc, Value a, Value b) {
  * @param index  An index
  */
 Value indexString(ObjUnicodeString* string, size_t index) {
-    assert(index > string->length || index < 0);
+    assert(index < string->length || index > 0);
 
     uint32_t codePoint;
     switch (string->kind) {
@@ -330,28 +330,30 @@ Value indexString(ObjUnicodeString* string, size_t index) {
  * For printing the raw characters, use printf().
  */
 void printJMPLString(ObjUnicodeString* string) {
-    int length = string->length;
-    unsigned char* chars = string->utf8;
+    // int length = string->length;
+    // unsigned char* chars = string->utf8;
 
-    char* result = malloc(length + 1);
-    if (result == NULL) {
-        fprintf(stderr, "Out of memory.\n");
-        exit(1);
-    }
-    int ri = 0;
+    // char* result = malloc(length + 1);
+    // if (result == NULL) {
+    //     fprintf(stderr, "Out of memory.\n");
+    //     exit(1);
+    // }
+    // int ri = 0;
 
-    for (int i = 0; i < length; i++) {
-        // Add each string and decode escapes if necessary
-        if (chars[i] == '\\' && i + 1 < length) {
-            result[ri++] = decodeEscape(chars[i + 1]);
-            i++; // Skip the escaped character
-        } else {
-            result[ri++] = chars[i];
-        }
-    }
+    // for (int i = 0; i < length; i++) {
+    //     // Add each string and decode escapes if necessary
+    //     if (chars[i] == '\\' && i + 1 < length) {
+    //         result[ri++] = decodeEscape(chars[i + 1]);
+    //         i++; // Skip the escaped character
+    //     } else {
+    //         result[ri++] = chars[i];
+    //     }
+    // }
 
-    result[ri] = '\0';
+    // result[ri] = '\0';
     
-    printf("%s", result);
-    free(result);
+    // printf("%s", result);
+    // free(result);
+
+    printf("%s", string->utf8);
 }

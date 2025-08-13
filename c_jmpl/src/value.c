@@ -152,7 +152,7 @@ unsigned char* valueToString(Value value) {
     }
 
     if (IS_FUNCTION(value)) {
-        ObjUnicodeString* name = AS_FUNCTION(value)->name;
+        ObjString* name = AS_FUNCTION(value)->name;
         if (name != NULL) {
             return strdup(name->utf8);
         }
@@ -161,7 +161,7 @@ unsigned char* valueToString(Value value) {
     }
 
     if (IS_CLOSURE(value)) {
-        ObjUnicodeString* name = AS_CLOSURE(value)->function->name;
+        ObjString* name = AS_CLOSURE(value)->function->name;
         if (name != NULL) {
             return strdup(name->utf8);
         }

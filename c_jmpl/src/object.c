@@ -84,7 +84,7 @@ void printObject(Value value, bool simple) {
         case OBJ_NATIVE:
             printf("<native>");
             break;
-        case OBJ_UNICODE_STRING:
+        case OBJ_STRING:
             printJMPLString(AS_STRING(value));
             break;
         case OBJ_UPVALUE:

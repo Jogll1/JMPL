@@ -4,7 +4,7 @@
 #include "value.h"
 
 typedef struct {
-    ObjUnicodeString* key;
+    ObjString* key;
     Value value;
 } Entry;
 
@@ -17,12 +17,12 @@ typedef struct {
 void initTable(Table* table);
 void freeTable(GC* gc, Table* table);
 
-bool tableGet(Table* table, ObjUnicodeString* key, Value* value);
-bool tableSet(GC* gc, Table* table, ObjUnicodeString* key, Value value);
-bool tableDelete(Table* table, ObjUnicodeString* key);
+bool tableGet(Table* table, ObjString* key, Value* value);
+bool tableSet(GC* gc, Table* table, ObjString* key, Value value);
+bool tableDelete(Table* table, ObjString* key);
 void tableAddAll(GC* gc, Table* from, Table* to);
 
-ObjUnicodeString* tableFindString(Table* table, const unsigned char* chars, int length, uint32_t hash);
+ObjString* tableFindString(Table* table, const unsigned char* chars, int length, uint32_t hash);
 void tableRemoveWhite(Table* table);
 void markTable(GC* gc, Table* table);
 void tableDebugStats(Table* table);

@@ -4,6 +4,7 @@
 #include "unicode.h"
 #include "common.h"
 #include "scanner.h"
+#include "obj_string.h"
 
 void initScanner(Scanner* scanner, const unsigned char* source) {
     scanner->start = source;
@@ -29,7 +30,7 @@ bool isTokenQueueFull(TokenQueue* queue) {
 }
 
 /**
- * @brief Check if a character is a character that can start an identifier.advance
+ * @brief Check if a character is a character that can start an identifier.
  * 
  * @param c The character to check
  * 
@@ -278,13 +279,47 @@ static Token number(Scanner* scanner) {
     return makeToken(scanner, TOKEN_NUMBER);
 }
 
+static Token escapeCharacter(Scanner* scanner) {
+    advance(scanner); // The '\'
+
+    EscapeType type = getEscapeType(peek(scanner));
+    if (type == ESC_SIMPLE) {
+        advance(scanner);
+    } else if (type == ESC_HEX || type == ESC_UNICODE || type == ESC_UNICODE_LG) {
+        advance(scanner);
+        // Type is encoded as the number of hex digits
+        for (int i = 0; i < type; i++) {
+            if (isHex(peek(scanner))) {
+                advance(scanner);
+            } else {
+                return errorToken(scanner, "Incomplete hex/unicode character");
+            }
+        }
+    } else {
+        return errorToken(scanner, "Invalid escape character");
+    }
+
+    if (peek(scanner) == '\'') {
+        advance(scanner); // The closing quote
+        return makeToken(scanner, TOKEN_CHAR);
+    } else {
+        return errorToken(scanner, "Invalid character");
+    }
+}
+
 static Token character(Scanner* scanner) {
     if (peek(scanner) != '\'' && !isAtEnd(scanner)) {
+        // Escape characters
+        if (peek(scanner) == '\\') {
+            return escapeCharacter(scanner);
+        }
+
         advance(scanner);
     } else {
         return errorToken(scanner, "Invalid syntax");
     }
     
+    printf("Yo dog\n");
     if (peek(scanner) != '\'' || isAtEnd(scanner)) return errorToken(scanner, "Invalid character");
 
     advance(scanner); // The closing quote

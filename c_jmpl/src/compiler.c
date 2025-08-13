@@ -111,9 +111,14 @@ static void fprintfRawString(FILE* f, const unsigned char* string, int length) {
     for (int i = 0; i < length; ++i) {
         unsigned char c = string[i];
         switch (c) {
+            case '\a': fputs("\\a", f); break;
+            case '\b': fputs("\\b", f); break;
+            case '\e': fputs("\\e", f); break;
+            case '\f': fputs("\\f", f); break;
             case '\n': fputs("\\n", f); break;
-            case '\t': fputs("\\t", f); break;
             case '\r': fputs("\\r", f); break;
+            case '\t': fputs("\\t", f); break;
+            case '\v': fputs("\\v", f); break;
             case '\\': fputs("\\\\", f); break;
             case '\'': fputs("\\'", f); break;
             case '\"': fputs("\\\"", f); break;
@@ -307,7 +312,7 @@ static void initCompiler(Compiler* compiler, FunctionType type) {
     current = compiler;
 
     if (type != TYPE_SCRIPT) {
-        current->function->name = copyUnicodeString(parser.gc, parser.previous.start, parser.previous.length);
+        current->function->name = copyString(parser.gc, parser.previous.start, parser.previous.length);
     }
 
     Local* local = &current->locals[current->localCount++];
@@ -356,7 +361,7 @@ static ParseRule* getRule(TokenType type);
 static void parsePrecedence(Precedence precendence, bool ignoreNewlines);
 
 static uint16_t identifierConstant(Token* name) {
-    return makeConstant(OBJ_VAL(copyUnicodeString(parser.gc, name->start, name->length)));
+    return makeConstant(OBJ_VAL(copyString(parser.gc, name->start, name->length)));
 }
 
 static bool identifiersEqual(Token* a, Token* b) {
@@ -788,7 +793,7 @@ static bool parseSetBuilderGenerator(int oldCount, uint8_t** generatorSlots, uin
  */
 static void setBuilder() {
     // Set anonymous function name and to implicit return
-    current->function->name = copyUnicodeString(parser.gc, "@setb", 5);
+    current->function->name = copyString(parser.gc, "@setb", 5);
     current->implicitReturn = true;
 
     // Store an opened set as a local
@@ -988,19 +993,103 @@ static void or_(bool canAssign) {
     patchJump(endJump);
 }
 
+static void compileString(unsigned char* start, size_t length) {
+    // If a backslash is next
+    // if (peek(scanner) == '\\') {
+    //     unsigned char c = peek(scanner);
+    //     if (0 <= c && c <= 8) {
+    //         // Octal
+    //     } else if (c == 'x') {
+    //         // Hex
+    //     } else if (c == 'u') {
+    //         // Unicode < 10000
+    //     } else if (c == 'U') {
+    //         // Unicode >= 10000
+    //     } else {
+    //         // Simple
+    //     }
+    // }
+}
+
+/**
+ * @brief Convert escape sequences into escape characters in a string of UTF-8 bytes.
+ * 
+ * @param output An empty output string
+ * @param chars  The first character of the string
+ * @param length The length of the string
+ * @returns      The size of the new string
+ */
+static size_t decodeEscapeString(unsigned char* output, const unsigned char* chars, size_t length) {
+    size_t outputLength = 0;
+
+    size_t i = 0;
+    while (i < length) {
+        if (chars[i] != '\\') {
+            output[outputLength++] = chars[i++];
+            continue;
+        }
+
+        if (i + 1 >= length) {
+            errorAtCurrent("Incomplete escape sequence");
+        }
+
+        unsigned char escChar = chars[++i]; // Char after '\'
+        EscapeType type = getEscapeType(escChar);
+
+        if (type == ESC_SIMPLE) {
+            output[outputLength++] = decodeSimpleEscape(escChar);
+            i++;
+        } else if (type == ESC_HEX || type == ESC_UNICODE || type == ESC_UNICODE_LG) {
+            size_t hexCount = type; // Type is encoded as the number of hex digits
+            if (i + hexCount >= length) {
+                errorAtCurrent("Incomplete hex/unicode escape sequence");
+            }
+
+            uint32_t codePoint = 0;
+            for (size_t j = 0; j < hexCount; j++) {
+                unsigned char c = chars[++i];
+                if (!isHex(c)) {
+                    errorAtCurrent("Invalid hex digit in escape");
+                }
+                codePoint = (codePoint << 4) | hexToValue(c);
+            }
+            i++;
+
+            unsigned char utf8Buf[4];
+            size_t bytes = unicodeToUtf8(codePoint, utf8Buf);
+            for (size_t j = 0; j < bytes; j++) {
+                output[outputLength++] = utf8Buf[j];
+            }
+        } else {
+            errorAtCurrent("Unknown escape sequence");
+        }
+    }
+    
+    return outputLength;
+}
+
 static void character(bool canAssign) {
     // Copy the char bytes from the source, +1 and -2 to trim quotation mark
-    uint32_t value = utf8ToUnicode(parser.previous.start + 1, parser.previous.length - 2);
+    size_t length = parser.previous.length - 2;
+    unsigned char decoded[length];
+    size_t newLength = decodeEscapeString(decoded, parser.previous.start + 1, length);
+
+    uint32_t value = utf8ToUnicode(decoded, newLength);
 
     if (value > UNICODE_MAX) {
-        errorAtCurrent("Invalid character");
+        errorAtCurrent("Unsupported character");
     }
+
     emitConstant(CHAR_VAL(value));
 }
 
 static void string(bool canAssign) {
     // Copy the string from the source, +1 and -2 to trim quotation marks
-    Value s = OBJ_VAL(copyUnicodeString(parser.gc, parser.previous.start + 1, parser.previous.length - 2));
+    size_t length = parser.previous.length - 2;
+    unsigned char decoded[length];
+    size_t newLength = decodeEscapeString(decoded, parser.previous.start + 1, length);
+
+    Value s = OBJ_VAL(copyString(parser.gc, decoded, newLength));
 
     pushTemp(parser.gc, s);
     emitConstant(s);
@@ -1063,7 +1152,7 @@ static void unary(bool canAssign) {
 
 static void quantifier() {
     // Set anonymous function name and to implicit return
-    current->function->name = copyUnicodeString(parser.gc, "@quan", 5);
+    current->function->name = copyString(parser.gc, "@quan", 5);
     current->implicitReturn = true;
 
     TokenType operatorType = parser.previous.type;

@@ -60,7 +60,7 @@ static void runtimeError(const unsigned char* format, ...) {
  * @param function The C function that is called
  */
 static void defineNative(const unsigned char* name, int arity, NativeFn function) {
-    push(OBJ_VAL(copyUnicodeString(&vm.gc, name, (int)strlen(name))));
+    push(OBJ_VAL(copyString(&vm.gc, name, (int)strlen(name))));
     push(OBJ_VAL(newNative(&vm.gc, function, arity)));
     tableSet(&vm.gc, &vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
     pop();
@@ -367,10 +367,10 @@ static int getSize(Value value) {
         return fabs(AS_NUMBER(value));
     } else if (IS_OBJ(value)) {
         switch (AS_OBJ(value)->type) {
-            case OBJ_UNICODE_STRING: return AS_STRING(value)->length;
-            case OBJ_SET:            return AS_SET(value)->count;
-            case OBJ_TUPLE:          return AS_TUPLE(value)->size;
-            default:                 return -1;
+            case OBJ_STRING: return AS_STRING(value)->length;
+            case OBJ_SET:    return AS_SET(value)->count;
+            case OBJ_TUPLE:  return AS_TUPLE(value)->size;
+            default:         return -1;
         }
     }
 #else
@@ -411,7 +411,7 @@ static int subscript() {
 
         push(tuple->elements[index]);
     } else if (IS_STRING(value)) {
-        ObjUnicodeString* string = AS_STRING(value);
+        ObjString* string = AS_STRING(value);
         if (index > string->length || index < 0) {
             runtimeError("String index out of range");
             return INTERPRET_RUNTIME_ERROR;
@@ -507,7 +507,7 @@ static InterpretResult run() {
                 break;
             }
             case OP_GET_GLOBAL: {
-                ObjUnicodeString* name = READ_STRING();
+                ObjString* name = READ_STRING();
                 Value value;
                 if (!tableGet(&vm.globals, name, &value)) {
                     runtimeError("Undefined variable '%s'", name->utf8);
@@ -517,13 +517,13 @@ static InterpretResult run() {
                 break;
             }
             case OP_DEFINE_GLOBAL: {
-                ObjUnicodeString* name = READ_STRING();
+                ObjString* name = READ_STRING();
                 tableSet(&vm.gc, &vm.globals, name, peek(0));
                 pop();
                 break;
             }
             case OP_SET_GLOBAL: {
-                ObjUnicodeString* name = READ_STRING();
+                ObjString* name = READ_STRING();
                 if (tableSet(&vm.gc, &vm.globals, name, peek(0))) {
                     tableDelete(&vm.globals, name);
                     runtimeError("Undefined variable '%s'", name->utf8);
@@ -569,7 +569,7 @@ static InterpretResult run() {
                     // Concatenate if at least one operand is a string
                     Value b = pop();
                     Value a = pop();
-                    push(OBJ_VAL(concatenateUnicodeString(&vm.gc, a, b)));
+                    push(OBJ_VAL(concatenateString(&vm.gc, a, b)));
                 } else if (IS_TUPLE(peek(0)) && IS_TUPLE(peek(1))) {
                     ObjTuple* b = AS_TUPLE(pop());
                     ObjTuple* a = AS_TUPLE(pop());

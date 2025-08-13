@@ -116,7 +116,7 @@ static void blackenObject(GC* gc, Obj* object) {
             break;
         }
         case OBJ_NATIVE:
-        case OBJ_UNICODE_STRING:
+        case OBJ_STRING:
         default:
             break;
     }
@@ -144,8 +144,8 @@ static void freeObject(GC* gc, Obj* object) {
             FREE(gc, ObjNative, object);
             break;
         }
-        case OBJ_UNICODE_STRING: {
-            freeUnicodeString(gc, (ObjUnicodeString*)object);
+        case OBJ_STRING: {
+            freeString(gc, (ObjString*)object);
             break;
         }
         case OBJ_UPVALUE: {

@@ -12,23 +12,71 @@
 #define FNV_INIT_HASH 2166136261u
 #define FNV_PRIME     16777619
 
+// ===================================
+// ======== Escape Characters ========
+// ===================================
+
+bool isHex(unsigned char c) {
+    return c >= '0' && c <= '9' ||
+           c >= 'a' && c <= 'f' ||
+           c >= 'A' && c <= 'F';
+}
+
+int hexToValue(unsigned char c) {
+    assert(isHex(c));
+    if (c >= '0' && c <= '9') return (unsigned char)(c - '0');
+    if (c >= 'A' && c <= 'F') return (unsigned char)(c - 'A' + 10);
+    if (c >= 'a' && c <= 'f') return (unsigned char)(c - 'a' + 10);
+    return 0;
+}
+
 /**
  * @brief Returns the corresponding escaped character given a character.
  * 
  * @param esc The character to escape
  * @return    The escaped character
  */
-static unsigned char decodeEscape(unsigned char esc) {
+unsigned char decodeSimpleEscape(unsigned char esc) {
     switch (esc) {
-        case 'n': return '\n';
-        case 't': return '\t';
-        case 'r': return '\r';
-        case 'e': return '\e';
-        case '"': return '\"';
+        case 'a':  return '\a';
+        case 'b':  return '\b';
+        case 'e':  return '\e';
+        case 'f':  return '\f';
+        case 'n':  return '\n';
+        case 'r':  return '\r';
+        case 't':  return '\t';
+        case 'v':  return '\v';
         case '\\': return '\\';
-        default: return esc;
+        case '\'': return '\'';
+        case '\"': return '\"';
+        default:   return esc;
     }
 }
+
+EscapeType getEscapeType(unsigned char esc) {
+    switch (esc) {
+        case 'a':
+        case 'b':
+        case 'e':
+        case 'f':
+        case 'n':
+        case 'r':
+        case 't':
+        case 'v':
+        case '\\':
+        case '\'':
+        case '\0':
+        case '"': return ESC_SIMPLE;
+        case 'x': return ESC_HEX;
+        case 'u': return ESC_UNICODE;
+        case 'U': return ESC_UNICODE_LG;
+        default:  return ESC_INVALID;
+    }
+}
+
+// ===================================
+// ========      Strings      ========
+// ===================================
 
 /**
  * @brief Hashes a char array using the FNV-1a hashing algorithm.
@@ -48,7 +96,7 @@ static uint32_t hashString(const unsigned char* key, int length) {
     return hash;
 }
 
-void freeUnicodeString(GC* gc, ObjUnicodeString* string) {
+void freeString(GC* gc, ObjString* string) {
     FREE_ARRAY(gc, char, string->utf8, string->utf8Length + 1);
             
     switch (string->kind) {
@@ -57,7 +105,7 @@ void freeUnicodeString(GC* gc, ObjUnicodeString* string) {
         case KIND_4_BYTE: FREE_ARRAY(gc, UCS4, string->as.ucs4, string->length); break;
     }
 
-    FREE(gc, ObjUnicodeString, string);
+    FREE(gc, ObjString, string);
 }
 
 /**
@@ -198,10 +246,10 @@ static size_t createCodePointArray(GC* gc, StringKind kind, const void** output,
     return length;
 }
 
-static ObjUnicodeString* allocateUnicodeString(GC* gc, StringKind kind, const void* codePoints, size_t length, unsigned char* utf8, size_t utf8Length, uint32_t hash) {
+static ObjString* allocateString(GC* gc, StringKind kind, const void* codePoints, size_t length, unsigned char* utf8, size_t utf8Length, uint32_t hash) {
     assert(codePoints != NULL);
 
-    ObjUnicodeString* string = ALLOCATE_OBJ(gc, ObjUnicodeString, OBJ_UNICODE_STRING);
+    ObjString* string = ALLOCATE_OBJ(gc, ObjString, OBJ_STRING);
     string->kind = kind;
     string->length = length;
     string->hash = hash;
@@ -225,7 +273,7 @@ static ObjUnicodeString* allocateUnicodeString(GC* gc, StringKind kind, const vo
 }
 
 /**
- * @brief Takes in an array of UTF-8 encoded bytes and returns a ObjUnicodeString pointer.
+ * @brief Takes in an array of UTF-8 encoded bytes and returns a ObjString pointer.
  * 
  * @param gc         The garbage collector
  * @param utf8       A UTF-8 byte sequence
@@ -233,10 +281,10 @@ static ObjUnicodeString* allocateUnicodeString(GC* gc, StringKind kind, const vo
  * 
  * Strings are interned and hashed by their UTF-8 sequence.
  */
-ObjUnicodeString* copyUnicodeString(GC* gc, const unsigned char* utf8, int utf8Length) {
+ObjString* copyString(GC* gc, const unsigned char* utf8, int utf8Length) {
     uint32_t hash = hashString(utf8, utf8Length);
 
-    ObjUnicodeString* interned = tableFindString(&vm.strings, utf8, utf8Length, hash);
+    ObjString* interned = tableFindString(&vm.strings, utf8, utf8Length, hash);
     if(interned != NULL) return interned;
 
     // Store the UTF-8 encoded string (null-terminated)
@@ -249,13 +297,13 @@ ObjUnicodeString* copyUnicodeString(GC* gc, const unsigned char* utf8, int utf8L
     const void* heapCodePoints = NULL;
     size_t length = createCodePointArray(gc, kind, &heapCodePoints, utf8, utf8Length);
 
-    return allocateUnicodeString(gc, kind, heapCodePoints, length, heapUtf8, utf8Length, hash);
+    return allocateString(gc, kind, heapCodePoints, length, heapUtf8, utf8Length, hash);
 }
 
-static ObjUnicodeString* takeUnicodeString(GC* gc, unsigned char* utf8, int utf8Length) {
+static ObjString* takeString(GC* gc, unsigned char* utf8, int utf8Length) {
     uint32_t hash = hashString(utf8, utf8Length);
 
-    ObjUnicodeString* interned = tableFindString(&vm.strings, utf8, utf8Length, hash);
+    ObjString* interned = tableFindString(&vm.strings, utf8, utf8Length, hash);
     if(interned != NULL) {
         FREE_ARRAY(gc, unsigned char, utf8, utf8Length + 1);
         return interned;
@@ -266,7 +314,7 @@ static ObjUnicodeString* takeUnicodeString(GC* gc, unsigned char* utf8, int utf8
     const void* heapCodePoints = NULL;
     size_t length = createCodePointArray(gc, kind, &heapCodePoints, utf8, utf8Length);
 
-    return allocateUnicodeString(gc, kind, heapCodePoints, length, utf8, utf8Length, hash);
+    return allocateString(gc, kind, heapCodePoints, length, utf8, utf8Length, hash);
 }
 
 /**
@@ -276,7 +324,7 @@ static ObjUnicodeString* takeUnicodeString(GC* gc, unsigned char* utf8, int utf8
  * @param b Value b
  * @return  A pointer to the concatenated string
  */
-ObjUnicodeString* concatenateUnicodeString(GC* gc, Value a, Value b) {
+ObjString* concatenateString(GC* gc, Value a, Value b) {
     pushTemp(gc, b);
     pushTemp(gc, a);
 
@@ -297,7 +345,7 @@ ObjUnicodeString* concatenateUnicodeString(GC* gc, Value a, Value b) {
     popTemp(gc);
     popTemp(gc);
 
-    ObjUnicodeString* result = takeUnicodeString(gc, chars, length);
+    ObjString* result = takeString(gc, chars, length);
     return result;
 }
 
@@ -307,7 +355,7 @@ ObjUnicodeString* concatenateUnicodeString(GC* gc, Value a, Value b) {
  * @param string A string
  * @param index  An index
  */
-Value indexString(ObjUnicodeString* string, size_t index) {
+Value indexString(ObjString* string, size_t index) {
     assert(index < string->length || index > 0);
 
     uint32_t codePoint;
@@ -322,14 +370,14 @@ Value indexString(ObjUnicodeString* string, size_t index) {
 }
 
 /**
- * @brief Print an ObjUnicodeString to the console.
+ * @brief Print an ObjString to the console.
  * 
- * @param string A pointer to an ObjUnicodeString
+ * @param string A pointer to an ObjString
  * 
  * Decodes each character in the string object, including escape characters.
  * For printing the raw characters, use printf().
  */
-void printJMPLString(ObjUnicodeString* string) {
+void printJMPLString(ObjString* string) {
     // int length = string->length;
     // unsigned char* chars = string->utf8;
 

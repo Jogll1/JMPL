@@ -108,6 +108,19 @@ void freeString(GC* gc, ObjString* string) {
     FREE(gc, ObjString, string);
 }
 
+static void printCodePoints(StringKind kind, const void* codePoints, size_t length) {
+    printf("Output (%d): ", (int)length);
+    for (size_t i = 0; i < length; i++) {
+        switch (kind) {
+            case KIND_ASCII: 
+            case KIND_1_BYTE: printf("U+%04x ", ((UCS1*)codePoints)[i]); break;
+            case KIND_2_BYTE: printf("U+%04x ", ((UCS2*)codePoints)[i]); break;
+            case KIND_4_BYTE: printf("U+%06x ", ((UCS4*)codePoints)[i]); break;
+        }
+    }
+    printf("\n");
+}
+
 /**
  * @brief Get the kind of a UTF-8 character.
  * 
@@ -136,19 +149,6 @@ static StringKind getUtf8CharacterKind(const unsigned char leadingByte) {
         // U+100000 - U+10FFFF
         return KIND_4_BYTE;
     }
-}
-
-static void printCodePoints(StringKind kind, const void* codePoints, size_t length) {
-    printf("Output (%d): ", (int)length);
-    for (size_t i = 0; i < length; i++) {
-        switch (kind) {
-            case KIND_ASCII: 
-            case KIND_1_BYTE: printf("U+%04x ", ((UCS1*)codePoints)[i]); break;
-            case KIND_2_BYTE: printf("U+%04x ", ((UCS2*)codePoints)[i]); break;
-            case KIND_4_BYTE: printf("U+%06x ", ((UCS4*)codePoints)[i]); break;
-        }
-    }
-    printf("\n");
 }
 
 /**
@@ -373,35 +373,7 @@ Value indexString(ObjString* string, size_t index) {
  * @brief Print an ObjString to the console.
  * 
  * @param string A pointer to an ObjString
- * 
- * Decodes each character in the string object, including escape characters.
- * For printing the raw characters, use printf().
  */
 void printJMPLString(ObjString* string) {
-    // int length = string->length;
-    // unsigned char* chars = string->utf8;
-
-    // char* result = malloc(length + 1);
-    // if (result == NULL) {
-    //     fprintf(stderr, "Out of memory.\n");
-    //     exit(1);
-    // }
-    // int ri = 0;
-
-    // for (int i = 0; i < length; i++) {
-    //     // Add each string and decode escapes if necessary
-    //     if (chars[i] == '\\' && i + 1 < length) {
-    //         result[ri++] = decodeEscape(chars[i + 1]);
-    //         i++; // Skip the escaped character
-    //     } else {
-    //         result[ri++] = chars[i];
-    //     }
-    // }
-
-    // result[ri] = '\0';
-    
-    // printf("%s", result);
-    // free(result);
-
     printf("%s", string->utf8);
 }

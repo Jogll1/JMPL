@@ -85,7 +85,11 @@
 - New native functions
     - `type(x)`
     - `input()`
+- Character data type, created with single quotes (`''`)
+- Several new escape sequence types (`\u`, `\U`, `\x`, `\a`, `\b`, `\v`, `\f`, `\0`)
 ### Changed
 - Quantfiers now use a pipe (`|`) instead of a comma (`,`) to be consistent with set-builder and for-loop syntax
+- Indexing a string now returns a character
 ### Fixed
 - Multiple garabage collection errors
+- Strings have been refactored to store their character's Unicode code points as well as their UTF-8 bytes

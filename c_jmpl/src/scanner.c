@@ -319,7 +319,6 @@ static Token character(Scanner* scanner) {
         return errorToken(scanner, "Invalid syntax");
     }
     
-    printf("Yo dog\n");
     if (peek(scanner) != '\'' || isAtEnd(scanner)) return errorToken(scanner, "Invalid character");
 
     advance(scanner); // The closing quote

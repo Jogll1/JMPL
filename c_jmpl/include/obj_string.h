@@ -10,20 +10,6 @@ typedef uint16_t UCS2;
 typedef uint32_t UCS4;
 
 /**
- * The kind of a string is determined by the size of the largest code point.
- * KIND_ASCII  = 0, ASCII  - All characters U+0000 - U+007F
- * KIND_1_BYTE = 1, Latin1 - All characters U+0000 - U+00FF, at least one >= U+0080
- * KIND_2_BYTE = 2, BMP    - All characters U+0000 - U+FFFF, at least one >= U+0100
- * KIND_4_BYTE = 4  All    - All characters U+0000 - U+10FFFF, at least one >= U+10000
- */
-typedef enum {
-    KIND_ASCII  = 0,
-    KIND_1_BYTE = 1,
-    KIND_2_BYTE = 2,
-    KIND_4_BYTE = 4 
-} StringKind;
-
-/**
  * The type of an escape sequence.`
  * ESC_SIMPLE     = \a, \b, \e, \f, \n, \r, \t, \v, \\, \', \", \0
  * ESC_HEX        = \xhh (where hh is a byte in hex)
@@ -38,6 +24,20 @@ typedef enum {
     ESC_UNICODE_LG = 6,
     ESC_INVALID
 } EscapeType;
+
+/**
+ * The kind of a string is determined by the size of the largest code point.
+ * KIND_ASCII  = 0, ASCII  - All characters U+0000 - U+007F
+ * KIND_1_BYTE = 1, Latin1 - All characters U+0000 - U+00FF, at least one >= U+0080
+ * KIND_2_BYTE = 2, BMP    - All characters U+0000 - U+FFFF, at least one >= U+0100
+ * KIND_4_BYTE = 4  All    - All characters U+0000 - U+10FFFF, at least one >= U+10000
+ */
+typedef enum {
+    KIND_ASCII  = 0,
+    KIND_1_BYTE = 1,
+    KIND_2_BYTE = 2,
+    KIND_4_BYTE = 4 
+} StringKind;
 
 struct ObjString {
     Obj obj;

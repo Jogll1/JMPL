@@ -119,7 +119,7 @@ static StringKind getUtf8StringKind(const unsigned char* utf8, size_t utf8Length
             // 1 byte in UTF-8, 1 byte code point
             // U+0000 - U+007F
             kind = KIND_ASCII;
-            i++;
+            i += 1;
         } else if (leadingByte < 0xC4) {
             // 2 bytes in UTF-8, 1 byte code point
             // U+0080 - U+00FF
@@ -294,7 +294,8 @@ ObjString* concatenateString(GC* gc, ObjString* a, Value b) {
     utf8[utf8Length] = '\0'; // Null terminator
 
     // Create the code point array
-    StringKind kind = getUtf8StringKind(utf8, utf8Length);
+    StringKind bKind = getUtf8StringKind(bUtf8, bUtf8Length);
+    StringKind kind = bKind > a->kind ? bKind : a->kind;
     const void* heapCodePoints = NULL;
     size_t length = createCodePointArray(gc, kind, &heapCodePoints, utf8, utf8Length);
 

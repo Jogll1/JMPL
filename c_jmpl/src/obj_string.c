@@ -250,9 +250,11 @@ static ObjString* allocateString(GC* gc, StringKind kind, const void* codePoints
  */
 ObjString* copyString(GC* gc, const unsigned char* utf8, int utf8Length) {
     uint64_t hash = hashString(FNV_INIT_HASH, utf8, utf8Length);
-
-    ObjString* interned = tableFindString(&vm.strings, utf8, utf8Length, hash);
-    if (interned != NULL) return interned;
+    
+    ObjString* interned = tableFindString(gc, &vm.strings, utf8, utf8Length, hash);
+    if (interned != NULL) {
+        return interned;
+    }
 
     // Store the UTF-8 encoded string (null-terminated)
     unsigned char* heapUtf8 = ALLOCATE(gc, unsigned char, utf8Length + 1);

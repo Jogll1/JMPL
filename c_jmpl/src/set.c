@@ -19,7 +19,7 @@ static void initSet(ObjSet* set) {
     set->elements = NULL;
 }
 
-static void printDebugSet(GC* gc, ObjSet* set) {
+static void printDebugSet(ObjSet* set) {
     printf("\n==============\n");
     for (int i = 0; i < set->capacity; i++) {
         unsigned char* str = valueToString(set->elements[i]);

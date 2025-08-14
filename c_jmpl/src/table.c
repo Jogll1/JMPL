@@ -24,12 +24,25 @@ void freeTable(GC* gc, Table* table) {
     initTable(table);
 }
 
+static void printDebugTable(Table* table) {
+    printf("\n=================================\n");
+    for (int i = 0; i < table->capacity; i++) {
+        if (table->entries[i].key == NULL) {
+            printf("%d. NULL || NULL\n", i);
+        } else {
+            unsigned char* val = valueToString(table->entries[i].value);
+            printf("%d. %s - %p || %s\n", i, table->entries[i].key->utf8, table->entries[i].key, val);
+            free(val);
+        }
+    }
+    printf("\n=================================\n");
+}
+
 static Entry* findEntry(Entry* entries, int capacity, ObjString* key) {
     // Map the key's hash code to an index in the array
     uint64_t index = key->hash & (capacity - 1);
     Entry* tombstone = NULL;
-
-    for (int i = 0; i < capacity; i++) {
+    while (true) {
         Entry* entry = &entries[index];
 
         if (entry->key == NULL) {
@@ -45,21 +58,15 @@ static Entry* findEntry(Entry* entries, int capacity, ObjString* key) {
             return entry;
         }
 
-        if (entry->key == key || entry->key == NULL) {
-            return entry;
-        }
-
         // Collision, so start linear probing
         index = (index + 1) & (capacity - 1);
     }
-
-    return tombstone;
 }
 
 bool tableGet(Table* table, ObjString* key, Value* value) {
     if (table->count == 0) return false;
 
-    Entry* entry = findEntry (table->entries, table->capacity, key);
+    Entry* entry = findEntry(table->entries, table->capacity, key);
     if (entry->key == NULL) return false;
 
     *value = entry->value;
@@ -134,25 +141,25 @@ void tableAddAll(GC* gc, Table* from, Table* to) {
     }
 }
 
-ObjString* tableFindString(Table* table, const unsigned char* chars, int length, uint64_t hash) {
+ObjString* tableFindString(GC* gc, Table* table, const unsigned char* chars, int length, uint64_t hash) {
     if (table->count == 0) return NULL;
     uint64_t index = hash & (table->capacity - 1);
 
-    for (int i = 0; i < table->capacity; i++) {
+    while (true) {
         assert(index < table->capacity);
         Entry* entry = &table->entries[index];
 
         if (entry->key == NULL) {
             // Stop when an empty non-tombstone entry is found
-            if (IS_NULL(entry->value)) return NULL;
-        } else if (entry->key->length == length && entry->key->hash == hash && memcmp(entry->key->utf8, chars, length) == 0) {
+            if (IS_NULL(entry->value)) {
+                return NULL;
+            }
+        } else if (entry->key->utf8Length == length && entry->key->hash == hash && memcmp(entry->key->utf8, chars, length) == 0) {
             return entry->key;
         }
 
         index = (index + 1) & (table->capacity - 1);
     }
-
-    return NULL;
 }
 
 Entry* tableFindJoinedStrings(GC* gc, Table* table, const unsigned char* a, int aLen, const unsigned char* b, int bLen, uint64_t hash) {

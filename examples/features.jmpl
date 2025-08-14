@@ -52,6 +52,7 @@ println("{3 ... 10} subset T = " + ({3 ... 10} subset T))
 println("5 ∈ S = " + (5 ∈ S))
 println("5 in S = " + (5 in S))
 println("{5} ∈ S = " + ({5} ∈ S))
+println("{x^2 | x ∈ {1 ... 10}} = " + {x^2 | x ∈ {1 ... 10}})
 
 // Tuples
 println("\n--- Tuple ---")

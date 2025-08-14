@@ -1,17 +1,6 @@
-func map(S, f) = 
-    for x ∈ S do
-        S := S \ {x}
-        S := S ∪ {f(x)}
-    S
+func map(S, f) = {f(x) | x ∈ S}
 
-func map2(S, f) = {f(x) | x ∈ S}
-
-func filter(S, f) =
-    for x ∈ S | ¬f(x) do
-        S := S \ {x}
-    S
-
-func filter2(S, f) = {x ∈ S | ¬f(x)}
+func filter(S, f) = {x ∈ S | ¬f(x)}
 
 func fold(S, b, f) = 
     let temp = b;
@@ -23,4 +12,3 @@ func add(x, y) = x + y
 
 let S = {1 ... 10}
 println(fold(S, 0, add))
-

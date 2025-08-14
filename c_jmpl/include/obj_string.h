@@ -66,7 +66,7 @@ EscapeType getEscapeType(unsigned char esc);
 void freeString(GC* gc, ObjString* string);
 
 ObjString* copyString(GC* gc, const unsigned char* utf8, int utf8Length);
-ObjString* concatenateString(GC* gc, ObjString* a, Value b);
+ObjString* concatenateString(GC* gc, ObjString* a, Value b, bool aFirst);
 
 Value indexString(ObjString* string, size_t index);
 void printJMPLString(ObjString* string);

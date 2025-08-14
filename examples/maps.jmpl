@@ -1,10 +1,9 @@
 let Map = {(0, "a"), (2, "r"), (5, "c")}
 
 func get(M, k) =
-    let answer = null
-    for t ∈ M | t[0] = k do
-        answer := t[1]
-    answer
+    for t ∈ M | t[0] == k do
+        return t
+    null
 
 func add(M, k, v) = M ∪ {(k, v)}
 

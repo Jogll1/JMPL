@@ -19,7 +19,8 @@ typedef enum {
     TOKEN_INTERSECT, TOKEN_UNION,           // ∩ ∪
     TOKEN_SUBSET, TOKEN_SUBSETEQ,           // ⊂ ⊆
     TOKEN_FORALL, TOKEN_EXISTS,             // ∀ ∃
-    
+
+    TOKEN_EQUAL_EQUAL,                      // ==
     TOKEN_ASSIGN, TOKEN_ELLIPSIS,           // := ...
     TOKEN_NOT, TOKEN_NOT_EQUAL,             // ¬ ¬= (≠)
     TOKEN_GREATER, TOKEN_GREATER_EQUAL,     // > >= (≥)

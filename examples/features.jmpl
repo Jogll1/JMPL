@@ -79,7 +79,7 @@ println("p and q = " + (p and q))
 println("p ∨ q = " + (p ∨ q))
 println("p or q = " + (p or q))
 println("")
-println("p = q = " + (p = q))
+println("p = q = " + (p == q))
 println("S ≠ T = " + (S ≠ T))
 println("S /= T = " + (S /= T))
 println("1 < 4 = " + (1 < 4))
@@ -133,8 +133,8 @@ for x ∈ R do
 println("total = " + total)
 total := 1
 println("total = " + total)
-println("for x ∈ R | x mod 2 = 0 do\n    total := total * x")
-for x ∈ R | x mod 2 = 0 do 
+println("for x ∈ R | x mod 2 == 0 do\n    total := total * x")
+for x ∈ R | x mod 2 == 0 do 
     total := total * x
 println("total = " + total)
 

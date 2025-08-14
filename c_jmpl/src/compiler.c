@@ -605,7 +605,7 @@ static void binary(bool canAssign) {
 
     switch (operatorType) {
         case TOKEN_NOT_EQUAL:     emitByte(OP_NOT_EQUAL);      break;
-        case TOKEN_EQUAL:         emitByte(OP_EQUAL);          break;
+        case TOKEN_EQUAL_EQUAL:   emitByte(OP_EQUAL);          break;
         case TOKEN_GREATER:       emitByte(OP_GREATER);        break;
         case TOKEN_GREATER_EQUAL: emitByte(OP_GREATER_EQUAL);  break;
         case TOKEN_LESS:          emitByte(OP_LESS);           break;
@@ -1254,7 +1254,8 @@ ParseRule rules[] = {
     [TOKEN_SUBSETEQ]      = {NULL,       binary,    PREC_TERM},
     [TOKEN_FORALL]        = {quantAnon,  NULL,      PREC_EQUALITY},
     [TOKEN_EXISTS]        = {quantAnon,  NULL,      PREC_EQUALITY},
-    [TOKEN_EQUAL]         = {NULL,       binary,    PREC_EQUALITY},
+    [TOKEN_EQUAL]         = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_EQUAL_EQUAL]   = {NULL,       binary,    PREC_EQUALITY},
     [TOKEN_ASSIGN]        = {NULL,       NULL,      PREC_NONE},
     [TOKEN_NOT]           = {unary,      NULL,      PREC_UNARY},
     [TOKEN_NOT_EQUAL]     = {NULL,       binary,    PREC_EQUALITY},

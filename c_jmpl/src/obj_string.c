@@ -272,11 +272,12 @@ ObjString* copyString(GC* gc, const unsigned char* utf8, int utf8Length) {
 /**
  * @brief Concatenate strings a and b if either are a string.
  * 
- * @param a Value a
- * @param b Value b
+ * @param a      Value a
+ * @param b      Value b
+ * @param aFirst If true, concat a + b, else b + a
  * @return  A pointer to the concatenated string
  */
-ObjString* concatenateString(GC* gc, ObjString* a, Value b) {
+ObjString* concatenateString(GC* gc, ObjString* a, Value b, bool aFirst) {
     unsigned char* bUtf8 = valueToString(b);
     int bUtf8Length = strlen(bUtf8);
 
@@ -291,8 +292,14 @@ ObjString* concatenateString(GC* gc, ObjString* a, Value b) {
     int utf8Length = a->utf8Length + bUtf8Length;
     unsigned char* utf8 = ALLOCATE(gc, unsigned char, utf8Length + 1);
 
-    memcpy(utf8, a->utf8, a->utf8Length);
-    memcpy(utf8 + a->utf8Length, bUtf8, bUtf8Length);
+    if (aFirst) {
+        memcpy(utf8, a->utf8, a->utf8Length);
+        memcpy(utf8 + a->utf8Length, bUtf8, bUtf8Length);
+    } else {
+        memcpy(utf8, bUtf8, bUtf8Length);
+        memcpy(utf8 + bUtf8Length, a->utf8, a->utf8Length);
+    }
+
     utf8[utf8Length] = '\0'; // Null terminator
 
     // Create the code point array

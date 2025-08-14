@@ -1,5 +1,21 @@
 func fib(n) = if n < 2 then n else fib(n - 2) + fib(n - 1)
 
+let Fibs = {(0, 0), (1, 1)}
+
+func op_fib(n) =
+    for t ∈ Fibs | t[0] == n do
+        return t[1]
+
+    let answer = op_fib(n - 2) + op_fib(n - 1)
+    Fibs := Fibs ∪ {(n, answer)}
+    answer    
+
 let start = clock()
 println("Fib(34) = " + fib(34))
 println("Time: " + (clock() - start))
+
+start := clock()
+println("Fib(34) = " + op_fib(34))
+println("Time: " + (clock() - start))
+
+println(Fibs)

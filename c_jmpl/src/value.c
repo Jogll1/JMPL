@@ -10,6 +10,7 @@
 #include "tuple.h"
 #include "memory.h"
 #include "unicode.h"
+#include "hash.h"
 
 void initValueArray(ValueArray* array) {
     array->values = NULL;
@@ -96,47 +97,6 @@ static void printChar(uint32_t codePoint) {
     printf("%s", str);
 }
 
-uint32_t hashValue(Value value) {
-#ifdef NAN_BOXING
-    if (IS_BOOL(value)) {
-        return AS_BOOL(value) ? 0xAAAA : 0xBBBB;
-    } else if (IS_NULL(value)) {
-        return 0xCCCC;
-    } else if (IS_NUMBER(value)) {
-        uint64_t bits = AS_NUMBER(value);
-        return (uint32_t)(bits ^ (bits >> 32));
-    } else if (IS_CHAR(value)) {
-        return AS_CHAR(value);
-    } else if (IS_OBJ(value)) {
-        switch(AS_OBJ(value)->type) {
-            case OBJ_SET:   return hashSet(AS_SET(value));
-            case OBJ_TUPLE: return hashTuple(AS_TUPLE(value));
-            default:        return (uint32_t)((uintptr_t)AS_OBJ(value) >> 2);
-        }
-    } 
-    return 0;
-#else
-    switch(value.type) {
-        case VAL_BOOL: return AS_BOOL(value) ? 0xAAAA : 0xBBBB;
-        case VAL_NULL: return 0xCCCC;
-        case VAL_NUMBER: {
-            uint64_t bits = *(uint64_t*)&value.as.number;
-            return (uint32_t)(bits ^ (bits >> 32));
-        }
-        case VAL_CHAR: {
-            return *(uint32_t*)&value.as.character;
-        }
-        case VAL_OBJ:  
-            switch(AS_OBJ(value)->type) {
-                case OBJ_SET:   return hashSet(AS_SET(value));
-                case OBJ_TUPLE: return hashTuple(AS_TUPLE(value));
-                default:        return (uint32_t)((uintptr_t)AS_OBJ(value) >> 2);
-            }
-        default: return 0;
-    }
-#endif
-}
-
 /**
  * @brief Converts a value to an array of chars.
  * 
@@ -207,13 +167,13 @@ unsigned char* valueToString(Value value) {
         case VAL_NULL:
             return strdup(NULL_TO_STRING);
         case VAL_NUMBER:
-            unsigned char* str;
-            NUMBER_TO_STRING(AS_NUMBER(value), &str);
-            return str;
+            unsigned char* numStr;
+            NUMBER_TO_STRING(AS_NUMBER(value), &numStr);
+            return numStr;
         case VAL_CHAR:
-            unsigned char str[5];
-            charToString(AS_CHAR(value), str);
-            return strdup(str);
+            unsigned char charStr[5];
+            charToString(AS_CHAR(value), charStr);
+            return strdup(charStr);
         default: 
             break;
     }

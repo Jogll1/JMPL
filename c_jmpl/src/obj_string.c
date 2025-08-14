@@ -8,9 +8,7 @@
 #include "unicode.h"
 #include "gc.h"
 #include "vm.h"
-
-#define FNV_INIT_HASH 2166136261u
-#define FNV_PRIME     16777619
+#include "hash.h"
 
 // ===================================
 // ======== Escape Characters ========
@@ -78,24 +76,6 @@ EscapeType getEscapeType(unsigned char esc) {
 // ========      Strings      ========
 // ===================================
 
-/**
- * @brief Hashes a char array using the FNV-1a hashing algorithm.
- * 
- * @param key    The char array that makes up the string
- * @param length The length of the string
- * @return       A hashed form of the string
- */
-static uint32_t hashString(const unsigned char* key, int length) {
-    uint32_t hash = FNV_INIT_HASH;
-
-    for (int i = 0; i < length; i++) {
-        hash ^= (uint8_t)key[i];
-        hash *= FNV_PRIME;
-    }
-
-    return hash;
-}
-
 void freeString(GC* gc, ObjString* string) {
     FREE_ARRAY(gc, char, string->utf8, string->utf8Length + 1);
             
@@ -122,36 +102,6 @@ static void printCodePoints(StringKind kind, const void* codePoints, size_t leng
 }
 
 /**
- * @brief Get the kind of a UTF-8 character.
- * 
- * @param utf8       The leading byte of a UTF-8 character
- * @return           The kind of the character
- */
-static StringKind getUtf8CharacterKind(const unsigned char leadingByte) {
-    if (leadingByte < 0x80) {
-        // 1 byte in UTF-8, 1 byte code point
-        // U+0000 - U+007F
-        return KIND_ASCII;
-    } else if (leadingByte < 0xC4) {
-        // 2 bytes in UTF-8, 1 byte code point
-        // U+0080 - U+00FF
-        return KIND_1_BYTE;
-    } else if (leadingByte < 0xE0) {
-        // 2 bytes in UTF-8, 2 byte code point
-        // U+0100 - U+07FF
-        return KIND_2_BYTE;
-    } else if (leadingByte <= 0xEF) {
-        // 3 bytes in UTF-8, 2 byte code point
-        // U+0800 - U+FFFF
-        return KIND_2_BYTE;
-    } else {
-        // 4 bytes in UTF-8, 4 byte code point
-        // U+100000 - U+10FFFF
-        return KIND_4_BYTE;
-    }
-}
-
-/**
  * @brief Get the kind of a UTF-8 byte sequence.
  * 
  * @param utf8       A UTF-8 byte sequence (null-terminated)
@@ -163,16 +113,33 @@ static StringKind getUtf8StringKind(const unsigned char* utf8, size_t utf8Length
 
     size_t i = 0;
     while (i < utf8Length) {
-        size_t numBytes = getCharByteCount(utf8[i]);
-        StringKind charKind = getUtf8CharacterKind(utf8[i]);
+        unsigned char leadingByte = utf8[i];
 
-        if (charKind == KIND_4_BYTE){
+        if (leadingByte < 0x80) {
+            // 1 byte in UTF-8, 1 byte code point
+            // U+0000 - U+007F
+            kind = KIND_ASCII;
+            i++;
+        } else if (leadingByte < 0xC4) {
+            // 2 bytes in UTF-8, 1 byte code point
+            // U+0080 - U+00FF
+            kind = KIND_1_BYTE;
+            i += 2;
+        } else if (leadingByte < 0xE0) {
+            // 2 bytes in UTF-8, 2 byte code point
+            // U+0100 - U+07FF
+            kind = KIND_2_BYTE;
+            i += 2;
+        } else if (leadingByte <= 0xEF) {
+            // 3 bytes in UTF-8, 2 byte code point
+            // U+0800 - U+FFFF
+            kind = KIND_2_BYTE;
+            i += 3;
+        } else {
+            // 4 bytes in UTF-8, 4 byte code point
+            // U+100000 - U+10FFFF
             return KIND_4_BYTE;
-        } else if (charKind > kind) {
-            kind = charKind;
         }
-        
-        i += numBytes;
     }
     
     return kind;
@@ -246,7 +213,7 @@ static size_t createCodePointArray(GC* gc, StringKind kind, const void** output,
     return length;
 }
 
-static ObjString* allocateString(GC* gc, StringKind kind, const void* codePoints, size_t length, unsigned char* utf8, size_t utf8Length, uint32_t hash) {
+static ObjString* allocateString(GC* gc, StringKind kind, const void* codePoints, size_t length, unsigned char* utf8, size_t utf8Length, uint64_t hash) {
     assert(codePoints != NULL);
 
     ObjString* string = ALLOCATE_OBJ(gc, ObjString, OBJ_STRING);
@@ -282,10 +249,10 @@ static ObjString* allocateString(GC* gc, StringKind kind, const void* codePoints
  * Strings are interned and hashed by their UTF-8 sequence.
  */
 ObjString* copyString(GC* gc, const unsigned char* utf8, int utf8Length) {
-    uint32_t hash = hashString(utf8, utf8Length);
+    uint64_t hash = hashString(FNV_INIT_HASH, utf8, utf8Length);
 
     ObjString* interned = tableFindString(&vm.strings, utf8, utf8Length, hash);
-    if(interned != NULL) return interned;
+    if (interned != NULL) return interned;
 
     // Store the UTF-8 encoded string (null-terminated)
     unsigned char* heapUtf8 = ALLOCATE(gc, unsigned char, utf8Length + 1);
@@ -300,23 +267,6 @@ ObjString* copyString(GC* gc, const unsigned char* utf8, int utf8Length) {
     return allocateString(gc, kind, heapCodePoints, length, heapUtf8, utf8Length, hash);
 }
 
-static ObjString* takeString(GC* gc, unsigned char* utf8, int utf8Length) {
-    uint32_t hash = hashString(utf8, utf8Length);
-
-    ObjString* interned = tableFindString(&vm.strings, utf8, utf8Length, hash);
-    if(interned != NULL) {
-        FREE_ARRAY(gc, unsigned char, utf8, utf8Length + 1);
-        return interned;
-    }
-
-    // Create the code point array
-    StringKind kind = getUtf8StringKind(utf8, utf8Length);
-    const void* heapCodePoints = NULL;
-    size_t length = createCodePointArray(gc, kind, &heapCodePoints, utf8, utf8Length);
-
-    return allocateString(gc, kind, heapCodePoints, length, utf8, utf8Length, hash);
-}
-
 /**
  * @brief Concatenate strings a and b if either are a string.
  * 
@@ -324,29 +274,32 @@ static ObjString* takeString(GC* gc, unsigned char* utf8, int utf8Length) {
  * @param b Value b
  * @return  A pointer to the concatenated string
  */
-ObjString* concatenateString(GC* gc, Value a, Value b) {
-    pushTemp(gc, b);
-    pushTemp(gc, a);
+ObjString* concatenateString(GC* gc, ObjString* a, Value b) {
+    unsigned char* bUtf8 = valueToString(b);
+    int bUtf8Length = strlen(bUtf8);
 
-    unsigned char* aStr = valueToString(a);
-    unsigned char* bStr = valueToString(b);
-    int aLen = strlen(aStr);
-    int bLen = strlen(bStr);
+    uint64_t hash = hashString(a->hash, bUtf8, bUtf8Length);
+    Entry* entry = tableFindJoinedStrings(gc, &vm.strings, a->utf8, a->utf8Length, bUtf8, bUtf8Length, hash);
+    if (entry->key != NULL) {
+        free(bUtf8);
+        return entry->key;
+    }
 
-    int length = aLen + bLen;
-    unsigned char* chars = ALLOCATE(gc, unsigned char, length + 1);
+    // Concat utf8
+    int utf8Length = a->utf8Length + bUtf8Length;
+    unsigned char* utf8 = ALLOCATE(gc, unsigned char, utf8Length + 1);
 
-    memcpy(chars, aStr, aLen);
-    memcpy(chars + aLen, bStr, bLen);
-    chars[length] = '\0'; // Null terminator
+    memcpy(utf8, a->utf8, a->utf8Length);
+    memcpy(utf8 + a->utf8Length, bUtf8, bUtf8Length);
+    utf8[utf8Length] = '\0'; // Null terminator
 
-    free(aStr);
-    free(bStr);
-    popTemp(gc);
-    popTemp(gc);
+    // Create the code point array
+    StringKind kind = getUtf8StringKind(utf8, utf8Length);
+    const void* heapCodePoints = NULL;
+    size_t length = createCodePointArray(gc, kind, &heapCodePoints, utf8, utf8Length);
 
-    ObjString* result = takeString(gc, chars, length);
-    return result;
+    free(bUtf8);
+    return allocateString(gc, kind, heapCodePoints, length, utf8, utf8Length, hash);
 }
 
 /**

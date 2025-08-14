@@ -109,22 +109,3 @@ ObjTuple* concatenateTuple(GC* gc, ObjTuple* a, ObjTuple* b) {
     
     return tuple;
 }
-
-/**
- * @brief Hashes a tuple using the FNV-1a hashing algorithm.
- * 
- * @param tuple The tuple to hash
- * @return      A hashed form of the tuple
- */
-uint32_t hashTuple(ObjTuple* tuple) {
-    uint32_t hash = 2166136261u;
-
-    for (int i = 0; i < tuple->size; i++) {
-        Value value = tuple->elements[i];
-
-        uint32_t elemHash = hashValue(value);
-
-        hash ^= elemHash;
-        hash *= 16777619;
-    }
-}

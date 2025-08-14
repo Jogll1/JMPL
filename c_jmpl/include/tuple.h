@@ -16,6 +16,5 @@ ObjTuple* newTuple(GC* gc, int size);
 bool tuplesEqual(ObjTuple* a, ObjTuple* b);
 unsigned char* tupleToString(ObjTuple* tuple);
 ObjTuple* concatenateTuple(GC* gc, ObjTuple* a, ObjTuple* b);
-uint32_t hashTuple(ObjTuple* tuple);
 
 #endif

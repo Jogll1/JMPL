@@ -7,6 +7,7 @@
 #include "object.h"
 #include "debug.h"
 #include "gc.h"
+#include "hash.h"
 #include "../lib/c-stringbuilder/sb.h"
 
 #define SET_MAX_LOAD 0.75
@@ -221,26 +222,6 @@ Value getArb(ObjSet* set) {
     }
     
     return NULL_VAL;
-}
-
-/**
- * @brief Hashes a set using the FNV-1a hashing algorithm.
- * 
- * @param set The set to hash
- * @return    A hashed form of the set
- */
-uint32_t hashSet(ObjSet* set) {
-    uint32_t hash = 2166136261u;
-
-    for (int i = 0; i < set->capacity; i++) {
-        Value element = set->elements[i];
-        if (!IS_NULL(element)) {
-            uint32_t elemHash = hashValue(element);
-
-            hash ^= elemHash;
-            hash *= 16777619;
-        }
-    }
 }
 
 /**

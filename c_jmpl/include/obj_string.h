@@ -44,7 +44,7 @@ struct ObjString {
 
     StringKind kind;
     size_t length; // No. code points (characters)
-    uint32_t hash;
+    uint64_t hash;
 
     union {
         UCS1* ucs1;
@@ -66,7 +66,7 @@ EscapeType getEscapeType(unsigned char esc);
 void freeString(GC* gc, ObjString* string);
 
 ObjString* copyString(GC* gc, const unsigned char* utf8, int utf8Length);
-ObjString* concatenateString(GC* gc, Value a, Value b);
+ObjString* concatenateString(GC* gc, ObjString* a, Value b);
 
 Value indexString(ObjString* string, size_t index);
 void printJMPLString(ObjString* string);

@@ -141,7 +141,6 @@ void freeValueArray(GC* gc, ValueArray* array);
 int findInValueArray(ValueArray* array, Value value);
 
 bool valuesEqual(Value a, Value b);
-uint32_t hashValue(Value value);
 unsigned char* valueToString(Value value);
 void printValue(Value value, bool simple);
 

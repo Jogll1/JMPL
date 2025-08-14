@@ -92,4 +92,4 @@
 - Indexing a string now returns a character
 ### Fixed
 - Multiple garabage collection errors
-- Strings have been refactored to store their character's Unicode code points as well as their UTF-8 bytes
+- Strings have been refactored to store character Unicode code points as well as UTF-8 bytes

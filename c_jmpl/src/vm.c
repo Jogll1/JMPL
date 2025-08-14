@@ -569,7 +569,10 @@ static InterpretResult run() {
                     // Concatenate if at least one operand is a string
                     Value b = pop();
                     Value a = pop();
-                    push(OBJ_VAL(concatenateString(&vm.gc, a, b)));
+
+                    ObjString* str = IS_STRING(a) ? AS_STRING(a) : AS_STRING(b);
+                    Value other = IS_STRING(a) ? b : a;
+                    push(OBJ_VAL(concatenateString(&vm.gc, str, other)));
                 } else if (IS_TUPLE(peek(0)) && IS_TUPLE(peek(1))) {
                     ObjTuple* b = AS_TUPLE(pop());
                     ObjTuple* a = AS_TUPLE(pop());

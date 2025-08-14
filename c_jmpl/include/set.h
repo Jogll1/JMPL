@@ -46,7 +46,6 @@ bool isProperSubset(ObjSet* a, ObjSet* b);
 
 Value getArb(ObjSet* set);
 
-uint32_t hashSet(ObjSet* set);
 unsigned char* setToString(ObjSet* set);
 
 // --- ObjSetIterator ---

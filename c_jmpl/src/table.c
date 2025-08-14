@@ -26,10 +26,10 @@ void freeTable(GC* gc, Table* table) {
 
 static Entry* findEntry(Entry* entries, int capacity, ObjString* key) {
     // Map the key's hash code to an index in the array
-    uint32_t index = key->hash & (capacity - 1);
+    uint64_t index = key->hash & (capacity - 1);
     Entry* tombstone = NULL;
 
-    while (true) {
+    for (int i = 0; i < capacity; i++) {
         Entry* entry = &entries[index];
 
         if (entry->key == NULL) {
@@ -52,6 +52,8 @@ static Entry* findEntry(Entry* entries, int capacity, ObjString* key) {
         // Collision, so start linear probing
         index = (index + 1) & (capacity - 1);
     }
+
+    return tombstone;
 }
 
 bool tableGet(Table* table, ObjString* key, Value* value) {
@@ -132,11 +134,11 @@ void tableAddAll(GC* gc, Table* from, Table* to) {
     }
 }
 
-ObjString* tableFindString(Table* table, const unsigned char* chars, int length, uint32_t hash) {
+ObjString* tableFindString(Table* table, const unsigned char* chars, int length, uint64_t hash) {
     if (table->count == 0) return NULL;
-    uint32_t index = hash & (table->capacity - 1);
+    uint64_t index = hash & (table->capacity - 1);
 
-    while (true) {
+    for (int i = 0; i < table->capacity; i++) {
         assert(index < table->capacity);
         Entry* entry = &table->entries[index];
 
@@ -149,6 +151,47 @@ ObjString* tableFindString(Table* table, const unsigned char* chars, int length,
 
         index = (index + 1) & (table->capacity - 1);
     }
+
+    return NULL;
+}
+
+Entry* tableFindJoinedStrings(GC* gc, Table* table, const unsigned char* a, int aLen, const unsigned char* b, int bLen, uint64_t hash) {
+    if (table->count + 1 > table->capacity * TABLE_MAX_LOAD) {
+        int capacity = GROW_CAPACITY(table->capacity);
+        adjustCapacity(gc, table, capacity);
+    }
+
+    int length = aLen + bLen;
+    uint64_t index = hash & (table->capacity - 1);
+    Entry* tombstone = NULL;
+
+    // Find the concatenation of two strings
+    for (int i = 0; i < table->capacity; i++) {
+        Entry* entry = &table->entries[index];
+
+        if (entry->key == NULL) {
+            if (IS_NULL(entry->value)) {
+                // Empty entry
+                return tombstone != NULL ? tombstone : entry;
+            } else {
+                // Found a tombstone
+                if (tombstone == NULL) tombstone = entry;
+            }
+        } else {
+            ObjString* key = entry->key;
+            if (key->hash == hash && key->length == length) {
+                const unsigned char* keyUtf8 = key->utf8;
+                if (!memcmp(keyUtf8, a, aLen) && !memcmp(keyUtf8 + aLen, b, bLen)) {
+                    return entry;
+                }
+            }
+        }
+
+        // Collision, so start linear probing
+        index = (index + 1) & (table->capacity - 1);
+    }
+    
+    return tombstone;
 }
 
 void tableRemoveWhite(Table* table) {
@@ -192,7 +235,7 @@ void tableDebugStats(Table* table) {
         }
 
         // How far is the entry from its ideal spot
-        uint32_t ideal = entry->key->hash % table->capacity;
+        uint64_t ideal = entry->key->hash % table->capacity;
         int dist = (i + table->capacity - ideal) % table->capacity;
         if (dist > longestProbe) longestProbe = dist;
     }

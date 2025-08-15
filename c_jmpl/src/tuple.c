@@ -92,18 +92,19 @@ ObjTuple* concatenateTuple(GC* gc, ObjTuple* a, ObjTuple* b) {
     pushTemp(gc, OBJ_VAL(b));
 
     ObjTuple* tuple = ALLOCATE_OBJ(gc, ObjTuple, OBJ_TUPLE);
-    int size = a->size + b->size;
-    tuple->size = size;
-    tuple->elements = ALLOCATE(gc, Value, size); 
+    pushTemp(gc, OBJ_VAL(tuple));
+    tuple->size = 0;
+    tuple->elements = NULL;
     
-    for (int i = 0; i < a->size; i++) {
-        tuple->elements[i] = a->elements[i];
-    }
+    size_t size =  a->size + b->size;
+    Value* elements = ALLOCATE(gc, Value, size);
+    memcpy(elements, a->elements, a->size * sizeof(Value));
+    memcpy(elements + a->size, b->elements, b->size * sizeof(Value));
 
-    for (int i = 0; i < b->size; i++) {
-        tuple->elements[i + a->size] = b->elements[i];
-    }
+    tuple->elements = elements;
+    tuple->size = size;
 
+    popTemp(gc);
     popTemp(gc);
     popTemp(gc);
     

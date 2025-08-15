@@ -187,7 +187,7 @@ Entry* tableFindJoinedStrings(GC* gc, Table* table, const unsigned char* a, int 
             }
         } else {
             ObjString* key = entry->key;
-            if (key->hash == hash && key->length == length) {
+            if (key->hash == hash && key->utf8Length == length) {
                 const unsigned char* keyUtf8 = key->utf8;
                 if (!memcmp(keyUtf8, a, aLen) && !memcmp(keyUtf8 + aLen, b, bLen)) {
                     return entry;

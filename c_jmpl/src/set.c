@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include <stdlib.h>
+#include <time.h>
 
 #include "set.h"
 #include "memory.h"
@@ -31,7 +33,7 @@ static void printDebugSet(ObjSet* set) {
 
 static Value* findElement(Value* elements, int capacity, Value value) {
     // Map the key's hash code to an index in the array
-    uint32_t index = hashValue(value) & (capacity - 1);
+    hash_t index = hashValue(value) & (capacity - 1);
     
     while (true) {
         Value* element = &elements[index];
@@ -48,13 +50,13 @@ static Value* findElement(Value* elements, int capacity, Value value) {
 static void adjustCapacity(GC* gc, ObjSet* set, int capacity) {
     Value* elements = ALLOCATE(gc, Value, capacity);
     // Initialise every element to be null
-    for(int i = 0; i < capacity; i++) {
+    for (int i = 0; i < capacity; i++) {
         elements[i] = NULL_VAL;
     }
 
     // Insert entries into array
     set->count = 0;
-    for(int i = 0; i < set->capacity; i++) {
+    for (int i = 0; i < set->capacity; i++) {
         Value element = set->elements[i];
         if(IS_NULL(element)) continue;
 
@@ -214,14 +216,18 @@ bool isProperSubset(ObjSet* a, ObjSet* b) {
 }
 
 Value getArb(ObjSet* set) {
-    for (int i = 0; i < set->capacity; i++) {
+    if (set->capacity == 0) return NULL_VAL;
+
+    int randIndex = rand() % set->capacity;
+
+    for (int i = randIndex; i < set->capacity; i++) {
         Value val = set->elements[i];
         if (IS_NULL(val)) continue;
 
         return val;
     }
     
-    return NULL_VAL;
+    return getArb(set); // Repeat until one is found
 }
 
 /**

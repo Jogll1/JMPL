@@ -2,6 +2,7 @@
 #define c_jmpl_string_h
 
 #include "object.h"
+#include "hash.h"
 
 typedef struct GC GC;
 
@@ -44,7 +45,7 @@ struct ObjString {
 
     StringKind kind;
     size_t length; // No. code points (characters)
-    uint64_t hash;
+    hash_t hash;
 
     union {
         UCS1* ucs1;
@@ -66,7 +67,7 @@ EscapeType getEscapeType(unsigned char esc);
 void freeString(GC* gc, ObjString* string);
 
 ObjString* copyString(GC* gc, const unsigned char* utf8, int utf8Length);
-ObjString* concatenateString(GC* gc, ObjString* a, Value b, bool aFirst);
+ObjString* concatenateStringsHelper(GC* gc, Value a, Value b);
 
 Value indexString(ObjString* string, size_t index);
 void printJMPLString(ObjString* string);

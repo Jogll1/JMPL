@@ -993,24 +993,6 @@ static void or_(bool canAssign) {
     patchJump(endJump);
 }
 
-static void compileString(unsigned char* start, size_t length) {
-    // If a backslash is next
-    // if (peek(scanner) == '\\') {
-    //     unsigned char c = peek(scanner);
-    //     if (0 <= c && c <= 8) {
-    //         // Octal
-    //     } else if (c == 'x') {
-    //         // Hex
-    //     } else if (c == 'u') {
-    //         // Unicode < 10000
-    //     } else if (c == 'U') {
-    //         // Unicode >= 10000
-    //     } else {
-    //         // Simple
-    //     }
-    // }
-}
-
 /**
  * @brief Convert escape sequences into escape characters in a string of UTF-8 bytes.
  * 

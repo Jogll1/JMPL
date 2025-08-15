@@ -213,7 +213,7 @@ static size_t createCodePointArray(GC* gc, StringKind kind, const void** output,
     return length;
 }
 
-static ObjString* allocateString(GC* gc, StringKind kind, const void* codePoints, size_t length, unsigned char* utf8, size_t utf8Length, uint64_t hash) {
+static ObjString* allocateString(GC* gc, StringKind kind, const void* codePoints, size_t length, unsigned char* utf8, size_t utf8Length, hash_t hash) {
     assert(codePoints != NULL);
 
     ObjString* string = ALLOCATE_OBJ(gc, ObjString, OBJ_STRING);
@@ -249,7 +249,7 @@ static ObjString* allocateString(GC* gc, StringKind kind, const void* codePoints
  * Strings are interned and hashed by their UTF-8 sequence.
  */
 ObjString* copyString(GC* gc, const unsigned char* utf8, int utf8Length) {
-    uint64_t hash = hashString(FNV_INIT_HASH, utf8, utf8Length);
+    hash_t hash = hashString(FNV_INIT_HASH, utf8, utf8Length);
     
     ObjString* interned = tableFindString(gc, &vm.strings, utf8, utf8Length, hash);
     if (interned != NULL) {
@@ -270,18 +270,48 @@ ObjString* copyString(GC* gc, const unsigned char* utf8, int utf8Length) {
 }
 
 /**
- * @brief Concatenate strings a and b if either are a string.
+ * @brief Concatenates two strings.
  * 
- * @param a      Value a
- * @param b      Value b
- * @param aFirst If true, concat a + b, else b + a
- * @return  A pointer to the concatenated string
+ * @param a      A string
+ * @param b      A string
+ * @return       A pointer to the concatenated string
  */
-ObjString* concatenateString(GC* gc, ObjString* a, Value b, bool aFirst) {
+static ObjString* concatenateStrings(GC* gc, ObjString* a, ObjString* b) {
+    hash_t hash = hashString(a->hash, b->utf8, b->utf8Length);
+    Entry* entry = tableFindJoinedStrings(gc, &vm.strings, a->utf8, a->utf8Length, b->utf8, b->utf8Length, hash);
+    if (entry->key != NULL) {
+        return entry->key;
+    }
+
+    // Concat utf8
+    int utf8Length = a->utf8Length + b->utf8Length;
+    unsigned char* utf8 = ALLOCATE(gc, unsigned char, utf8Length + 1);
+
+    memcpy(utf8, a->utf8, a->utf8Length);
+    memcpy(utf8 + a->utf8Length, b->utf8,  b->utf8Length);
+    utf8[utf8Length] = '\0'; // Null terminator
+
+    // Create the code point array
+    StringKind kind = b->kind > a->kind ? b->kind : a->kind;
+    const void* heapCodePoints = NULL;
+    size_t length = createCodePointArray(gc, kind, &heapCodePoints, utf8, utf8Length);
+
+    return allocateString(gc, kind, heapCodePoints, length, utf8, utf8Length, hash);
+}
+
+/**
+ * @brief Concatenate a string and a value.
+ * 
+ * @param a      A string
+ * @param b      A value
+ * @param aFirst If true, concat a + b, else b + a
+ * @return       A pointer to the concatenated string
+ */
+static ObjString* concatenateStringAndValue(GC* gc, ObjString* a, Value b, bool aFirst) {
     unsigned char* bUtf8 = valueToString(b);
     int bUtf8Length = strlen(bUtf8);
 
-    uint64_t hash = hashString(a->hash, bUtf8, bUtf8Length);
+    hash_t hash = hashString(a->hash, bUtf8, bUtf8Length);
     Entry* entry = tableFindJoinedStrings(gc, &vm.strings, a->utf8, a->utf8Length, bUtf8, bUtf8Length, hash);
     if (entry->key != NULL) {
         free(bUtf8);
@@ -310,6 +340,26 @@ ObjString* concatenateString(GC* gc, ObjString* a, Value b, bool aFirst) {
 
     free(bUtf8);
     return allocateString(gc, kind, heapCodePoints, length, utf8, utf8Length, hash);
+}
+
+/**
+ * @brief Concatenate strings a and b if either are a string.
+ * 
+ * @param a      Value a
+ * @param b      Value b
+ * @param aFirst If true, concat a + b, else b + a
+ * @return       A pointer to the concatenated string
+ */
+ObjString* concatenateStringsHelper(GC* gc, Value a, Value b) {
+    assert(IS_STRING(a) || IS_STRING(b));
+
+    if (IS_STRING(a) && IS_STRING(b)) {
+        return concatenateStrings(&vm.gc, AS_STRING(a), AS_STRING(b));
+    } else if (IS_STRING(a)) {
+        return concatenateStringAndValue(&vm.gc, AS_STRING(a), b, true);
+    } else {
+        return concatenateStringAndValue(&vm.gc, AS_STRING(b), a, false);
+    }
 }
 
 /**

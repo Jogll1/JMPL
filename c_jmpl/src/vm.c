@@ -570,11 +570,7 @@ static InterpretResult run() {
                     Value b = pop();
                     Value a = pop();
 
-                    if (IS_STRING(a)) {
-                        push(OBJ_VAL(concatenateString(&vm.gc, AS_STRING(a), b, true)));
-                    } else {
-                        push(OBJ_VAL(concatenateString(&vm.gc, AS_STRING(b), a, false)));
-                    }
+                    push(OBJ_VAL(concatenateStringsHelper(&vm.gc, a, b)));
                 } else if (IS_TUPLE(peek(0)) && IS_TUPLE(peek(1))) {
                     ObjTuple* b = AS_TUPLE(pop());
                     ObjTuple* a = AS_TUPLE(pop());

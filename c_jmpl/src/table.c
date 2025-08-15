@@ -9,6 +9,7 @@
 #include "obj_string.h"
 #include "value.h"
 #include "gc.h"
+#include "hash.h"
 
 // NOTE: should be fine-tuned once table implemented and tested
 #define TABLE_MAX_LOAD 0.75
@@ -141,7 +142,7 @@ void tableAddAll(GC* gc, Table* from, Table* to) {
     }
 }
 
-ObjString* tableFindString(GC* gc, Table* table, const unsigned char* chars, int length, uint64_t hash) {
+ObjString* tableFindString(GC* gc, Table* table, const unsigned char* chars, int length, hash_t hash) {
     if (table->count == 0) return NULL;
     uint64_t index = hash & (table->capacity - 1);
 
@@ -162,7 +163,7 @@ ObjString* tableFindString(GC* gc, Table* table, const unsigned char* chars, int
     }
 }
 
-Entry* tableFindJoinedStrings(GC* gc, Table* table, const unsigned char* a, int aLen, const unsigned char* b, int bLen, uint64_t hash) {
+Entry* tableFindJoinedStrings(GC* gc, Table* table, const unsigned char* a, int aLen, const unsigned char* b, int bLen, hash_t hash) {
     if (table->count + 1 > table->capacity * TABLE_MAX_LOAD) {
         int capacity = GROW_CAPACITY(table->capacity);
         adjustCapacity(gc, table, capacity);

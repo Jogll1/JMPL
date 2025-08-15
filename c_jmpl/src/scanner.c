@@ -433,6 +433,7 @@ Token scanToken(Scanner* scanner) {
         } else {
             // Re-skip whitespace if in a grouping
             skipWhitespace(scanner);
+            scanner->start = scanner->current;
         }
     }
 

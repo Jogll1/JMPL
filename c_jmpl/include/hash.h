@@ -8,10 +8,12 @@
 
 // #define FNV_INIT_HASH 2166136261u
 // #define FNV_PRIME     16777619
-#define FNV_INIT_HASH 0xCBF29CE484222325
-#define FNV_PRIME     0x00000100000001B3
+#define FNV_INIT_HASH ((hash_t)0xCBF29CE484222325ULL)
+#define FNV_PRIME     ((hash_t)0x00000100000001B3ULL)
 
-uint64_t hashString(uint64_t hash, const unsigned char* key, int length);
-uint64_t hashValue(Value value);
+typedef uint64_t hash_t;
+
+hash_t hashString(hash_t hash, const unsigned char* key, int length);
+hash_t hashValue(Value value);
 
 #endif

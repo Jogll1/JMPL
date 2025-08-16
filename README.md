@@ -31,7 +31,6 @@ Running the interpreter with no source file will start the in-terminal REPL.
 ## Third-Party Code
 List of libraries used in this project:
 - <a href="https://github.com/cavaliercoder/c-stringbuilder">c-stringbuilder<a> by cavaliercodernk
-- <a href="https://github.com/Cyan4973/xxHash">xxHash<a> by Cyan4973
 
 ## Credits
 Implementation of the v0.1.0 interpreter was based off the book Crafting Interpreters by Bob Nystrom. 

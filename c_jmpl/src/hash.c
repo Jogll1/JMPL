@@ -6,7 +6,6 @@
 #include "obj_string.h"
 #include "set.h"
 #include "tuple.h"
-#include "../lib/xxhash/xxhash.h"
 
 #define TRUE_HASH  0xAAAA
 #define FALSE_HASH 0xBBBB
@@ -23,7 +22,7 @@ static hash_t hashAvalanche(hash_t hash) {
 }
 
 /**
- * @brief Hashes a char array using the FNV-1a hashing algorithm.
+ * @brief Hashes a char array using xxHash-64.
  * 
  * @param hash   An initial hash
  * @param key    The char array that makes up the string
@@ -31,14 +30,14 @@ static hash_t hashAvalanche(hash_t hash) {
  * @return       A hashed form of the string
  */
 hash_t hashString(hash_t hash, const unsigned char* key, int length) {
-    // for (int i = 0; i < length; i++) {
-    //     hash ^= key[i];
-    //     hash *= FNV_PRIME;
-    // }
+    for (int i = 0; i < length; i++) {
+        hash ^= key[i];
+        hash *= FNV_PRIME;
+    }
 
-    // return hashAvalanche(hash);
+    return hashAvalanche(hash);
 
-    return (hash_t)XXH64(key, length, hash);
+    // return (hash_t)XXH64(key, length, hash);
 }
 
 /**
@@ -59,6 +58,8 @@ static hash_t hashSet(ObjSet* set) {
             hash *= FNV_PRIME;
         }
     }
+
+    return hash;
 }
 
 
@@ -79,6 +80,8 @@ static hash_t hashTuple(ObjTuple* tuple) {
         hash ^= elemHash;
         hash *= FNV_PRIME;
     }
+
+    return hash;
 }
 
 static hash_t hashObject(Obj* obj) {

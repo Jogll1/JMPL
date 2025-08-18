@@ -8,9 +8,9 @@
  */
 typedef struct ObjSet {
     Obj obj;
+    Value* elements;
     int count;
     int capacity;
-    Value* elements;
 } ObjSet;
 
 /**
@@ -21,13 +21,6 @@ typedef struct {
     ObjSet* set;      // Set to iterate through
     int currentIndex; // Index of the current set value
 } ObjSetIterator;
-
-typedef struct {
-    int start;
-    int end;
-    int current;
-    int step;
-} RangeSet;
 
 // --- ObjSet ---
 ObjSet* newSet(GC* gc);

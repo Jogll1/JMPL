@@ -31,7 +31,7 @@ static void printDebugSet(ObjSet* set) {
     printf("==============\n");
 }
 
-static Value* findElement(Value* elements, int capacity, Value value) {
+static Value* findElement(Value* elements, size_t capacity, Value value) {
     // Map the key's hash code to an index in the array
     hash_t index = hashValue(value) & (capacity - 1);
     
@@ -47,7 +47,7 @@ static Value* findElement(Value* elements, int capacity, Value value) {
     }
 }
 
-static void adjustCapacity(GC* gc, ObjSet* set, int capacity) {
+static void adjustCapacity(GC* gc, ObjSet* set, size_t capacity) {
     Value* elements = ALLOCATE(gc, Value, capacity);
     // Initialise every element to be null
     for (int i = 0; i < capacity; i++) {
@@ -87,7 +87,7 @@ bool setInsert(GC* gc, ObjSet* set, Value value) {
     pushTemp(gc, OBJ_VAL(set));
 
     if(set->count + 1 > set->capacity * SET_MAX_LOAD) {
-        int capacity = GROW_CAPACITY(set->capacity);
+        size_t capacity = GROW_CAPACITY(set->capacity);
         adjustCapacity(gc, set, capacity);
     }
 
@@ -156,12 +156,22 @@ ObjSet* setUnion(GC* gc, ObjSet* a, ObjSet* b) {
     ObjSet* result = newSet(gc);
     pushTemp(gc, OBJ_VAL(result));
 
-    for (int i = 0; i < a->capacity; i++) {
-        Value valA = a->elements[i];
-        if (IS_NULL(valA)) continue;
-        setInsert(gc, result, valA);
+    // Duplicate larger set
+    if (a->count < b->count) {
+        ObjSet* temp = a;
+        a = b;
+        b = temp;
     }
 
+    // Mem copy a
+    Value* elements = ALLOCATE(gc, Value, a->capacity);
+    memcpy(elements, a->elements, a->capacity * sizeof(Value));
+
+    result->elements = elements;
+    result->capacity = a->capacity;
+    result->count = a->count;
+
+    // Add in b
     for (int i = 0; i < b->capacity; i++) {
         Value valB = b->elements[i];
         if (IS_NULL(valB)) continue;

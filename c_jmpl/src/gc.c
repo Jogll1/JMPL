@@ -37,5 +37,5 @@ void pushTemp(GC* gc, Value value) {
 
 Value popTemp(GC* gc) {
     assert(gc->tempCount > 0);
-    return gc->tempStack[gc->tempCount--];
+    return gc->tempStack[--gc->tempCount];
 }

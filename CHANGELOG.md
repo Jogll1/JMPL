@@ -68,7 +68,7 @@
 - Tuples can be concatenated
 - A 1-tuple can be created using `(x,)`
 ### Changed
-- `==` (equality operation) to be `=`
+- Changed `==` (equality operation) to be `=`
 - Removed `out` keyword and replaced it with the functions `print(x)` and `println(x)`
 ### Fixed
 - Bugs relating to upvalues and closures
@@ -86,10 +86,15 @@
     - `type(x)`
     - `input()`
 - Character data type, created with single quotes (`''`)
-- Several new escape sequence types (`\u`, `\U`, `\x`, `\a`, `\b`, `\v`, `\f`, `\0`)
+- Several new escape sequence types (with 'H' meaning a hex character): `\uHHHH`, `\UHHHHHH`, `\xHH`, `\a`, `\b`, `\v`, `\f`, `\0`
 ### Changed
 - Quantfiers now use a pipe (`|`) instead of a comma (`,`) to be consistent with set-builder and for-loop syntax
+- Reversed `=` (equality operation) to be `==`
 - Indexing a string now returns a character
+- Made the `arb` keyword return a random member of a set
+- Optimisations for strings and sets
 ### Fixed
-- Multiple garabage collection errors
+- Fixed multiple garabage collection errors
 - Strings have been refactored to store character Unicode code points as well as UTF-8 bytes
+    - Now Unicode strings can be indexed and sized correctly
+- Tuples concatenating no longer causes a memory leak

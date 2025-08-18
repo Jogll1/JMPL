@@ -9,8 +9,8 @@
 typedef struct ObjSet {
     Obj obj;
     Value* elements;
-    int count;
-    int capacity;
+    size_t count;
+    size_t capacity;
 } ObjSet;
 
 /**

@@ -38,4 +38,7 @@ Implementation of the v0.1.0 interpreter was based off the book Crafting Interpr
 Code optimisations and GC fix inspired by <a href="https://github.com/tung/clox">tung's clox</a>.
 
 ## See Also
+Check out my <a href="https://marketplace.visualstudio.com/items?itemName=jogll1.vscode-jmpl">JMPL VS Code Extension</a> for syntax highlighting, code formatting, 
+and code snippets.
+
 Check out my <a href="https://jogll1.github.io/blog.html">blog</a> for updates and news about JMPL.

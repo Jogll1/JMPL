@@ -80,7 +80,7 @@
 - Fixed garbage collector collecting sets while they are being created
 - Optimised Value code with NaN boxing
 
-## [v0.2.2] - 06/08/2025
+## [v0.2.2] - 18/08/2025
 ### Added
 - New native functions
     - `type(x)`

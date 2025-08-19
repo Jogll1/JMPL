@@ -88,6 +88,7 @@
 - Character data type, created with single quotes (`''`)
 - Several new escape sequence types (with 'H' meaning a hex character): `\uHHHH`, `\UHHHHHH`, `\xHH`, `\a`, `\b`, `\v`, `\f`, `\0`
 ### Changed
+- Any syntax that uses generators (for loops, set builders, quantifiers) can now use any iterable object.
 - Quantfiers now use a pipe (`|`) instead of a comma (`,`) to be consistent with set-builder and for-loop syntax
 - Reversed `=` (equality operation) to be `==`
 - Indexing a string now returns a character

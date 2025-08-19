@@ -273,8 +273,7 @@ ObjString* copyString(GC* gc, const unsigned char* utf8, int utf8Length) {
     // Create the code point array
     StringKind kind = getUtf8StringKind(utf8, utf8Length);
     const void* heapCodePoints = NULL;
-    size_t length = createCodePointArray(gc, kind, &heapCodePoints, utf8, utf8Length);
-    printf("Copying: %.*s\n", utf8Length, heapUtf8);
+    size_t length = createCodePointArray(gc, kind, &heapCodePoints, heapUtf8, utf8Length);
 
     return allocateString(gc, kind, heapCodePoints, length, heapUtf8, utf8Length, hash);
 }
@@ -380,8 +379,6 @@ ObjString* concatenateStringsHelper(GC* gc, Value a, Value b) {
  */
 Value indexString(ObjString* string, size_t index) {
     assert(index < string->length || index > 0);
-
-    printf("Indexing: %.*s\n", string->utf8Length, string->utf8);
 
     uint32_t codePoint;
     switch (string->kind) {

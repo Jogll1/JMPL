@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 
 #include "obj_string.h"
 #include "memory.h"
@@ -398,6 +399,26 @@ Value indexString(ObjString* string, size_t index) {
     }
 
     return CHAR_VAL(codePoint);
+}
+
+ObjString* sliceString(GC* gc, ObjString* string, size_t start, size_t end) {
+    assert(start >= 0 && end >= 0);
+    if (end >= string->length) end = string->length - 1;
+
+    size_t length = start <= end ? end - start + 1 : 0;
+    if (start >= string->length) length = 0;
+
+    size_t utf8Length = 0;
+    for (size_t i = start; i < start + length; i++) {
+        switch (string->kind) {
+            case KIND_ASCII:
+            case KIND_1_BYTE: utf8Length += getCharByteCount(string->as.ucs1[i]); break;
+            case KIND_2_BYTE: utf8Length += getCharByteCount(string->as.ucs2[i]); break;
+            case KIND_4_BYTE: utf8Length += getCharByteCount(string->as.ucs4[i]); break;
+        }
+    }
+
+    return copyString(gc, string->utf8 + start, utf8Length);
 }
 
 /**

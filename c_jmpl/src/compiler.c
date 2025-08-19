@@ -651,17 +651,30 @@ static void call(bool canAssign) {
 }
 
 static void subscript(bool canAssign) {
-    expression(true);
+    int isSlice = 0;
 
-    // if (match(TOKEN_COLON)) {
-    //     expression(true);
-    // } else {
+    if (match(TOKEN_COLON)) {
+        // [:x]
+        isSlice = 1;
+        emitByte(OP_NULL);
+        expression(true);
+    } else {
+        expression(true);
 
-    // }
+        if (match(TOKEN_COLON)) {
+            isSlice = 1;
+            if (check(TOKEN_RIGHT_SQUARE)) {
+                // [x:]
+                emitByte(OP_NULL);
+            } else {
+                // [x:y]
+                expression(true);
+            }
+        }
+    }
 
     consume(TOKEN_RIGHT_SQUARE, "Expected ']' after expression");
-
-    emitByte(OP_SUBSCRIPT);
+    emitBytes(OP_SUBSCRIPT, isSlice);
 }
 
 static void literal(bool canAssign) {

@@ -12,8 +12,9 @@ typedef struct {
     Value* elements;
 } ObjTuple;
 
-ObjTuple* newTuple(GC* gc, int size);
+ObjTuple* newTuple(GC* gc, size_t size);
 bool tuplesEqual(ObjTuple* a, ObjTuple* b);
+ObjTuple* sliceTuple(GC* gc, ObjTuple* tuple, size_t start, size_t end);
 unsigned char* tupleToString(ObjTuple* tuple);
 ObjTuple* concatenateTuple(GC* gc, ObjTuple* a, ObjTuple* b);
 

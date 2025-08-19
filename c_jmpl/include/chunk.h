@@ -56,7 +56,7 @@ typedef enum {
     OP_SUBSETEQ,
     OP_CREATE_TUPLE, // b
     OP_TUPLE_OMISSION, // b
-    OP_SUBSCRIPT,
+    OP_SUBSCRIPT, // b
     OP_CREATE_ITERATOR,
     OP_ITERATE,
     OP_ARB

@@ -205,7 +205,7 @@ int disassembleInstruction(Chunk* chunk, int offset) {
         case OP_SUBSETEQ:        return simpleInstruction("OP_SUBSETEQ", offset);
         case OP_CREATE_TUPLE:    return byteInstruction("OP_CREATE_TUPLE", chunk, offset);
         case OP_TUPLE_OMISSION:  return byteInstruction("OP_TUPLE_OMISSION", chunk, offset);
-        case OP_SUBSCRIPT:       return simpleInstruction("OP_SUBSCRIPT", offset);
+        case OP_SUBSCRIPT:       return byteInstruction("OP_SUBSCRIPT", chunk, offset);
         case OP_CREATE_ITERATOR: return simpleInstruction("OP_CREATE_ITERATOR", offset);
         case OP_ITERATE:         return simpleInstruction("OP_ITERATE", offset);
         case OP_ARB:             return simpleInstruction("OP_ARB", offset);

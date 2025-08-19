@@ -347,19 +347,20 @@ static int tupleOmission(bool hasNext) {
 }
 
 /**
- * @brief Determines if a value is false.
+ * @brief Determines if a value is falsey.
  * 
  * @param value The value to determine the Boolean value of
  * 
- * Values are false if they are null, false, 0, empty string, or an empty set.
+ * Values are false if they are null, false, 0, empty string, empty set, or an empty tuple.
  */
 static bool isFalse(Value value) {
     // Return false if null, false, 0, or empty string
     return IS_NULL(value) || 
            (IS_NUMBER(value) && AS_NUMBER(value) == 0) || 
            (IS_BOOL(value) && !AS_BOOL(value)) ||
-           (IS_STRING(value) && AS_CSTRING(value)[0] == '\0' ||
-           (IS_SET(value) && AS_SET(value)->count == 0));
+           (IS_STRING(value) && AS_CSTRING(value)[0] == '\0') ||
+           (IS_SET(value) && AS_SET(value)->count == 0) ||
+           (IS_TUPLE(value) && AS_TUPLE(value)->size == 0);
 }
 
 static int getSize(Value value) {
@@ -395,12 +396,12 @@ static int getSize(Value value) {
     return -1;
 }
 
-static int subscript() {
+static int indexObj() {
     if (!IS_INTEGER(peek(0))) {
-        runtimeError("Tuple index must be an integer");
+        runtimeError("Index must be an integer");
         return INTERPRET_RUNTIME_ERROR;
     }
-    int index = (int)AS_NUMBER(pop());
+    int index = (signed int)AS_NUMBER(pop());
 
     Value value = pop();
     if (IS_TUPLE(value)) {
@@ -418,11 +419,49 @@ static int subscript() {
             return INTERPRET_RUNTIME_ERROR;
         }
 
-        Value character = indexString(string, index);
-
-        push(character);
+        push(indexString(string, index));
     } else {
-        runtimeError("Object cannot be subscripted");
+        runtimeError("Object cannot be indexed");
+        return INTERPRET_RUNTIME_ERROR;
+    }
+
+    return INTERPRET_OK;
+}
+
+static int sliceObj() {
+    if (!IS_INTEGER(peek(0)) && !IS_NULL(peek(0)) || !IS_INTEGER(peek(1)) && !IS_NULL(peek(1))) {
+        runtimeError("Slice index must be an integer or null");
+        return INTERPRET_RUNTIME_ERROR;
+    }
+
+    Value end = pop();
+    Value start = pop();
+    int startIndex = IS_NULL(start) ? 0 : (signed int)AS_NUMBER(start);
+    int endIndex;
+
+    Value value = pop();
+    if (IS_TUPLE(value)) {
+        ObjTuple* tuple = AS_TUPLE(value);
+        endIndex = IS_NULL(end) ? tuple->size - 1 : (signed int)AS_NUMBER(end);
+
+        if (startIndex < 0 || endIndex < 0) {
+            runtimeError("Tuple slice index out of range");
+            return INTERPRET_RUNTIME_ERROR;
+        }
+
+        push(OBJ_VAL(sliceTuple(&vm.gc, tuple, startIndex, endIndex)));
+    } else if (IS_STRING(value)) {
+        ObjString* string = AS_STRING(value);
+        endIndex = IS_NULL(end) ? string->length - 1 : (signed int)AS_NUMBER(end);
+
+        if (startIndex < 0 || endIndex < 0) {
+            runtimeError("String slice index out of range");
+            return INTERPRET_RUNTIME_ERROR;
+        }
+
+        push(OBJ_VAL(sliceString(&vm.gc, string, startIndex, endIndex)));
+    } else {
+        runtimeError("Object cannot be indexed");
         return INTERPRET_RUNTIME_ERROR;
     }
 
@@ -570,7 +609,6 @@ static InterpretResult run() {
                     // Concatenate if at least one operand is a string
                     Value b = pop();
                     Value a = pop();
-
                     push(OBJ_VAL(concatenateStringsHelper(&vm.gc, a, b)));
                 } else if (IS_TUPLE(peek(0)) && IS_TUPLE(peek(1))) {
                     ObjTuple* b = AS_TUPLE(pop());
@@ -774,7 +812,13 @@ static InterpretResult run() {
                 break;
             }
             case OP_SUBSCRIPT: {
-                int status = subscript();
+                bool isSlice = READ_BYTE();
+                int status;
+                if (isSlice) {
+                    status = sliceObj();
+                } else {
+                    status = indexObj();
+                }
                 if (status != INTERPRET_OK) return status;
                 break;
             }

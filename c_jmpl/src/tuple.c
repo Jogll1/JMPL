@@ -7,12 +7,12 @@
 #include "gc.h"
 #include "../lib/c-stringbuilder/sb.h"
 
-ObjTuple* newTuple(GC* gc, int size) {
+ObjTuple* newTuple(GC* gc, size_t size) {
     ObjTuple* tuple = ALLOCATE_OBJ(gc, ObjTuple, OBJ_TUPLE, true);
     tuple->size = size;
     tuple->elements = ALLOCATE(gc, Value, size); 
     
-    for (int i = 0; i < size; i++) {
+    for (size_t i = 0; i < size; i++) {
         tuple->elements[i] = NULL_VAL;
     }
     
@@ -23,10 +23,10 @@ ObjTuple* newTuple(GC* gc, int size) {
 bool tuplesEqual(ObjTuple* a, ObjTuple* b) {
     if (a->size != b->size) return false;
     
-    for (int i = 0; i < a->size; i++) {
+    for (size_t i = 0; i < a->size; i++) {
         Value valA = a->elements[i];
 
-        for (int j = 0; j < b->size; j++) {
+        for (size_t j = 0; j < b->size; j++) {
             Value valB = b->elements[i];
 
             if (!valuesEqual(valA, valB)) {
@@ -36,6 +36,28 @@ bool tuplesEqual(ObjTuple* a, ObjTuple* b) {
     }
 
     return true;
+}
+
+ObjTuple* sliceTuple(GC* gc, ObjTuple* tuple, size_t start, size_t end) {
+    assert(start >= 0 && end >= 0);
+    if (end >= tuple->size) end = tuple->size - 1;
+
+    pushTemp(gc, OBJ_VAL(tuple));
+
+    ObjTuple* result = ALLOCATE_OBJ(gc, ObjTuple, OBJ_TUPLE, true);
+
+    size_t size = start <= end ? end - start + 1 : 0;
+    if (start >= tuple->size) size = 0;
+
+    Value* elements = ALLOCATE(gc, Value, size);
+    memcpy(elements, tuple->elements + start, size * sizeof(Value));
+
+    result->size = size;
+    result->elements = elements;
+
+    popTemp(gc);
+
+    return result;
 }
 
 /**
@@ -96,7 +118,7 @@ ObjTuple* concatenateTuple(GC* gc, ObjTuple* a, ObjTuple* b) {
     tuple->size = 0;
     tuple->elements = NULL;
     
-    size_t size =  a->size + b->size;
+    size_t size = a->size + b->size;
     Value* elements = ALLOCATE(gc, Value, size);
     memcpy(elements, a->elements, a->size * sizeof(Value));
     memcpy(elements + a->size, b->elements, b->size * sizeof(Value));

@@ -13,15 +13,6 @@ typedef struct ObjSet {
     size_t capacity;
 } ObjSet;
 
-/**
- * @brief Object to iterate through a Set.
- */
-typedef struct {
-    Obj obj;
-    ObjSet* set;      // Set to iterate through
-    int currentIndex; // Index of the current set value
-} ObjSetIterator;
-
 // --- ObjSet ---
 ObjSet* newSet(GC* gc);
 void freeSet(GC* gc, ObjSet* set);
@@ -40,10 +31,5 @@ bool isProperSubset(ObjSet* a, ObjSet* b);
 Value getArb(ObjSet* set);
 
 unsigned char* setToString(ObjSet* set);
-
-// --- ObjSetIterator ---
-ObjSetIterator* newSetIterator(GC* gc, ObjSet* set);
-void freeSetIterator(GC* gc, ObjSetIterator* iterator);
-bool iterateSetIterator(ObjSetIterator* iterator, Value* value);
 
 #endif

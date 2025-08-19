@@ -516,11 +516,11 @@ static uint8_t syntheticLocal(OpCode code, const char* name) {
 }
 
 /**
- * @brief Parse a generator in the form 'x in Set'.
+ * @brief Parse a generator in the form 'x in Obj'.
  * 
  * @return The slot of the generator
  * 
- * Pushes: a local variable, a null value initialiser, and the set
+ * Pushes: a local variable, a null value initialiser, and the target object
  */
 static uint8_t parseGenerator() {
     // Parse the local variable that will be the generator
@@ -550,7 +550,7 @@ static uint8_t parseGenerator() {
 
     consume(TOKEN_IN, "Expected 'in' or '∈' after identifier");
 
-    // Push the set (to create an iterator)
+    // Push the object to generate from (to create an iterator)
     expression(false);
 
     return localVarSlot;
@@ -1451,7 +1451,7 @@ static void forStatement() {
 
     // Load and iterate the iterator
     emitBytes(OP_GET_LOCAL, iteratorSlot);
-    emitByte(OP_ITERATE); // Push next value + bool for if there is a current value
+    emitByte(OP_ITERATE); // Push next value then the bool for if there is a current value
 
     // If no current value -> jump to after-loop
     int exitJump = emitJump(OP_JUMP_IF_FALSE);

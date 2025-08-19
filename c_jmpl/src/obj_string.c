@@ -216,16 +216,25 @@ static size_t createCodePointArray(GC* gc, StringKind kind, const void** output,
 static ObjString* allocateString(GC* gc, StringKind kind, const void* codePoints, size_t length, unsigned char* utf8, size_t utf8Length, hash_t hash) {
     assert(codePoints != NULL);
 
-    ObjString* string = ALLOCATE_OBJ(gc, ObjString, OBJ_STRING);
+    ObjString* string = ALLOCATE_OBJ(gc, ObjString, OBJ_STRING, true);
     string->kind = kind;
     string->length = length;
     string->hash = hash;
 
     switch (kind) {
         case KIND_ASCII:
-        case KIND_1_BYTE: string->as.ucs1 = (UCS1*)codePoints; break;
-        case KIND_2_BYTE: string->as.ucs2 = (UCS2*)codePoints; break;
-        case KIND_4_BYTE: string->as.ucs4 = (UCS4*)codePoints; break;
+        case KIND_1_BYTE: { 
+            string->as.ucs1 = (UCS1*)codePoints;
+            break;
+        }
+        case KIND_2_BYTE: { 
+            string->as.ucs2 = (UCS2*)codePoints;
+            break;
+        }
+        case KIND_4_BYTE: { 
+            string->as.ucs4 = (UCS4*)codePoints;
+            break;
+        }
     }
 
     // Will be the same pointer for ascii
@@ -265,6 +274,7 @@ ObjString* copyString(GC* gc, const unsigned char* utf8, int utf8Length) {
     StringKind kind = getUtf8StringKind(utf8, utf8Length);
     const void* heapCodePoints = NULL;
     size_t length = createCodePointArray(gc, kind, &heapCodePoints, utf8, utf8Length);
+    printf("Copying: %.*s\n", utf8Length, heapUtf8);
 
     return allocateString(gc, kind, heapCodePoints, length, heapUtf8, utf8Length, hash);
 }
@@ -371,12 +381,23 @@ ObjString* concatenateStringsHelper(GC* gc, Value a, Value b) {
 Value indexString(ObjString* string, size_t index) {
     assert(index < string->length || index > 0);
 
+    printf("Indexing: %.*s\n", string->utf8Length, string->utf8);
+
     uint32_t codePoint;
     switch (string->kind) {
         case KIND_ASCII:
-        case KIND_1_BYTE: codePoint = (uint32_t)string->as.ucs1[index]; break;
-        case KIND_2_BYTE: codePoint = (uint32_t)string->as.ucs2[index]; break;
-        case KIND_4_BYTE: codePoint = string->as.ucs4[index]; break;
+        case KIND_1_BYTE: { 
+            codePoint = (uint32_t)string->as.ucs1[index];
+            break;
+        }
+        case KIND_2_BYTE: { 
+            codePoint = (uint32_t)string->as.ucs2[index];
+            break;
+        }
+        case KIND_4_BYTE: { 
+            codePoint = string->as.ucs4[index];
+            break;
+        }
     }
 
     return CHAR_VAL(codePoint);

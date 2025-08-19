@@ -72,7 +72,7 @@ static void adjustCapacity(GC* gc, ObjSet* set, size_t capacity) {
 
 // --- Sets --- 
 ObjSet* newSet(GC* gc) {
-    ObjSet* set = ALLOCATE_OBJ(gc, ObjSet, OBJ_SET);
+    ObjSet* set = ALLOCATE_OBJ(gc, ObjSet, OBJ_SET, true);
     initSet(set);
     return set;
 }
@@ -289,53 +289,4 @@ unsigned char* setToString(ObjSet* set) {
     sb_free(sb);
 
     return str;
-}
-
-// --- Set Iterator --- 
-ObjSetIterator* newSetIterator(GC* gc, ObjSet* set) {
-    ObjSetIterator* iterator = ALLOCATE_OBJ(gc, ObjSetIterator, OBJ_SET_ITERATOR);
-    iterator->set = set;
-    iterator->currentIndex = -1;
-
-    // Find index of first value in set
-    for (int i = 0; i < set->capacity; i++) {
-        if (IS_NULL(set->elements[i])) continue;
-
-        iterator->currentIndex = i;
-        break;
-    }
-
-    return iterator;
-}
-
-void freeSetIterator(GC* gc, ObjSetIterator* iterator) {
-    FREE(gc, ObjSetIterator, iterator);
-}
-
-/**
- * @brief Iterates the iterator if possible
- * 
- * @param iterator A pointer to an iterator object
- * @param value    A pointer to the current value 
- * @return         If the current iterator value is valid
- */
-bool iterateSetIterator(ObjSetIterator* iterator, Value* value) {
-    ObjSet* set = iterator->set;
-
-    int capacity = set->capacity;
-    int current = iterator->currentIndex;
-    if (current == -1 || capacity == 0 || current >= capacity) return false;
-
-    // Set value to point to the value pre-iteration
-    *(value) = set->elements[current];
-
-    for (int i = current + 1; i < capacity; i++) {
-        if (IS_NULL(set->elements[i])) continue;
-
-        iterator->currentIndex = i;
-        return true;
-    }
-
-    iterator->currentIndex = capacity;
-    return true; 
 }

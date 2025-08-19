@@ -7,6 +7,7 @@
 #include "obj_string.h"
 #include "tuple.h"
 #include "vm.h"
+#include "iterator.h"
 
 #ifdef DEBUG_LOG_GC
 #include <stdio.h>
@@ -103,9 +104,9 @@ static void blackenObject(GC* gc, Obj* object) {
             }
             break;
         }
-        case OBJ_SET_ITERATOR: {
-            ObjSetIterator* iterator = (ObjSetIterator*)object;
-            markObject(gc, (Obj*)iterator->set);
+        case OBJ_ITERATOR: {
+            ObjIterator* iterator = (ObjIterator*)object;
+            markObject(gc, (Obj*)iterator->target);
             break;
         }
         case OBJ_TUPLE: {
@@ -156,8 +157,8 @@ static void freeObject(GC* gc, Obj* object) {
             freeSet(gc, (ObjSet*)object);
             break;
         }
-        case OBJ_SET_ITERATOR: {
-            freeSetIterator(gc, (ObjSetIterator*)object);
+        case OBJ_ITERATOR: {
+            freeIterator(gc, (ObjIterator*)object);
             break;
         }
         case OBJ_TUPLE: {

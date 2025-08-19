@@ -8,7 +8,7 @@
 #include "../lib/c-stringbuilder/sb.h"
 
 ObjTuple* newTuple(GC* gc, int size) {
-    ObjTuple* tuple = ALLOCATE_OBJ(gc, ObjTuple, OBJ_TUPLE);
+    ObjTuple* tuple = ALLOCATE_OBJ(gc, ObjTuple, OBJ_TUPLE, true);
     tuple->size = size;
     tuple->elements = ALLOCATE(gc, Value, size); 
     
@@ -91,7 +91,7 @@ ObjTuple* concatenateTuple(GC* gc, ObjTuple* a, ObjTuple* b) {
     pushTemp(gc, OBJ_VAL(a));
     pushTemp(gc, OBJ_VAL(b));
 
-    ObjTuple* tuple = ALLOCATE_OBJ(gc, ObjTuple, OBJ_TUPLE);
+    ObjTuple* tuple = ALLOCATE_OBJ(gc, ObjTuple, OBJ_TUPLE, true);
     pushTemp(gc, OBJ_VAL(tuple));
     tuple->size = 0;
     tuple->elements = NULL;

@@ -13,10 +13,11 @@
 #include "vm.h"
 #include "../lib/c-stringbuilder/sb.h"
 
-Obj* allocateObject(GC* gc, size_t size, ObjType type) {
+Obj* allocateObject(GC* gc, size_t size, ObjType type, bool isIterable) {
     Obj* object = (Obj*)reallocate(gc, NULL, 0, size);
     object->type = type;
     object->isMarked = false;
+    object->isIterable = isIterable;
 
     object->next = gc->objects;
     gc->objects = object;
@@ -34,7 +35,7 @@ ObjClosure* newClosure(GC* gc, ObjFunction* function) {
         upvalues[i] = NULL;
     }
 
-    ObjClosure* closure = ALLOCATE_OBJ(gc, ObjClosure, OBJ_CLOSURE);
+    ObjClosure* closure = ALLOCATE_OBJ(gc, ObjClosure, OBJ_CLOSURE, false);
     closure->function = function;
     closure->upvalues = upvalues;
     closure->upvalueCount = function->upvalueCount;
@@ -42,7 +43,7 @@ ObjClosure* newClosure(GC* gc, ObjFunction* function) {
 }
 
 ObjFunction* newFunction(GC* gc) {
-    ObjFunction* function = ALLOCATE_OBJ(gc, ObjFunction, OBJ_FUNCTION);
+    ObjFunction* function = ALLOCATE_OBJ(gc, ObjFunction, OBJ_FUNCTION, false);
     function->arity = 0;
     function->upvalueCount = 0;
     function->name = NULL;
@@ -51,14 +52,14 @@ ObjFunction* newFunction(GC* gc) {
 }
 
 ObjNative* newNative(GC* gc, NativeFn function, int arity) {
-    ObjNative* native = ALLOCATE_OBJ(gc, ObjNative, OBJ_NATIVE);
+    ObjNative* native = ALLOCATE_OBJ(gc, ObjNative, OBJ_NATIVE, false);
     native->arity = arity;
     native->function = function;
     return native;
 }
 
 ObjUpvalue* newUpvalue(GC* gc, Value* slot) {
-    ObjUpvalue* upvalue = ALLOCATE_OBJ(gc, ObjUpvalue, OBJ_UPVALUE);
+    ObjUpvalue* upvalue = ALLOCATE_OBJ(gc, ObjUpvalue, OBJ_UPVALUE, false);
     upvalue->closed = NULL_VAL;
     upvalue->location = slot;
     upvalue->next = NULL;
@@ -108,7 +109,7 @@ void printObject(Value value, bool simple) {
                 free(tupleStr);
             }
             break;
-        case OBJ_SET_ITERATOR:
+        case OBJ_ITERATOR:
             printf("<iterator>");
             break;
         default: 

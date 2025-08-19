@@ -107,42 +107,44 @@ static void printChar(uint32_t codePoint) {
  */
 unsigned char* valueToString(Value value) {
     // If its an object
-    if (IS_STRING(value)) {
-        return strdup(AS_CSTRING(value));
-    }
-
-    if (IS_FUNCTION(value)) {
-        ObjString* name = AS_FUNCTION(value)->name;
-        if (name != NULL) {
-            return strdup(name->utf8);
+    if (IS_OBJ(value)) {
+        if (IS_STRING(value)) {
+            return strdup(AS_CSTRING(value));
         }
 
-        return strdup("<anon>");
-    }
+        if (IS_FUNCTION(value)) {
+            ObjString* name = AS_FUNCTION(value)->name;
+            if (name != NULL) {
+                return strdup(name->utf8);
+            }
 
-    if (IS_CLOSURE(value)) {
-        ObjString* name = AS_CLOSURE(value)->function->name;
-        if (name != NULL) {
-            return strdup(name->utf8);
+            return strdup("<anon>");
         }
 
-        return strdup("<anon>");
-    }
+        if (IS_CLOSURE(value)) {
+            ObjString* name = AS_CLOSURE(value)->function->name;
+            if (name != NULL) {
+                return strdup(name->utf8);
+            }
 
-    if (IS_NATIVE(value)) {
-        return strdup("<native>");
-    }
+            return strdup("<anon>");
+        }
 
-    if (IS_SET(value)) {
-        return setToString(AS_SET(value));
-    }
+        if (IS_NATIVE(value)) {
+            return strdup("<native>");
+        }
 
-    if (IS_TUPLE(value)) {
-        return tupleToString(AS_TUPLE(value));
-    }
+        if (IS_SET(value)) {
+            return setToString(AS_SET(value));
+        }
 
-    if (IS_SET_ITERATOR(value)) {
-        return strdup("<iterator>");
+        if (IS_TUPLE(value)) {
+            return tupleToString(AS_TUPLE(value));
+        }
+
+        if (IS_ITERATOR(value)) {
+            return strdup("<iterator>");
+        }
     }
 
     // If its a value

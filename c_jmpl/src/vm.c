@@ -15,6 +15,7 @@
 #include "native.h"
 #include "debug.h"
 #include "gc.h"
+#include "iterator.h"
 
 // ToDo: swap this for a pointer
 VM vm;
@@ -778,23 +779,23 @@ static InterpretResult run() {
                 break;
             }
             case OP_CREATE_ITERATOR: {
-                if (!IS_SET(peek(0))) {
-                    runtimeError("Generator must iterate over a set");
+                if (!IS_OBJ(peek(0)) || !AS_OBJ(peek(0))->isIterable) {
+                    runtimeError("Generator must iterate over a set, tuple, or a string");
                     return INTERPRET_RUNTIME_ERROR;
                 }
-                ObjSet* set = AS_SET(pop());
-                ObjSetIterator* iterator = newSetIterator(&vm.gc, set);
+                Obj* target = AS_OBJ(pop());
+                ObjIterator* iterator = newIterator(&vm.gc, target);
                 push(OBJ_VAL(iterator));
                 break;
             }
             case OP_ITERATE: {
-                if (!IS_SET_ITERATOR(peek(0))) {
+                if (!IS_ITERATOR(peek(0))) {
                     runtimeError("(Internal) Missing iterator");
                     return INTERPRET_RUNTIME_ERROR;
                 }
-                ObjSetIterator* iterator = AS_SET_ITERATOR(pop());
+                ObjIterator* iterator = AS_ITERATOR(pop());
                 Value value;
-                bool hasCurrentVal = iterateSetIterator(iterator, &value);
+                bool hasCurrentVal = iterate(iterator, &value);
                 if (hasCurrentVal) push(value);
                 push(BOOL_VAL(hasCurrentVal));
                 break;

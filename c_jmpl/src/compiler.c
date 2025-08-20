@@ -224,7 +224,7 @@ static void consumeSeparator() {
     if (match(TOKEN_SEMICOLON) || match(TOKEN_NEWLINE)) return;
     
     if (check(TOKEN_INDENT) || check(TOKEN_DEDENT) || check(TOKEN_EOF)) return;
-    
+
     error("Invalid syntax");
 }
 
@@ -1214,9 +1214,43 @@ static void quantifier() {
 /**
  * @brief Wrapper for quantifier to call it as an anonymous function.
  */
-static void quantAnon(bool canAssign) {
+static void quantWrap(bool canAssign) {
     functionWrapper(TYPE_FUNCTION, quantifier);
     emitBytes(OP_CALL, 0);
+}
+
+static void anonymousFunction() {
+    // Set anonymous function name and to implicit return
+    current->function->name = copyString(parser.gc, "@anon", 5);
+    current->implicitReturn = true;
+
+    consume(TOKEN_LEFT_PAREN, "Expected '(' after anonymous function declaration");
+
+    if (!check(TOKEN_RIGHT_PAREN)) {
+        do {
+            current->function->arity++;
+            if(current->function->arity > 255) {
+                errorAtCurrent("Can't have more than 255 parameters");
+            }
+
+            uint16_t constant = parseVariable("Expected parameter name");
+            defineVariable(constant);
+        } while (match(TOKEN_COMMA));
+    }
+
+    consume(TOKEN_RIGHT_PAREN, "Expected ')' after anonymous function parameters");
+    consume(TOKEN_MAPS_TO, "Expected '->' or '→' after anonymous function signature");
+
+    // Compile the body - no blocks
+    skipNewlines();
+    statement(false, true);
+}
+
+/**
+ * @brief Wrapper for creating an anonymous function.
+ */ 
+static void anonWrap(bool canAssign) {
+    functionWrapper(TYPE_FUNCTION, anonymousFunction);
 }
 
 ParseRule rules[] = {
@@ -1247,8 +1281,9 @@ ParseRule rules[] = {
     [TOKEN_UNION]         = {NULL,       binary,    PREC_TERM},
     [TOKEN_SUBSET]        = {NULL,       binary,    PREC_TERM},
     [TOKEN_SUBSETEQ]      = {NULL,       binary,    PREC_TERM},
-    [TOKEN_FORALL]        = {quantAnon,  NULL,      PREC_EQUALITY},
-    [TOKEN_EXISTS]        = {quantAnon,  NULL,      PREC_EQUALITY},
+    [TOKEN_FORALL]        = {quantWrap,  NULL,      PREC_EQUALITY},
+    [TOKEN_EXISTS]        = {quantWrap,  NULL,      PREC_EQUALITY},
+    [TOKEN_SOME]          = {quantWrap,  NULL,      PREC_EQUALITY},
     [TOKEN_EQUAL]         = {NULL,       NULL,      PREC_NONE},
     [TOKEN_EQUAL_EQUAL]   = {NULL,       binary,    PREC_EQUALITY},
     [TOKEN_ASSIGN]        = {NULL,       NULL,      PREC_NONE},
@@ -1277,10 +1312,9 @@ ParseRule rules[] = {
     [TOKEN_WHILE]         = {NULL,       NULL,      PREC_NONE},
     [TOKEN_DO]            = {NULL,       NULL,      PREC_NONE},
     [TOKEN_FOR]           = {NULL,       NULL,      PREC_NONE},
-    [TOKEN_SOME]          = {quantAnon,  NULL,      PREC_EQUALITY},
     [TOKEN_ARB]           = {unary,      NULL,      PREC_UNARY},
     [TOKEN_RETURN]        = {NULL,       NULL,      PREC_NONE},
-    [TOKEN_FUNCTION]      = {NULL,       NULL,      PREC_NONE},
+    [TOKEN_FUNCTION]      = {anonWrap,   NULL,      PREC_ASSIGNMENT},
     [TOKEN_NEWLINE]       = {NULL,       NULL,      PREC_NONE},
     [TOKEN_INDENT]        = {NULL,       NULL,      PREC_NONE},
     [TOKEN_DEDENT]        = {NULL,       NULL,      PREC_NONE},

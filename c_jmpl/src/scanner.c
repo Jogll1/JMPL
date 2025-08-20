@@ -178,7 +178,7 @@ static TokenType checkKeyword(Scanner* scanner, unsigned int start, int length, 
  */
 static TokenType identifierType(Scanner* scanner) {
     switch (scanner->start[0]) {
-        case 'a': 
+        case 'a': {
             if (scanner->current - scanner->start > 1) {
                 switch (scanner->start[1]) {
                     case 'n': return checkKeyword(scanner, 2, 1, "d", TOKEN_AND);
@@ -186,8 +186,9 @@ static TokenType identifierType(Scanner* scanner) {
                 }
             }
             break;
+        }
         case 'd': return checkKeyword(scanner, 1, 1, "o", TOKEN_DO);
-        case 'e':
+        case 'e': {
             if (scanner->current - scanner->start > 1) {
                 switch (scanner->start[1]) {
                     case 'l': return checkKeyword(scanner, 2, 2, "se", TOKEN_ELSE);
@@ -195,7 +196,8 @@ static TokenType identifierType(Scanner* scanner) {
                 }
             }
             break;
-        case 'f': 
+        }
+        case 'f': {
             if (scanner->current - scanner->start > 1) {
                 switch (scanner->start[1]) {
                     case 'a': return checkKeyword(scanner, 2, 3, "lse", TOKEN_FALSE);
@@ -209,7 +211,8 @@ static TokenType identifierType(Scanner* scanner) {
                 }
             }
             break;
-        case 'i': 
+        }
+        case 'i': { 
             if (scanner->current - scanner->start > 1) {
                 switch (scanner->start[1]) {
                     case 'f': return TOKEN_IF;
@@ -224,6 +227,7 @@ static TokenType identifierType(Scanner* scanner) {
                 }
             }
             break;
+        }
         case 'l': return checkKeyword(scanner, 1, 2, "et", TOKEN_LET);
         case 'm': return checkKeyword(scanner, 1, 2, "od", TOKEN_MOD);
         case 'n': 
@@ -236,7 +240,7 @@ static TokenType identifierType(Scanner* scanner) {
             break;
         case 'o': return checkKeyword(scanner, 1, 1, "r", TOKEN_OR);
         case 'r': return checkKeyword(scanner, 1, 5, "eturn", TOKEN_RETURN);
-        case 's':
+        case 's': {
             if (scanner->current - scanner->start > 1) {
                 if (isKeyword(scanner, 1, 7, "ubseteq")) return TOKEN_SUBSETEQ;
                 else if (isKeyword(scanner, 1, 5, "ubset")) return TOKEN_SUBSET;
@@ -244,7 +248,8 @@ static TokenType identifierType(Scanner* scanner) {
                 else return TOKEN_IDENTIFIER;
             }
             break;
-        case 't': 
+        }
+        case 't': {
             if (scanner->current - scanner->start > 1) {
                 switch (scanner->start[1]) {
                     case 'h': return checkKeyword(scanner, 2, 2, "en", TOKEN_THEN);
@@ -252,6 +257,7 @@ static TokenType identifierType(Scanner* scanner) {
                 }
             }
             break;
+        }
         case 'u': return checkKeyword(scanner, 1, 4, "nion", TOKEN_UNION);
         case 'w': return checkKeyword(scanner, 1, 4, "hile", TOKEN_WHILE);
     }
@@ -468,6 +474,7 @@ Token scanToken(Scanner* scanner) {
         case 0xE28A86: return makeToken(scanner, TOKEN_SUBSETEQ); // '⊆' U+2286, UTF-8: 0xE28A86
         case 0xE28880: return makeToken(scanner, TOKEN_FORALL); // '∀' U+2200, UTF-8: 0xE28880
         case 0xE28883: return makeToken(scanner, TOKEN_EXISTS); // '∃' U+2203, UTF-8: 0xE28883
+        // case 0xCEBB: return makeToken(scanner, TOKEN_LAMBDA); // 'λ' U+03BB, UTF-8: 9xCEBB
         case '#': return makeToken(scanner, TOKEN_HASHTAG);
         case 0xE289A0: return makeToken(scanner, TOKEN_NOT_EQUAL); // '≠' U+2260, UTF-8: 0xE289A0
         case 0xE289A4: return makeToken(scanner, TOKEN_LESS_EQUAL); // '≤' U+2264, UTF-8: 0xE289A4

@@ -2,7 +2,7 @@
 #define c_jmpl_scanner_h
 
 #define MAX_INDENT_SIZE 16
-#define TOKEN_QUEUE_SIZE 16
+#define TOKEN_QUEUE_SIZE 16 
 
 typedef enum {
     // Character operators (all should have ASCII representations too)

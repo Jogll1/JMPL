@@ -406,15 +406,17 @@ static int indexObj() {
     Value value = pop();
     if (IS_TUPLE(value)) {
         ObjTuple* tuple = AS_TUPLE(value);
-        if (index > tuple->size - 1 || index < 0) {
+        int intLength = (int)tuple->size;
+        if (index < -intLength || index >= intLength) {
             runtimeError("Tuple index out of range");
             return INTERPRET_RUNTIME_ERROR;
         }
 
-        push(tuple->elements[index]);
+        push(indexTuple(tuple, index));
     } else if (IS_STRING(value)) {
         ObjString* string = AS_STRING(value);
-        if (index > string->length - 1 || index < 0) {
+        int intLength = (int)string->length;
+        if (index < -intLength || index >= intLength) {
             runtimeError("String index out of range");
             return INTERPRET_RUNTIME_ERROR;
         }
@@ -442,9 +444,11 @@ static int sliceObj() {
     Value value = pop();
     if (IS_TUPLE(value)) {
         ObjTuple* tuple = AS_TUPLE(value);
-        endIndex = IS_NULL(end) ? tuple->size - 1 : (signed int)AS_NUMBER(end);
+        int intLength = (int)tuple->size;
 
-        if (startIndex < 0 || endIndex < 0) {
+        endIndex = IS_NULL(end) ? tuple->size - 1 : (signed int)AS_NUMBER(end);
+        
+        if (startIndex < -intLength || endIndex < -intLength) {
             runtimeError("Tuple slice index out of range");
             return INTERPRET_RUNTIME_ERROR;
         }
@@ -452,9 +456,11 @@ static int sliceObj() {
         push(OBJ_VAL(sliceTuple(&vm.gc, tuple, startIndex, endIndex)));
     } else if (IS_STRING(value)) {
         ObjString* string = AS_STRING(value);
+        int intLength = (int)string->length;
+
         endIndex = IS_NULL(end) ? string->length - 1 : (signed int)AS_NUMBER(end);
 
-        if (startIndex < 0 || endIndex < 0) {
+        if (startIndex < -intLength || endIndex < -intLength) {
             runtimeError("String slice index out of range");
             return INTERPRET_RUNTIME_ERROR;
         }

@@ -69,8 +69,8 @@ void freeString(GC* gc, ObjString* string);
 ObjString* copyString(GC* gc, const unsigned char* utf8, int utf8Length);
 ObjString* concatenateStringsHelper(GC* gc, Value a, Value b);
 
-Value indexString(ObjString* string, size_t index);
-ObjString* sliceString(GC* gc, ObjString* string, size_t start, size_t end);
+Value indexString(ObjString* string, int index);
+ObjString* sliceString(GC* gc, ObjString* string, int start, int end);
 
 void printJMPLString(ObjString* string);
 

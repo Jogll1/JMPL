@@ -421,8 +421,11 @@ ObjString* concatenateStringsHelper(GC* gc, Value a, Value b) {
  * @param string A string
  * @param index  An index
  */
-Value indexString(ObjString* string, size_t index) {
-    assert(index < string->length - 1 || index >= 0);
+Value indexString(ObjString* string, int index) {
+    int intLength = (int)(string->length);
+    assert(index > -intLength || index < intLength);
+
+    if (index < 0) index += intLength;
 
     uint32_t codePoint;
     switch (string->kind) {
@@ -444,12 +447,16 @@ Value indexString(ObjString* string, size_t index) {
     return CHAR_VAL(codePoint);
 }
 
-ObjString* sliceString(GC* gc, ObjString* string, size_t start, size_t end) {
-    assert(start >= 0 && end >= 0);
-    if (end >= string->length) end = string->length - 1;
+ObjString* sliceString(GC* gc, ObjString* string, int start, int end) {
+    int intLength = (int)(string->length);
+    assert(start >= -intLength && end >= -intLength);
+
+    if (end >= intLength) end = intLength - 1;
+    if (start < 0) start += intLength; 
+    if (end < 0) end += intLength; 
 
     size_t length = start <= end ? end - start + 1 : 0;
-    if (start >= string->length) length = 0;
+    if (start >= intLength) length = 0;
 
     switch (string->kind) {
         case KIND_ASCII:  return stringFromCodePoints(gc, KIND_ASCII,  &string->as.ucs1[start], length);

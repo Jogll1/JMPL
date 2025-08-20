@@ -19,7 +19,6 @@ ObjTuple* newTuple(GC* gc, size_t size) {
     return tuple;
 }
 
-
 bool tuplesEqual(ObjTuple* a, ObjTuple* b) {
     if (a->size != b->size) return false;
     
@@ -38,9 +37,25 @@ bool tuplesEqual(ObjTuple* a, ObjTuple* b) {
     return true;
 }
 
-ObjTuple* sliceTuple(GC* gc, ObjTuple* tuple, size_t start, size_t end) {
-    assert(start >= 0 && end >= 0);
-    if (end >= tuple->size) end = tuple->size - 1;
+Value indexTuple(ObjTuple* tuple, int index) {
+    int intLength = (int)(tuple->size);
+    assert(index > -intLength || index < intLength);
+
+    if (index < 0) index += intLength;
+
+    return tuple->elements[index];
+}
+
+ObjTuple* sliceTuple(GC* gc, ObjTuple* tuple, int start, int end) {
+    int intLength = (int)(tuple->size);
+    assert(start >= -intLength && end >= -intLength);
+
+    if (end >= intLength) end = intLength - 1;
+    if (start < 0) start += intLength; 
+    if (end < 0) end += intLength; 
+
+    size_t length = start <= end ? end - start + 1 : 0;
+    if (start >= intLength) length = 0;
 
     pushTemp(gc, OBJ_VAL(tuple));
 
@@ -58,6 +73,37 @@ ObjTuple* sliceTuple(GC* gc, ObjTuple* tuple, size_t start, size_t end) {
     popTemp(gc);
 
     return result;
+}
+
+/**
+ * @brief Concatenate tuples a and b if both are tuples.
+ * 
+ * @param a A tuple
+ * @param b A tuple
+ * @return  The concatenated tuple
+ */
+ObjTuple* concatenateTuple(GC* gc, ObjTuple* a, ObjTuple* b) {
+    pushTemp(gc, OBJ_VAL(a));
+    pushTemp(gc, OBJ_VAL(b));
+
+    ObjTuple* tuple = ALLOCATE_OBJ(gc, ObjTuple, OBJ_TUPLE, true);
+    pushTemp(gc, OBJ_VAL(tuple));
+    tuple->size = 0;
+    tuple->elements = NULL;
+    
+    size_t size = a->size + b->size;
+    Value* elements = ALLOCATE(gc, Value, size);
+    memcpy(elements, a->elements, a->size * sizeof(Value));
+    memcpy(elements + a->size, b->elements, b->size * sizeof(Value));
+
+    tuple->elements = elements;
+    tuple->size = size;
+
+    popTemp(gc);
+    popTemp(gc);
+    popTemp(gc);
+    
+    return tuple;
 }
 
 /**
@@ -100,35 +146,4 @@ unsigned char* tupleToString(ObjTuple* tuple) {
     sb_free(sb);
 
     return str;
-}
-
-/**
- * @brief Concatenate tuples a and b if both are tuples.
- * 
- * @param a A tuple
- * @param b A tuple
- * @return  The concatenated tuple
- */
-ObjTuple* concatenateTuple(GC* gc, ObjTuple* a, ObjTuple* b) {
-    pushTemp(gc, OBJ_VAL(a));
-    pushTemp(gc, OBJ_VAL(b));
-
-    ObjTuple* tuple = ALLOCATE_OBJ(gc, ObjTuple, OBJ_TUPLE, true);
-    pushTemp(gc, OBJ_VAL(tuple));
-    tuple->size = 0;
-    tuple->elements = NULL;
-    
-    size_t size = a->size + b->size;
-    Value* elements = ALLOCATE(gc, Value, size);
-    memcpy(elements, a->elements, a->size * sizeof(Value));
-    memcpy(elements + a->size, b->elements, b->size * sizeof(Value));
-
-    tuple->elements = elements;
-    tuple->size = size;
-
-    popTemp(gc);
-    popTemp(gc);
-    popTemp(gc);
-    
-    return tuple;
 }

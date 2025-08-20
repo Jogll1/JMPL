@@ -191,7 +191,7 @@ void printValue(Value value, bool simple) {
     } else if (IS_NULL(value)) {
         printf("null");
     } else if (IS_NUMBER(value)) {
-        printf("%g", AS_NUMBER(value));
+        printf("%.17g", AS_NUMBER(value));
     } else if (IS_CHAR(value)) {
         printChar(AS_CHAR(value));
     } else if (IS_OBJ(value)) {
@@ -201,7 +201,7 @@ void printValue(Value value, bool simple) {
     switch(value.type) {
         case VAL_BOOL:   printf(AS_BOOL(value) ? "true" : "false"); break;
         case VAL_NULL:   printf("null"); break;
-        case VAL_NUMBER: printf("%g", AS_NUMBER(value)); break;
+        case VAL_NUMBER: printf("%.17g", AS_NUMBER(value)); break;
         case VAL_CHAR:   printChar(AS_CHAR(value)); break;
         case VAL_OBJ:    printObject(value, simple); break;
         default: return;

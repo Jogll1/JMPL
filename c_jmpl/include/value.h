@@ -123,9 +123,9 @@ typedef struct {
             *(resultPtr) = (unsigned char*)malloc(size); \
             snprintf(*(resultPtr), size, "%d", (int)(value)); \
         } else { \
-            int size = snprintf(NULL, 0, "%lf", (value)) + 1; \
+            int size = snprintf(NULL, 0, "%.17g", (value)) + 1; \
             *(resultPtr) = (unsigned char*)malloc(size); \
-            snprintf(*(resultPtr), size, "%lf", (value)); \
+            snprintf(*(resultPtr), size, "%.17g", (value)); \
         } \
     } while(false)
 

@@ -214,8 +214,6 @@ static size_t createCodePointArray(GC* gc, StringKind kind, const void** output,
 }
 
 static ObjString* allocateString(GC* gc, StringKind kind, const void* codePoints, size_t length, unsigned char* utf8, size_t utf8Length, hash_t hash) {
-    assert(codePoints != NULL);
-
     ObjString* string = ALLOCATE_OBJ(gc, ObjString, OBJ_STRING, true);
     string->kind = kind;
     string->length = length;
@@ -280,32 +278,48 @@ ObjString* copyString(GC* gc, const unsigned char* utf8, int utf8Length) {
 }
 
 static ObjString* stringFromCodePoints(GC* gc, StringKind kind, const void* codePoints, size_t length) {
-    printCodePoints(kind, codePoints, length);
-    unsigned char utf8[length * 4];
+    unsigned char* utf8 = ALLOCATE(gc, unsigned char, length * 4 + 1);
     size_t utf8Length = 0;
 
     for (size_t i = 0; i < length; i++) {
         switch (kind) {
             case KIND_ASCII:
-            case KIND_1_BYTE: utf8Length += unicodeToUtf8(((UCS1*)codePoints)[i], &utf8[utf8Length]); 
-            case KIND_2_BYTE: utf8Length += unicodeToUtf8(((UCS2*)codePoints)[i], &utf8[utf8Length]); 
-            case KIND_4_BYTE: utf8Length += unicodeToUtf8(((UCS4*)codePoints)[i], &utf8[utf8Length]); 
+            case KIND_1_BYTE: utf8Length += unicodeToUtf8(((UCS1*)codePoints)[i], &utf8[utf8Length]); break;
+            case KIND_2_BYTE: utf8Length += unicodeToUtf8(((UCS2*)codePoints)[i], &utf8[utf8Length]); break;
+            case KIND_4_BYTE: utf8Length += unicodeToUtf8(((UCS4*)codePoints)[i], &utf8[utf8Length]); break;
         }
     }
+    utf8[utf8Length] = '\0';
     
     hash_t hash = hashString(FNV_INIT_HASH, utf8, utf8Length);
     
     ObjString* interned = tableFindString(gc, &vm.strings, utf8, utf8Length, hash);
     if (interned != NULL) {
+        free(utf8);
         return interned;
     }
 
-    // Store the UTF-8 encoded string (null-terminated)
-    unsigned char* heapUtf8 = ALLOCATE(gc, unsigned char, utf8Length);
-    memcpy(heapUtf8, utf8, utf8Length);
-    heapUtf8[utf8Length] = '\0';
+    const void* heapCodePoints = NULL;
+#define COPY_STRING(type) \
+    do { \
+        type* copyCodePoints = ALLOCATE(gc, type, length); \
+        memcpy(copyCodePoints, codePoints, sizeof(type) * length); \
+        heapCodePoints = copyCodePoints; \
+    } while (false)
 
-    return allocateString(gc, kind, codePoints, length, heapUtf8, utf8Length, hash);
+    switch (kind) {
+        case KIND_ASCII: {
+            heapCodePoints = (void*)utf8;
+            length = utf8Length;
+            break;
+        }
+        case KIND_1_BYTE: COPY_STRING(UCS1); break;
+        case KIND_2_BYTE: COPY_STRING(UCS2); break;
+        case KIND_4_BYTE: COPY_STRING(UCS4); break;
+    }
+#undef COPY_STRING
+
+    return allocateString(gc, kind, heapCodePoints, length, utf8, utf8Length, hash);
 }
 
 /**
@@ -431,25 +445,12 @@ Value indexString(ObjString* string, size_t index) {
 }
 
 ObjString* sliceString(GC* gc, ObjString* string, size_t start, size_t end) {
-    printf("Slicing: %s\n", string->utf8);
-
     assert(start >= 0 && end >= 0);
     if (end >= string->length) end = string->length - 1;
 
     size_t length = start <= end ? end - start + 1 : 0;
     if (start >= string->length) length = 0;
 
-    printf("Transforming: ");
-    for (size_t i = 0; i < length; i++) {
-        switch (string->kind) {
-            case KIND_ASCII:
-            case KIND_1_BYTE: printf("U+%04x ", string->as.ucs1[start + i]); break;
-            case KIND_2_BYTE: printf("U+%04x ", string->as.ucs2[start + i]); break;
-            case KIND_4_BYTE: printf("U+%04x ", string->as.ucs4[start + i]); break;
-        }
-    }
-    printf("\n");
-    
     switch (string->kind) {
         case KIND_ASCII:  return stringFromCodePoints(gc, KIND_ASCII,  &string->as.ucs1[start], length);
         case KIND_1_BYTE: return stringFromCodePoints(gc, KIND_1_BYTE, &string->as.ucs1[start], length);

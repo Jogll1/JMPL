@@ -10,7 +10,8 @@
 #define UNICODE_MAX (0x10FFFF)
 
 uint32_t utf8ToUnicode(const unsigned char* input, int numBytes);
-size_t unicodeToUtf8(uint32_t codePoint, unsigned char* output);
-size_t getCharByteCount(unsigned char byte);
+int8_t unicodeToUtf8(uint32_t codePoint, unsigned char* output);
+int8_t getCharByteCount(unsigned char byte);
+int8_t getCodePointByteCount(uint32_t codePoint);
 
 #endif

@@ -119,22 +119,21 @@ static StringKind getUtf8StringKind(const unsigned char* utf8, size_t utf8Length
         if (leadingByte < 0x80) {
             // 1 byte in UTF-8, 1 byte code point
             // U+0000 - U+007F
-            kind = KIND_ASCII;
             i += 1;
         } else if (leadingByte < 0xC4) {
             // 2 bytes in UTF-8, 1 byte code point
             // U+0080 - U+00FF
-            kind = KIND_1_BYTE;
+            if (kind <= KIND_1_BYTE) kind = KIND_1_BYTE;
             i += 2;
         } else if (leadingByte < 0xE0) {
             // 2 bytes in UTF-8, 2 byte code point
             // U+0100 - U+07FF
-            kind = KIND_2_BYTE;
+            if (kind <= KIND_2_BYTE) kind = KIND_2_BYTE;
             i += 2;
         } else if (leadingByte <= 0xEF) {
             // 3 bytes in UTF-8, 2 byte code point
             // U+0800 - U+FFFF
-            kind = KIND_2_BYTE;
+            if (kind <= KIND_2_BYTE) kind = KIND_2_BYTE;
             i += 3;
         } else {
             // 4 bytes in UTF-8, 4 byte code point
@@ -273,10 +272,40 @@ ObjString* copyString(GC* gc, const unsigned char* utf8, int utf8Length) {
 
     // Create the code point array
     StringKind kind = getUtf8StringKind(utf8, utf8Length);
+
     const void* heapCodePoints = NULL;
     size_t length = createCodePointArray(gc, kind, &heapCodePoints, heapUtf8, utf8Length);
 
     return allocateString(gc, kind, heapCodePoints, length, heapUtf8, utf8Length, hash);
+}
+
+static ObjString* stringFromCodePoints(GC* gc, StringKind kind, const void* codePoints, size_t length) {
+    printCodePoints(kind, codePoints, length);
+    unsigned char utf8[length * 4];
+    size_t utf8Length = 0;
+
+    for (size_t i = 0; i < length; i++) {
+        switch (kind) {
+            case KIND_ASCII:
+            case KIND_1_BYTE: utf8Length += unicodeToUtf8(((UCS1*)codePoints)[i], &utf8[utf8Length]); 
+            case KIND_2_BYTE: utf8Length += unicodeToUtf8(((UCS2*)codePoints)[i], &utf8[utf8Length]); 
+            case KIND_4_BYTE: utf8Length += unicodeToUtf8(((UCS4*)codePoints)[i], &utf8[utf8Length]); 
+        }
+    }
+    
+    hash_t hash = hashString(FNV_INIT_HASH, utf8, utf8Length);
+    
+    ObjString* interned = tableFindString(gc, &vm.strings, utf8, utf8Length, hash);
+    if (interned != NULL) {
+        return interned;
+    }
+
+    // Store the UTF-8 encoded string (null-terminated)
+    unsigned char* heapUtf8 = ALLOCATE(gc, unsigned char, utf8Length);
+    memcpy(heapUtf8, utf8, utf8Length);
+    heapUtf8[utf8Length] = '\0';
+
+    return allocateString(gc, kind, codePoints, length, heapUtf8, utf8Length, hash);
 }
 
 /**
@@ -379,7 +408,7 @@ ObjString* concatenateStringsHelper(GC* gc, Value a, Value b) {
  * @param index  An index
  */
 Value indexString(ObjString* string, size_t index) {
-    assert(index < string->length || index > 0);
+    assert(index < string->length - 1 || index >= 0);
 
     uint32_t codePoint;
     switch (string->kind) {
@@ -402,23 +431,33 @@ Value indexString(ObjString* string, size_t index) {
 }
 
 ObjString* sliceString(GC* gc, ObjString* string, size_t start, size_t end) {
+    printf("Slicing: %s\n", string->utf8);
+
     assert(start >= 0 && end >= 0);
     if (end >= string->length) end = string->length - 1;
 
     size_t length = start <= end ? end - start + 1 : 0;
     if (start >= string->length) length = 0;
 
-    size_t utf8Length = 0;
-    for (size_t i = start; i < start + length; i++) {
+    printf("Transforming: ");
+    for (size_t i = 0; i < length; i++) {
         switch (string->kind) {
             case KIND_ASCII:
-            case KIND_1_BYTE: utf8Length += getCharByteCount(string->as.ucs1[i]); break;
-            case KIND_2_BYTE: utf8Length += getCharByteCount(string->as.ucs2[i]); break;
-            case KIND_4_BYTE: utf8Length += getCharByteCount(string->as.ucs4[i]); break;
+            case KIND_1_BYTE: printf("U+%04x ", string->as.ucs1[start + i]); break;
+            case KIND_2_BYTE: printf("U+%04x ", string->as.ucs2[start + i]); break;
+            case KIND_4_BYTE: printf("U+%04x ", string->as.ucs4[start + i]); break;
         }
     }
+    printf("\n");
+    
+    switch (string->kind) {
+        case KIND_ASCII:  return stringFromCodePoints(gc, KIND_ASCII,  &string->as.ucs1[start], length);
+        case KIND_1_BYTE: return stringFromCodePoints(gc, KIND_1_BYTE, &string->as.ucs1[start], length);
+        case KIND_2_BYTE: return stringFromCodePoints(gc, KIND_2_BYTE, &string->as.ucs2[start], length);
+        case KIND_4_BYTE: return stringFromCodePoints(gc, KIND_4_BYTE, &string->as.ucs4[start], length);
+    }
 
-    return copyString(gc, string->utf8 + start, utf8Length);
+    return NULL;
 }
 
 /**

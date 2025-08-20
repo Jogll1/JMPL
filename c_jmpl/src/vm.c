@@ -414,7 +414,7 @@ static int indexObj() {
         push(tuple->elements[index]);
     } else if (IS_STRING(value)) {
         ObjString* string = AS_STRING(value);
-        if (index > string->length || index < 0) {
+        if (index > string->length - 1 || index < 0) {
             runtimeError("String index out of range");
             return INTERPRET_RUNTIME_ERROR;
         }

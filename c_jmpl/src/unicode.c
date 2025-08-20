@@ -16,7 +16,7 @@ enum {
  * @param byte The first byte of the character
  * @returns    How long the character's byte sequence is
  */
-size_t getCharByteCount(unsigned char byte) {
+int8_t getCharByteCount(unsigned char byte) {
     if (byte < 0x80) {
         return 1; // ASCII
     } else if ((byte & 0xE0) == 0xC0) {
@@ -31,13 +31,39 @@ size_t getCharByteCount(unsigned char byte) {
 }
 
 /**
+ * @brief Determine the length of a code point in bytes when it is encoded with UTF-8.
+ * 
+ * @param codePoint A code point
+ * @returns         How long the character's byte sequence will be when encoded in UTF-8
+ */
+int8_t getCodePointByteCount(uint32_t codePoint) {
+    if (codePoint < 0x80) {
+        // 1 byte in UTF-8
+        // U+0000 - U+007F
+        return 1;
+    } else if (codePoint < 0x800) {
+        // 2 bytes in UTF-8
+        // U+0080 - U+07FF
+        return 2;
+    } else if (codePoint < 0x100000) {
+        // 3 bytes in UTF-8
+        // U+0800 - U+FFFF
+        return 3;
+    } else {
+        // 4 bytes in UTF-8
+        // U+100000 - U+10FFFF
+        return 4;
+    }
+}
+
+/**
  * @brief Converts a Unicode code point to its UTF-8 encoding.
  * 
  * @param codePoint The Unicode code point of a character
  * @param output    A char pointer (string) for the output
  * @return          The number of bytes 
  */
-size_t unicodeToUtf8(uint32_t codePoint, unsigned char* output) {
+int8_t unicodeToUtf8(uint32_t codePoint, unsigned char* output) {
     codePoint = (uint64_t)codePoint;
     if (codePoint <= ASCII_MAX) {
         output[0] = codePoint & ASCII_MAX;

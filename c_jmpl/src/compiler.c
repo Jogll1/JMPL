@@ -356,6 +356,7 @@ static void endScope() {
 // Function declarations 
 static void expression(bool ignoreNewlines);
 static void statement(bool blockAllowed, bool ignoreSeparator);
+static void expressionStatement();
 static void declaration();
 static ParseRule* getRule(TokenType type);
 static void parsePrecedence(Precedence precendence, bool ignoreNewlines);
@@ -1241,9 +1242,8 @@ static void anonymousFunction() {
     consume(TOKEN_RIGHT_PAREN, "Expected ')' after anonymous function parameters");
     consume(TOKEN_MAPS_TO, "Expected '->' or '→' after anonymous function signature");
 
-    // Compile the body - no blocks
-    skipNewlines();
-    statement(false, true);
+    // Compile the as an expression
+    expressionStatement();
 }
 
 /**
@@ -1295,7 +1295,7 @@ ParseRule rules[] = {
     [TOKEN_LESS_EQUAL]    = {NULL,       binary,    PREC_COMPARISON},
     [TOKEN_MAPS_TO]       = {NULL,       NULL,      PREC_NONE},
     [TOKEN_IMPLIES]       = {NULL,       NULL,      PREC_NONE},
-    [TOKEN_IDENTIFIER]    = {variable,   implMult,  PREC_TERM},
+    [TOKEN_IDENTIFIER]    = {variable,   NULL,      PREC_TERM},
     [TOKEN_STRING]        = {string,     NULL,      PREC_NONE},
     [TOKEN_NUMBER]        = {number,     NULL,      PREC_NONE},
     [TOKEN_CHAR]          = {character,  NULL,      PREC_NONE},

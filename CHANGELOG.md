@@ -87,6 +87,8 @@
     - `input()`
 - Character data type, created with single quotes (`''`)
 - Several new escape sequence types (with 'H' meaning a hex character): `\uHHHH`, `\UHHHHHH`, `\xHH`, `\a`, `\b`, `\v`, `\f`, `\0`
+- Strings and tuple can now be sliced using `[x:y]` subscript notation
+- Anonymous function expressions
 ### Changed
 - Any syntax that uses generators (for loops, set builders, quantifiers) can now use any iterable object instead of just sets.
 - Quantfiers now use a pipe (`|`) instead of a comma (`,`) to be consistent with set-builder and for-loop syntax
@@ -94,6 +96,7 @@
 - Indexing a string now returns a character
 - Made the `arb` keyword return a random member of a set
 - Optimisations for strings and sets
+- Strings and tuples can now be indexed with negative indices to get the last elements (this extends to slicing as well)
 ### Fixed
 - Fixed multiple garabage collection errors
 - Strings have been refactored to store character Unicode code points as well as UTF-8 bytes

@@ -118,7 +118,7 @@ static bool iterateString(ObjIterator* iterator, Value* value) {
  * @param value    A pointer to the current value 
  * @return         If the current iterator value is valid
  */
-bool iterate(ObjIterator* iterator, Value* value) {
+bool iterateObj(ObjIterator* iterator, Value* value) {
     switch (iterator->target->type) {
         case OBJ_SET:    return iterateSet(iterator, value);
         case OBJ_TUPLE:  return iterateTuple(iterator, value);

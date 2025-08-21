@@ -845,7 +845,7 @@ static InterpretResult run() {
                 }
                 ObjIterator* iterator = AS_ITERATOR(pop());
                 Value value;
-                bool hasCurrentVal = iterate(iterator, &value);
+                bool hasCurrentVal = iterateObj(iterator, &value);
                 if (hasCurrentVal) push(value);
                 push(BOOL_VAL(hasCurrentVal));
                 break;

@@ -18,8 +18,8 @@ typedef enum {
  * @brief The JMPL representation of a Set.
  */
 typedef struct ObjSet {
-    SetType type;
     Obj obj;
+    SetType type;
 } ObjSet;
 
 /**

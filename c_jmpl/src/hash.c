@@ -64,11 +64,11 @@ static hash_t hashSet(ObjSet* set) {
             break;
         }
         case SET_RANGE: {
-            RangeSet* set = AS_FINITE_SET(set);
+            RangeSet* set = AS_RANGE_SET(set);
             int current = set->start;
             int step = set->start < set->end ? set->step : -set->step;
             for (int i = 0; i < set->size; i++) {
-                hash ^= (uint64_t)(i ^ (i >> 32));
+                hash ^= (uint64_t)(i);
                 hash *= FNV_PRIME;
             }
             break;

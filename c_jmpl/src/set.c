@@ -28,7 +28,8 @@ static void initFiniteSet(FiniteSet* set) {
 }
 
 FiniteSet* newFiniteSet(GC* gc) {
-    FiniteSet* set = AS_FINITE_SET(ALLOCATE_OBJ(gc, ObjSet, OBJ_SET, true));
+    FiniteSet* set = ALLOCATE_OBJ(gc, FiniteSet, OBJ_SET, true);
+    set->header.type = SET_FINITE;
     initFiniteSet(set);
 
     return set;
@@ -233,15 +234,15 @@ static unsigned char* finiteSetToString(FiniteSet* set) {
             //     break;
             // }
             
-            unsigned char* str = valueToString(value);
+            unsigned char* valStr = valueToString(value);
             if (IS_OBJ(value) && IS_STRING(value)) {
-                sb_appendf(sb, "\"%s\"", str);
+                sb_appendf(sb, "\"%s\"", valStr);
             } else if (IS_CHAR(value)) {
-                sb_appendf(sb, "'%s'", str);
+                sb_appendf(sb, "'%s'", valStr);
             } else {
-                sb_appendf(sb, "%s", str);
+                sb_appendf(sb, "%s", valStr);
             }
-            free(str);
+            free(valStr);
 
             if (count < numElements - 1) sb_append(sb, ", ");
             count++;
@@ -269,7 +270,8 @@ static unsigned char* finiteSetToString(FiniteSet* set) {
 RangeSet* newRangeSet(GC* gc, int start, int end, int step) {
     assert(step != 0);
 
-    RangeSet* set = AS_RANGE_SET(ALLOCATE_OBJ(gc, ObjSet, OBJ_SET, true));
+    RangeSet* set = ALLOCATE_OBJ(gc, RangeSet, OBJ_SET, true);
+    set->header.type = SET_RANGE;
     
     set->start = start;
     set->end = end;
@@ -523,14 +525,10 @@ Value getArb(ObjSet* set) {
  * Must be freed.
  */
 unsigned char* setToString(ObjSet* set) {
-    unsigned char* str;
-
     switch (set->type) {
-        case SET_FINITE: str = finiteSetToString(AS_FINITE_SET(set)); break;
-        case SET_RANGE:  str = rangeSetToString(AS_RANGE_SET(set)); break;
+        case SET_FINITE: return finiteSetToString(AS_FINITE_SET(set));
+        case SET_RANGE:  return rangeSetToString(AS_RANGE_SET(set));
     }
-    
-    return str;
 }
 
 #pragma endregion

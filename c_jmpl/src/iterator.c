@@ -19,14 +19,23 @@ ObjIterator* newIterator(GC* gc, Obj* target) {
         case OBJ_SET: {
             ObjSet* set = (ObjSet*)target;
 
-            // Find index of first value in set
-            for (int i = 0; i < set->capacity; i++) {
-                if (IS_NULL(set->elements[i])) continue;
+            switch(set->type) {
+                case SET_FINITE: {
+                    FiniteSet* set = (FiniteSet*)set;
+                    // Find index of first value in set
+                    for (int i = 0; i < set->capacity; i++) {
+                        if (IS_NULL(set->elements[i])) continue;
 
-                iterator->currentIndex = i;
-                break;
+                        iterator->currentIndex = i;
+                        break;
+                    }
+                    break;
+                }
+                case SET_RANGE: {
+                    iterator->currentIndex = AS_RANGE_SET(set)->start;
+                    break;
+                }
             }
-            break;
         }
         case OBJ_TUPLE: {
             ObjTuple* tuple = (ObjTuple*)target;
@@ -53,11 +62,7 @@ void freeIterator(GC* gc, ObjIterator* iterator) {
     FREE(gc, ObjIterator, iterator);
 }
 
-static bool iterateSet(ObjIterator* iterator, Value* value) {
-    assert(iterator->target->type == OBJ_SET);
-
-    ObjSet* set = (ObjSet*)iterator->target;
-
+static bool iterateFiniteSet(ObjIterator* iterator, FiniteSet* set, Value* value) {
     int capacity = set->capacity;
     int current = iterator->currentIndex;
     if (current == -1 || capacity == 0 || current >= capacity) return false;
@@ -74,7 +79,32 @@ static bool iterateSet(ObjIterator* iterator, Value* value) {
     }
 
     iterator->currentIndex = capacity;
-    return true; 
+    return true;
+}
+
+static bool iterateRangeSet(ObjIterator* iterator, RangeSet* set, Value* value) {
+    int capacity = set->size;
+    int current = iterator->currentIndex;
+    if (current == -1 || capacity == 0 || current >= capacity) return false;
+
+    // Set value to point to the value pre-iteration
+    *(value) = NUMBER_VAL(iterator->currentIndex);
+
+    // Get next iteration
+    iterator->currentIndex += set->step;
+    return true;
+}
+
+static bool iterateSet(ObjIterator* iterator, Value* value) {
+    assert(iterator->target->type == OBJ_SET);
+
+    ObjSet* set = (ObjSet*)iterator->target;
+    switch (set->type) {
+        case SET_FINITE: return iterateFiniteSet(iterator, AS_FINITE_SET(set), value);
+        case SET_RANGE:  return iterateRangeSet(iterator, AS_RANGE_SET(set), value);
+    }
+
+ 
 }
 
 static bool iterateTuple(ObjIterator* iterator, Value* value) {
@@ -118,7 +148,7 @@ static bool iterateString(ObjIterator* iterator, Value* value) {
  * @param value    A pointer to the current value 
  * @return         If the current iterator value is valid
  */
-bool iterate(ObjIterator* iterator, Value* value) {
+bool iterateObj(ObjIterator* iterator, Value* value) {
     switch (iterator->target->type) {
         case OBJ_SET:    return iterateSet(iterator, value);
         case OBJ_TUPLE:  return iterateTuple(iterator, value);

@@ -19,6 +19,6 @@ typedef struct {
 
 ObjIterator* newIterator(GC* gc, Obj* target);
 void freeIterator(GC* gc, ObjIterator* iterator);
-bool iterate(ObjIterator* iterator, Value* value);
+bool iterateObj(ObjIterator* iterator, Value* value);
 
 #endif

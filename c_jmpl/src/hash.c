@@ -49,19 +49,34 @@ hash_t hashString(hash_t hash, const unsigned char* key, int length) {
 static hash_t hashSet(ObjSet* set) {
     hash_t hash = FNV_INIT_HASH;
 
-    for (int i = 0; i < set->capacity; i++) {
-        Value element = set->elements[i];
-        if (!IS_NULL(element)) {
-            hash_t elemHash = hashValue(element);
+    switch (set->type) {
+        case SET_FINITE: {
+            FiniteSet* set = AS_FINITE_SET(set);
+            for (int i = 0; i < set->capacity; i++) {
+                Value element = set->elements[i];
+                if (!IS_NULL(element)) {
+                    hash_t elemHash = hashValue(element);
 
-            hash ^= elemHash;
-            hash *= FNV_PRIME;
+                    hash ^= elemHash;
+                    hash *= FNV_PRIME;
+                }
+            }
+            break;
+        }
+        case SET_RANGE: {
+            RangeSet* set = AS_FINITE_SET(set);
+            int current = set->start;
+            int step = set->start < set->end ? set->step : -set->step;
+            for (int i = 0; i < set->size; i++) {
+                hash ^= (uint64_t)(i ^ (i >> 32));
+                hash *= FNV_PRIME;
+            }
+            break;
         }
     }
 
     return hash;
 }
-
 
 /**
  * @brief Hashes a tuple using the FNV-1a hashing algorithm.

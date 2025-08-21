@@ -1,4 +1,4 @@
-// --- JMPL v0-2-0 Full Features List ---
+// --- JMPL v0-2-1 Full Features List ---
 let start = clock()
 
 // Comments
@@ -53,6 +53,7 @@ println("5 ∈ S = " + (5 ∈ S))
 println("5 in S = " + (5 in S))
 println("{5} ∈ S = " + ({5} ∈ S))
 println("{x^2 | x ∈ {1 ... 10}} = " + {x^2 | x ∈ {1 ... 10}})
+println("{x | x ∈ \"Hello\"} = " + {x | x ∈ "Hello"})
 
 // Tuples
 println("\n--- Tuple ---")

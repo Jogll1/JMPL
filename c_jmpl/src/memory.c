@@ -98,10 +98,7 @@ static void blackenObject(GC* gc, Obj* object) {
             break;
         }
         case OBJ_SET: {
-            ObjSet* set = (ObjSet*)object;
-            for (int i = 0; i < set->capacity; i++) {
-                markValue(gc, set->elements[i]);
-            }
+            markSet(gc, (ObjSet*)object);
             break;
         }
         case OBJ_ITERATOR: {

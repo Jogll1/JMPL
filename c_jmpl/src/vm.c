@@ -242,7 +242,7 @@ static void setInsertN(int count) {
     push(OBJ_VAL(set));
 }
 
-static int setOmission(bool hasNext) {
+static int setOmission(GC* gc, bool hasNext) {
     if (hasNext) {
         if (!IS_INTEGER(peek(0)) || !IS_INTEGER(peek(1)) || !IS_INTEGER(peek(2)) || !IS_SET(peek(3))) {
             runtimeError("Expected: {int, int ... int}");
@@ -262,9 +262,6 @@ static int setOmission(bool hasNext) {
     }
     int first = (int)AS_NUMBER(pop());
 
-    ObjSet* set = AS_SET(pop());
-    pushTemp(&vm.gc, OBJ_VAL(set));
-
     int gap = 1;
     if (hasNext) {
         gap = abs(next - first);
@@ -275,18 +272,8 @@ static int setOmission(bool hasNext) {
         }
     }
 
-    if (last > first) {
-        for (int i = first; i <= last; i += gap) {
-            setInsert(&vm.gc, set, NUMBER_VAL(i));
-        }   
-    } else {
-        for (int i = first; i >= last; i -= gap) {
-            setInsert(&vm.gc, set, NUMBER_VAL(i));
-        }   
-    }
-
-    popTemp(&vm.gc);
-    push(OBJ_VAL(set));
+    RangeSet* set = newRangeSet(gc, first, last, gap);
+    push(OBJ_VAL((ObjSet*)set));
     return INTERPRET_OK;
 }
 
@@ -359,7 +346,7 @@ static bool isFalse(Value value) {
            (IS_NUMBER(value) && AS_NUMBER(value) == 0) || 
            (IS_BOOL(value) && !AS_BOOL(value)) ||
            (IS_STRING(value) && AS_CSTRING(value)[0] == '\0') ||
-           (IS_SET(value) && AS_SET(value)->count == 0) ||
+           (IS_SET(value) && getSetSize(AS_SET(value)) == 0) ||
            (IS_TUPLE(value) && AS_TUPLE(value)->size == 0);
 }
 
@@ -370,7 +357,7 @@ static int getSize(Value value) {
     } else if (IS_OBJ(value)) {
         switch (AS_OBJ(value)->type) {
             case OBJ_STRING: return AS_STRING(value)->length;
-            case OBJ_SET:    return AS_SET(value)->count;
+            case OBJ_SET:    return getSetSize(AS_SET(value));
             case OBJ_TUPLE:  return AS_TUPLE(value)->size;
             default:         return -1;
         }
@@ -492,7 +479,7 @@ static InterpretResult run() {
         double a = AS_NUMBER(pop()); \
         push(valueType(a op b)); \
     } while (false)
-#define SET_OP_GC(valueType, setFunction) \
+#define SET_OP(valueType, setFunction) \
     do { \
         if (!IS_SET(peek(0)) || !IS_SET(peek(1))) { \
             runtimeError("Operands must be sets"); \
@@ -505,16 +492,6 @@ static InterpretResult run() {
         push(valueType(setFunction(&vm.gc, setA, setB))); \
         popTemp(&vm.gc); \
         popTemp(&vm.gc); \
-    } while (false)
-#define SET_OP(valueType, setFunction) \
-    do { \
-        if (!IS_SET(peek(0)) || !IS_SET(peek(1))) { \
-            runtimeError("Operands must be sets"); \
-            return INTERPRET_RUNTIME_ERROR; \
-        } \
-        ObjSet* setB = AS_SET(pop()); \
-        ObjSet* setA = AS_SET(pop()); \
-        push(valueType(setFunction(setA, setB))); \
     } while (false)
 // ---
 
@@ -762,7 +739,7 @@ static InterpretResult run() {
                 break;
             }
             case OP_SET_CREATE: {
-                ObjSet* set = newSet(&vm.gc);
+                ObjSet* set = (ObjSet*)newFiniteSet(&vm.gc);
                 push(OBJ_VAL(set));
                 break;
             }
@@ -774,7 +751,7 @@ static InterpretResult run() {
             }
             case OP_SET_OMISSION: {
                 bool omissionParameter = READ_BYTE();
-                int status = setOmission(omissionParameter);
+                int status = setOmission(&vm.gc, omissionParameter);
                 if (status != INTERPRET_OK) return status;
                 break;
             }
@@ -788,9 +765,9 @@ static InterpretResult run() {
                 push(BOOL_VAL(setContains(set, value)));
                 break;
             }
-            case OP_SET_INTERSECT: SET_OP_GC(OBJ_VAL, setIntersect); break;
-            case OP_SET_UNION: SET_OP_GC(OBJ_VAL, setUnion); break;
-            case OP_SET_DIFFERENCE: SET_OP_GC(OBJ_VAL, setDifference); break;
+            case OP_SET_INTERSECT: SET_OP(OBJ_VAL, setIntersect); break;
+            case OP_SET_UNION: SET_OP(OBJ_VAL, setUnion); break;
+            case OP_SET_DIFFERENCE: SET_OP(OBJ_VAL, setDifference); break;
             case OP_SUBSET: SET_OP(BOOL_VAL, isProperSubset); break;
             case OP_SUBSETEQ: SET_OP(BOOL_VAL, isSubset); break;
             case OP_SIZE: {
@@ -845,7 +822,7 @@ static InterpretResult run() {
                 }
                 ObjIterator* iterator = AS_ITERATOR(pop());
                 Value value;
-                bool hasCurrentVal = iterate(iterator, &value);
+                bool hasCurrentVal = iterateObj(iterator, &value);
                 if (hasCurrentVal) push(value);
                 push(BOOL_VAL(hasCurrentVal));
                 break;

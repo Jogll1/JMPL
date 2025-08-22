@@ -87,7 +87,7 @@
     - `input()`
 - Character data type, created with single quotes (`''`)
 - Several new escape sequence types (with 'H' meaning a hex character): `\uHHHH`, `\UHHHHHH`, `\xHH`, `\a`, `\b`, `\v`, `\f`, `\0`
-- Strings and tuple can now be sliced using `[x:y]` subscript notation
+- Strings and tuple can now be sliced using `[x ... y]` subscript notation
 - Anonymous function expressions
 ### Changed
 - Any syntax that uses generators (for loops, set builders, quantifiers) can now use any iterable object instead of just sets.

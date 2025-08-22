@@ -75,6 +75,7 @@ const unsigned char* getTokenName(TokenType type) {
         case TOKEN_ARB:           return "ARB";
         case TOKEN_RETURN:        return "RETURN";
         case TOKEN_FUNCTION:      return "FUNCTION";
+        case TOKEN_WITH:          return "WITH";
 
         case TOKEN_NEWLINE:       return "NEWLINE";
         case TOKEN_INDENT:        return "INDENT";

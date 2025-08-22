@@ -654,7 +654,7 @@ static void call(bool canAssign) {
 static void subscript(bool canAssign) {
     int isSlice = 0;
 
-    if (match(TOKEN_COLON)) {
+    if (match(TOKEN_ELLIPSIS)) {
         // [:x]
         isSlice = 1;
         emitByte(OP_NULL);
@@ -662,7 +662,7 @@ static void subscript(bool canAssign) {
     } else {
         expression(true);
 
-        if (match(TOKEN_COLON)) {
+        if (match(TOKEN_ELLIPSIS)) {
             isSlice = 1;
             if (check(TOKEN_RIGHT_SQUARE)) {
                 // [x:]
@@ -1315,6 +1315,7 @@ ParseRule rules[] = {
     [TOKEN_ARB]           = {unary,      NULL,      PREC_UNARY},
     [TOKEN_RETURN]        = {NULL,       NULL,      PREC_NONE},
     [TOKEN_FUNCTION]      = {anonWrap,   NULL,      PREC_ASSIGNMENT},
+    [TOKEN_WITH]          = {NULL,       NULL,      PREC_NONE},
     [TOKEN_NEWLINE]       = {NULL,       NULL,      PREC_NONE},
     [TOKEN_INDENT]        = {NULL,       NULL,      PREC_NONE},
     [TOKEN_DEDENT]        = {NULL,       NULL,      PREC_NONE},
@@ -1431,6 +1432,16 @@ static void letDeclaration() {
     defineVariable(global);
 
     consumeSeparator();
+}
+
+static void withDeclaration() {
+    // Consume a path
+    consume(TOKEN_STRING, "Expected a string after with");
+
+    // Path is here
+    printf("%.*s", parser.previous.length, parser.previous.start);
+
+    error("Unimplemented");
 }
 
 static void expressionStatement() {
@@ -1559,6 +1570,8 @@ static void declaration() {
         functionDeclaration();
     } else if (match(TOKEN_LET)) {
         letDeclaration();
+    } else if (match(TOKEN_WITH)) {
+        withDeclaration();
     } else {
         statement(false, false);
     }

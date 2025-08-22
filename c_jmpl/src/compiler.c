@@ -44,6 +44,7 @@ typedef struct Compiler {
 
 typedef struct {
     Scanner scanner;
+    Compiler* currentCompiler;
     GC* gc;
 
     Token current;
@@ -84,7 +85,7 @@ typedef enum {
     PREC_PRIMARY
 } Precedence;
 
-typedef void (*ParseFn)(bool canAssign);
+typedef void (*ParseFn)(Parser* parser, bool canAssign);
 
 typedef struct {
     ParseFn prefix;
@@ -92,12 +93,8 @@ typedef struct {
     Precedence precedence;
 } ParseRule;
 
-// Note: Remove globals eventually
-Parser parser;
-Compiler* current = NULL;
-
-static Chunk* currentChunk() {
-    return &current->function->chunk;
+static Chunk* currentChunk(Parser* parser) {
+    return &parser->currentCompiler->function->chunk;
 }
 
 /**
@@ -129,9 +126,9 @@ static void fprintfRawString(FILE* f, const unsigned char* string, int length) {
     }
 }
 
-static void errorAt(Token* token, const unsigned char* message) {
-    if(parser.panicMode) return;
-    parser.panicMode = true;
+static void errorAt(Parser* parser, Token* token, const unsigned char* message) {
+    if(parser->panicMode) return;
+    parser->panicMode = true;
     
     fprintf(stderr, "[line %d] " ANSI_RED "Error" ANSI_RESET, token->line);
 
@@ -147,22 +144,22 @@ static void errorAt(Token* token, const unsigned char* message) {
 
     fprintf(stderr, ": %s.\n", message);
     exit(INTERNAL_SOFTWARE_ERROR); // TEMPORARY HACK TO FORCE PROGRAM TO EXIT WHEN THERE'S A COMPILER ERROR
-    parser.hadError = true;
+    parser->hadError = true;
 }
 
-static void error(const unsigned char* message) {
-    errorAt(&parser.previous, message);
+static void error(Parser* parser, const unsigned char* message) {
+    errorAt(parser, &parser->previous, message);
 }
 
-static void errorAtCurrent(const unsigned char* message) {
-    errorAt(&parser.current, message);
+static void errorAtCurrent(Parser* parser, const unsigned char* message) {
+    errorAt(parser, &parser->current, message);
 }
 
-static void advance() {
-    parser.previous = parser.current;
+static void advance(Parser* parser) {
+    parser->previous = parser->current;
     
     while (true) {
-        parser.current = scanToken(&parser.scanner);
+        parser->current = scanToken(&parser->scanner);
 #ifdef DEBUG_PRINT_TOKENS
         // Debug tokens
         printf("%s", getTokenName(parser.current.type));
@@ -172,9 +169,9 @@ static void advance() {
         if (parser.current.type == TOKEN_NEWLINE || parser.current.type == TOKEN_DEDENT || parser.current.type == TOKEN_EOF) printf("\n\n");
 #endif
 
-        if(parser.current.type != TOKEN_ERROR) break;
+        if(parser->current.type != TOKEN_ERROR) break;
 
-        errorAtCurrent(parser.current.start);
+        errorAtCurrent(parser, parser->current.start);
     }
 }
 
@@ -187,31 +184,31 @@ static void advance() {
  * If the current token has the given token type it calls advance().
  * If not, an error is displayed with errorAtCurrent().
  */
-static void consume(TokenType type, const unsigned char* message) {
-    if (parser.current.type == type) {
-        advance();
+static void consume(Parser* parser, TokenType type, const unsigned char* message) {
+    if (parser->current.type == type) {
+        advance(parser);
         return;
     }
 
-    errorAtCurrent(message);
+    errorAtCurrent(parser, message);
 }
 
 /**
  * @brief Skip zero or more newlines.
  */
-static void skipNewlines() {
-    while (parser.current.type == TOKEN_NEWLINE) {
-        advance();
+static void skipNewlines(Parser* parser) {
+    while (parser->current.type == TOKEN_NEWLINE) {
+        advance(parser);
     }
 }
 
-static bool check(TokenType type) {
-    return parser.current.type == type;
+static bool check(Parser* parser, TokenType type) {
+    return parser->current.type == type;
 }
 
-static bool match(TokenType type) {
-    if (!check(type)) return false;
-    advance();
+static bool match(Parser* parser, TokenType type) {
+    if (!check(parser, type)) return false;
+    advance(parser);
 
     return true;
 }
@@ -219,150 +216,151 @@ static bool match(TokenType type) {
 /**
  * @brief Consume a statement separator (newline or semicolon).
  */
-static void consumeSeparator() {
+static void consumeSeparator(Parser* parser) {
     // Make sure a seperator separates statements
-    if (match(TOKEN_SEMICOLON) || match(TOKEN_NEWLINE)) return;
+    if (match(parser, TOKEN_SEMICOLON) || match(parser, TOKEN_NEWLINE)) return;
     
-    if (check(TOKEN_INDENT) || check(TOKEN_DEDENT) || check(TOKEN_EOF)) return;
+    if (check(parser, TOKEN_INDENT) || check(parser, TOKEN_DEDENT) || check(parser, TOKEN_EOF)) return;
 
-    error("Invalid syntax");
+    error(parser, "Invalid syntax");
 }
 
-static void emitByte(uint8_t byte) {
-    writeChunk(parser.gc, currentChunk(), byte, parser.previous.line);
+static void emitByte(Parser* parser, uint8_t byte) {
+    writeChunk(parser->gc, currentChunk(parser), byte, parser->previous.line);
 }
 
-static void emitBytes(uint8_t byte1, uint8_t byte2) {
-    emitByte(byte1);
-    emitByte(byte2);
+static void emitBytes(Parser* parser, uint8_t byte1, uint8_t byte2) {
+    emitByte(parser, byte1);
+    emitByte(parser, byte2);
 }
 
-static void emitOpShort(uint8_t byte, uint16_t u16) {
-    emitByte(byte);
-    emitBytes((uint8_t)(u16 >> 8), (uint8_t)(u16 & 0xFF)); // Split the u16 into two bytes
+static void emitOpShort(Parser* parser, uint8_t byte, uint16_t u16) {
+    emitByte(parser, byte);
+    emitBytes(parser, (uint8_t)(u16 >> 8), (uint8_t)(u16 & 0xFF)); // Split the u16 into two bytes
 }
 
-static void emitLoop(int loopStart) {
-    emitByte(OP_LOOP);
+static void emitLoop(Parser* parser, int loopStart) {
+    emitByte(parser, OP_LOOP);
 
-    int offset = currentChunk()->count - loopStart + 2;
-    if (offset > UINT16_MAX) error("(Internal) Loop body too large");
+    int offset = currentChunk(parser)->count - loopStart + 2;
+    if (offset > UINT16_MAX) error(parser, "(Internal) Loop body too large");
 
-    emitByte((offset >> 8) & 0xFF);
-    emitByte(offset & 0xFF);
+    emitByte(parser, (offset >> 8) & 0xFF);
+    emitByte(parser, offset & 0xFF);
 }
 
-static int emitJump(uint8_t instruction) {
-    emitByte(instruction);
+static int emitJump(Parser* parser, uint8_t instruction) {
+    emitByte(parser, instruction);
 
     // Jump over offset
-    emitByte(0xFF);
-    emitByte(0xFF);
+    emitByte(parser, 0xFF);
+    emitByte(parser, 0xFF);
 
-    return currentChunk()->count - 2;
+    return currentChunk(parser)->count - 2;
 }
 
-static void emitReturn() {
+static void emitReturn(Parser* parser) {
     // Implicitly returns null if function returns nothing
-    if (!current->implicitReturn || current->type != TYPE_FUNCTION) {
-        emitByte(OP_NULL);
+    if (!parser->currentCompiler->implicitReturn || parser->currentCompiler->type != TYPE_FUNCTION) {
+        emitByte(parser, OP_NULL);
     }
 
-    emitBytes(OP_RETURN, current->implicitReturn);
+    emitBytes(parser, OP_RETURN, parser->currentCompiler->implicitReturn);
 }
 
-static uint16_t makeConstant(Value value) {
-    int constant = findConstant(currentChunk(), value);
+static uint16_t makeConstant(Parser* parser, Value value) {
+    int constant = findConstant(currentChunk(parser), value);
     if (constant == -1) {
-        constant = addConstant(parser.gc, currentChunk(), value);
+        constant = addConstant(parser->gc, currentChunk(parser), value);
     }
 
     if (constant > UINT16_MAX) {
-        error("(Internal) Too many constants in one chunk");
+        error(parser, "(Internal) Too many constants in one chunk");
         return 0;
     }
 
     return (uint16_t)constant;
 }
 
-static void emitConstant(Value value) {
-    emitOpShort(OP_CONSTANT, makeConstant(value));
+static void emitConstant(Parser* parser, Value value) {
+    emitOpShort(parser, OP_CONSTANT, makeConstant(parser, value));
 }
 
-static void patchJump(int offset) {
+static void patchJump(Parser* parser, int offset) {
     // -2 to adjust for the bytecode for the jump offset itself
-    int jump = currentChunk()->count - offset - 2;
+    int jump = currentChunk(parser)->count - offset - 2;
 
     if (jump > UINT16_MAX) {
-        error("(Internal) Too much code to jump over");
+        error(parser, "(Internal) Too much code to jump over");
     }
 
-    currentChunk()->code[offset] = (jump >> 8) & 0xFF;
-    currentChunk()->code[offset + 1] = jump & 0xFF;
+    currentChunk(parser)->code[offset] = (jump >> 8) & 0xFF;
+    currentChunk(parser)->code[offset + 1] = jump & 0xFF;
 }
 
-static void initCompiler(Compiler* compiler, FunctionType type) {
-    compiler->enclosing = current;
+static void initCompiler(Parser* parser, Compiler* compiler, FunctionType type) {
+    compiler->enclosing = parser->currentCompiler;
     compiler->function = NULL;
     compiler->type = type;
     compiler->localCount = 0;
     compiler->scopeDepth = 0;
     compiler->implicitReturn = false;
-    compiler->function = newFunction(parser.gc);
-    current = compiler;
+    compiler->function = newFunction(parser->gc);
+
+    parser->currentCompiler = compiler;
 
     if (type != TYPE_SCRIPT) {
-        current->function->name = copyString(parser.gc, parser.previous.start, parser.previous.length);
+        parser->currentCompiler->function->name = copyString(parser->gc, parser->previous.start, parser->previous.length);
     }
 
-    Local* local = &current->locals[current->localCount++];
+    Local* local = &parser->currentCompiler->locals[parser->currentCompiler->localCount++];
     local->depth = 0;
     local->isCaptured = false;
     local->name.start = "";
     local->name.length = 0;
 }
 
-static ObjFunction* endCompiler() {
-    emitReturn();
-    ObjFunction* function = current->function;
+static ObjFunction* endCompiler(Parser* parser) {
+    emitReturn(parser);
+    ObjFunction* function = parser->currentCompiler->function;
 
 #ifdef DEBUG_PRINT_CODE
-    if (!parser.hadError) {
-        disassembleChunk(currentChunk(), function->name != NULL ? (const char*)function->name->utf8 : "<script>");
+    if (!parser->hadError) {
+        disassembleChunk(currentChunk(parser), function->name != NULL ? (const char*)function->name->utf8 : "<script>");
     }
 #endif
 
-    current = current->enclosing;
+    parser->currentCompiler = parser->currentCompiler->enclosing;
     return function;
 }
 
-static void beginScope() {
-    current->scopeDepth++;
+static void beginScope(Parser* parser) {
+    parser->currentCompiler->scopeDepth++;
 }
 
-static void endScope() {
-    current->scopeDepth--;
+static void endScope(Parser* parser) {
+    parser->currentCompiler->scopeDepth--;
 
-    while (current->localCount > 0 && current->locals[current->localCount - 1].depth > current->scopeDepth) {
-        if (current->locals[current->localCount - 1].isCaptured) {
-            emitByte(OP_CLOSE_UPVALUE);
+    while (parser->currentCompiler->localCount > 0 && parser->currentCompiler->locals[parser->currentCompiler->localCount - 1].depth > parser->currentCompiler->scopeDepth) {
+        if (parser->currentCompiler->locals[parser->currentCompiler->localCount - 1].isCaptured) {
+            emitByte(parser, OP_CLOSE_UPVALUE);
         } else {
-            emitByte(OP_POP);
+            emitByte(parser, OP_POP);
         }
-        current->localCount--;
+        parser->currentCompiler->localCount--;
     }
 }
 
 // Function declarations 
-static void expression(bool ignoreNewlines);
-static void statement(bool blockAllowed, bool ignoreSeparator);
-static void expressionStatement();
-static void declaration();
+static void expression(Parser* parser, bool ignoreNewlines);
+static void statement(Parser* parser, bool blockAllowed, bool ignoreSeparator);
+static void expressionStatement(Parser* parser);
+static void declaration(Parser* parser);
 static ParseRule* getRule(TokenType type);
-static void parsePrecedence(Precedence precendence, bool ignoreNewlines);
+static void parsePrecedence(Parser* parser, Precedence precendence, bool ignoreNewlines);
 
-static uint16_t identifierConstant(Token* name) {
-    return makeConstant(OBJ_VAL(copyString(parser.gc, name->start, name->length)));
+static uint16_t identifierConstant(Parser* parser, Token* name) {
+    return makeConstant(parser, OBJ_VAL(copyString(parser->gc, name->start, name->length)));
 }
 
 static bool identifiersEqual(Token* a, Token* b) {
@@ -370,13 +368,13 @@ static bool identifiersEqual(Token* a, Token* b) {
     return memcmp(a->start, b->start, a->length) == 0;
 }
 
-static int resolveLocal(Compiler* compiler, Token* name) {
+static int resolveLocal(Parser* parser, Compiler* compiler, Token* name) {
     for (int i = compiler->localCount - 1; i >= 0; i--) {
         Local* local = &compiler->locals[i];
 
         if (identifiersEqual(name, &local->name)) {
             if(local->depth == -1) {
-                error("Can't read local variable in its own initialiser");
+                error(parser, "Can't read local variable in its own initialiser");
             }
 
             return i;
@@ -386,7 +384,7 @@ static int resolveLocal(Compiler* compiler, Token* name) {
     return -1;
 }
 
-static int addUpvalue(Compiler* compiler, uint8_t index, bool isLocal) {
+static int addUpvalue(Parser* parser, Compiler* compiler, uint8_t index, bool isLocal) {
     int upvalueCount = compiler->function->upvalueCount;
 
     for (int i = 0; i < upvalueCount; i++) {
@@ -397,7 +395,7 @@ static int addUpvalue(Compiler* compiler, uint8_t index, bool isLocal) {
     }
 
     if (upvalueCount == UINT8_COUNT) {
-        error("(Internal) Too many closure variables in function");
+        error(parser, "(Internal) Too many closure variables in function");
         return 0;
     }
 
@@ -407,30 +405,30 @@ static int addUpvalue(Compiler* compiler, uint8_t index, bool isLocal) {
     return compiler->function->upvalueCount++;
 }
 
-static int resolveUpvalue(Compiler* compiler, Token* name) {
-    if(compiler->enclosing == NULL) return -1;
+static int resolveUpvalue(Parser* parser, Compiler* compiler, Token* name) {
+    if (compiler->enclosing == NULL) return -1;
 
-    int local = resolveLocal(compiler->enclosing, name);
+    int local = resolveLocal(parser, compiler->enclosing, name);
     if (local != -1) {
         compiler->enclosing->locals[local].isCaptured = true;
-        return addUpvalue(compiler, (uint8_t)local, true);
+        return addUpvalue(parser, compiler, (uint8_t)local, true);
     }
 
-    int upvalue = resolveUpvalue(compiler->enclosing, name);
+    int upvalue = resolveUpvalue(parser, compiler->enclosing, name);
     if (upvalue != -1) {
-        return addUpvalue(compiler, (uint8_t)upvalue, false);
+        return addUpvalue(parser, compiler, (uint8_t)upvalue, false);
     }
 
     return -1;
 }
 
-static void addLocal(Token name) {
-    if (current->localCount == UINT8_COUNT) {
-        error("(Internal) Too many local variables in current scope");
+static void addLocal(Parser* parser, Token name) {
+    if (parser->currentCompiler->localCount == UINT8_COUNT) {
+        error(parser, "(Internal) Too many local variables in current scope");
         return;
     }
 
-    Local* local = &current->locals[current->localCount++];
+    Local* local = &parser->currentCompiler->locals[parser->currentCompiler->localCount++];
     local->name = name;
     local->depth = -1;
     local->isCaptured = false;
@@ -441,24 +439,24 @@ static void addLocal(Token name) {
  * 
  * @return Whether the variable is already defined
  */
-static void declareVariable() {
-    if (current->scopeDepth == 0) return;
+static void declareVariable(Parser* parser) {
+    if (parser->currentCompiler->scopeDepth == 0) return;
 
-    Token* name = &parser.previous;
+    Token* name = &parser->previous;
 
-    for (int i = current->localCount - 1; i >= 0; i--) {
-        Local* local = &current->locals[i];
+    for (int i = parser->currentCompiler->localCount - 1; i >= 0; i--) {
+        Local* local = &parser->currentCompiler->locals[i];
 
-        if (local->depth != -1 && local->depth < current->scopeDepth) {
+        if (local->depth != -1 && local->depth < parser->currentCompiler->scopeDepth) {
             break;
         }
 
         if (identifiersEqual(name, &local->name)) {
-            error("Variable with this identifier already defined in this scope");
+            error(parser, "Variable with this identifier already defined in this scope");
         }
     }
 
-    addLocal(*name);
+    addLocal(parser, *name);
 }
 
 /**
@@ -469,27 +467,27 @@ static void declareVariable() {
  * 
  * Note: local variables live on the stack so are accessed via a stack index
  */
-static uint16_t parseVariable(const unsigned char* errorMessage) {
-    consume(TOKEN_IDENTIFIER, errorMessage);
+static uint16_t parseVariable(Parser* parser, const unsigned char* errorMessage) {
+    consume(parser, TOKEN_IDENTIFIER, errorMessage);
 
-    declareVariable();
-    if (current->scopeDepth > 0) return 0;
+    declareVariable(parser);
+    if (parser->currentCompiler->scopeDepth > 0) return 0;
 
-    return identifierConstant(&parser.previous);
+    return identifierConstant(parser, &parser->previous);
 }
 
-static void markInitialised() {
-    if (current->scopeDepth == 0) return;
-    current->locals[current->localCount - 1].depth = current->scopeDepth;
+static void markInitialised(Parser* parser) {
+    if (parser->currentCompiler->scopeDepth == 0) return;
+    parser->currentCompiler->locals[parser->currentCompiler->localCount - 1].depth = parser->currentCompiler->scopeDepth;
 }
 
-static void defineVariable(uint16_t global) {
-    if (current->scopeDepth > 0) {
-        markInitialised();
+static void defineVariable(Parser* parser, uint16_t global) {
+    if (parser->currentCompiler->scopeDepth > 0) {
+        markInitialised(parser);
         return;
     }
 
-    emitOpShort(OP_DEFINE_GLOBAL, global);
+    emitOpShort(parser, OP_DEFINE_GLOBAL, global);
 }
 
 static Token syntheticToken(const char* name) {
@@ -505,13 +503,13 @@ static Token syntheticToken(const char* name) {
  * @param code An opcode that pushes a value to the top of the stack
  * @param name The name of the synthetic variable
  */
-static uint8_t syntheticLocal(OpCode code, const char* name) {
-    emitByte(code);
+static uint8_t syntheticLocal(Parser* parser, OpCode code, const char* name) {
+    emitByte(parser, code);
     
-    uint8_t varSlot = current->localCount;
-    addLocal(syntheticToken(name));
-    markInitialised();
-    emitBytes(OP_SET_LOCAL, varSlot);
+    uint8_t varSlot = parser->currentCompiler->localCount;
+    addLocal(parser, syntheticToken(name));
+    markInitialised(parser);
+    emitBytes(parser, OP_SET_LOCAL, varSlot);
 
     return varSlot;
 }
@@ -523,18 +521,18 @@ static uint8_t syntheticLocal(OpCode code, const char* name) {
  * 
  * Pushes: a local variable, a null value initialiser, and the target object
  */
-static uint8_t parseGenerator() {
+static uint8_t parseGenerator(Parser* parser) {
     // Parse the local variable that will be the generator
-    uint8_t localVarSlot = current->localCount;
-    consume(TOKEN_IDENTIFIER, "Expected identifier");
+    uint8_t localVarSlot = parser->currentCompiler->localCount;
+    consume(parser, TOKEN_IDENTIFIER, "Expected identifier");
     
     // === Check if name is already defined ===
-    Token* name = &parser.previous;
+    Token* name = &parser->previous;
 
-    for (int i = current->localCount - 1; i >= 0; i--) {
-        Local* local = &current->locals[i];
+    for (int i = parser->currentCompiler->localCount - 1; i >= 0; i--) {
+        Local* local = &parser->currentCompiler->locals[i];
 
-        if (local->depth != -1 && local->depth < current->scopeDepth) {
+        if (local->depth != -1 && local->depth < parser->currentCompiler->scopeDepth) {
             break;
         }
 
@@ -544,15 +542,15 @@ static uint8_t parseGenerator() {
     }
     // ========================================
 
-    addLocal(*name);
+    addLocal(parser, *name);
 
-    emitByte(OP_NULL); // Set it to null initially
-    defineVariable(localVarSlot);
+    emitByte(parser, OP_NULL); // Set it to null initially
+    defineVariable(parser, localVarSlot);
 
-    consume(TOKEN_IN, "Expected 'in' or '∈' after identifier");
+    consume(parser, TOKEN_IN, "Expected 'in' or '∈' after identifier");
 
     // Push the object to generate from (to create an iterator)
-    expression(false);
+    expression(parser, false);
 
     return localVarSlot;
 }
@@ -563,126 +561,107 @@ static uint8_t parseGenerator() {
  * @param type The type of function to create
  * @param f    The c function to call to compile the inner part of the function
  */
-static void functionWrapper(FunctionType type, void (*f)()) {
+static void functionWrapper(Parser* parser, FunctionType type, void (*f)()) {
     Compiler compiler;
-    initCompiler(&compiler, type);
-    beginScope();
+    initCompiler(parser, &compiler, type);
+    beginScope(parser);
 
-    (*f)();
+    (*f)(parser);
 
-    ObjFunction* function = endCompiler();
-    emitOpShort(OP_CLOSURE, makeConstant(OBJ_VAL(function)));
+    ObjFunction* function = endCompiler(parser);
+    emitOpShort(parser, OP_CLOSURE, makeConstant(parser, OBJ_VAL(function)));
 
     for (int i = 0; i < function->upvalueCount; i++) {
-        emitByte(compiler.upvalues[i].isLocal ? 1 : 0);
-        emitByte(compiler.upvalues[i].index);
+        emitByte(parser, compiler.upvalues[i].isLocal ? 1 : 0);
+        emitByte(parser, compiler.upvalues[i].index);
     }
 }
 
-static uint8_t argumentList() {
+static uint8_t argumentList(Parser* parser) {
     uint8_t argCount = 0;
-    if (!check(TOKEN_RIGHT_PAREN)) {
+    if (!check(parser, TOKEN_RIGHT_PAREN)) {
         do {
-            skipNewlines();
-            expression(true);
+            skipNewlines(parser);
+            expression(parser, true);
 
             if(argCount == 255) {
-                error("(Internal) Can't have more than 255 arguments");
+                error(parser, "(Internal) Can't have more than 255 arguments");
             }
             argCount++;
-        } while (match(TOKEN_COMMA));
+        } while (match(parser, TOKEN_COMMA));
     }
 
-    skipNewlines();
+    skipNewlines(parser);
 
-    consume(TOKEN_RIGHT_PAREN, "Expected ')' after arguments");
+    consume(parser, TOKEN_RIGHT_PAREN, "Expected ')' after arguments");
     return argCount;
 }
 
-static void binary(bool canAssign) {
-    TokenType operatorType = parser.previous.type;
+static void binary(Parser* parser, bool canAssign) {
+    TokenType operatorType = parser->previous.type;
     ParseRule* rule = getRule(operatorType);
-    parsePrecedence((Precedence)(rule->precedence + 1), false);
+    parsePrecedence(parser, (Precedence)(rule->precedence + 1), false);
 
     switch (operatorType) {
-        case TOKEN_NOT_EQUAL:     emitByte(OP_NOT_EQUAL);      break;
-        case TOKEN_EQUAL_EQUAL:   emitByte(OP_EQUAL);          break;
-        case TOKEN_GREATER:       emitByte(OP_GREATER);        break;
-        case TOKEN_GREATER_EQUAL: emitByte(OP_GREATER_EQUAL);  break;
-        case TOKEN_LESS:          emitByte(OP_LESS);           break;
-        case TOKEN_LESS_EQUAL:    emitByte(OP_LESS_EQUAL);     break;
-        case TOKEN_PLUS:          emitByte(OP_ADD);            break;
-        case TOKEN_MINUS:         emitByte(OP_SUBTRACT);       break;
-        case TOKEN_ASTERISK:      emitByte(OP_MULTIPLY);       break;
-        case TOKEN_SLASH:         emitByte(OP_DIVIDE);         break;
-        case TOKEN_CARET:         emitByte(OP_EXPONENT);       break;
-        case TOKEN_MOD:           emitByte(OP_MOD);            break;
-        case TOKEN_IN:            emitByte(OP_SET_IN);         break;
-        case TOKEN_INTERSECT:     emitByte(OP_SET_INTERSECT);  break;
-        case TOKEN_UNION:         emitByte(OP_SET_UNION);      break;
-        case TOKEN_BACK_SLASH:    emitByte(OP_SET_DIFFERENCE); break;
-        case TOKEN_SUBSET:        emitByte(OP_SUBSET);         break;
-        case TOKEN_SUBSETEQ:      emitByte(OP_SUBSETEQ);       break;
+        case TOKEN_NOT_EQUAL:     emitByte(parser, OP_NOT_EQUAL);      break;
+        case TOKEN_EQUAL_EQUAL:   emitByte(parser, OP_EQUAL);          break;
+        case TOKEN_GREATER:       emitByte(parser, OP_GREATER);        break;
+        case TOKEN_GREATER_EQUAL: emitByte(parser, OP_GREATER_EQUAL);  break;
+        case TOKEN_LESS:          emitByte(parser, OP_LESS);           break;
+        case TOKEN_LESS_EQUAL:    emitByte(parser, OP_LESS_EQUAL);     break;
+        case TOKEN_PLUS:          emitByte(parser, OP_ADD);            break;
+        case TOKEN_MINUS:         emitByte(parser, OP_SUBTRACT);       break;
+        case TOKEN_ASTERISK:      emitByte(parser, OP_MULTIPLY);       break;
+        case TOKEN_SLASH:         emitByte(parser, OP_DIVIDE);         break;
+        case TOKEN_CARET:         emitByte(parser, OP_EXPONENT);       break;
+        case TOKEN_MOD:           emitByte(parser, OP_MOD);            break;
+        case TOKEN_IN:            emitByte(parser, OP_SET_IN);         break;
+        case TOKEN_INTERSECT:     emitByte(parser, OP_SET_INTERSECT);  break;
+        case TOKEN_UNION:         emitByte(parser, OP_SET_UNION);      break;
+        case TOKEN_BACK_SLASH:    emitByte(parser, OP_SET_DIFFERENCE); break;
+        case TOKEN_SUBSET:        emitByte(parser, OP_SUBSET);         break;
+        case TOKEN_SUBSETEQ:      emitByte(parser, OP_SUBSETEQ);       break;
         default: return;
     }
 }
 
-/**
- * @brief Creates an implicit multiplication.
- * 
- * Called when an identifier comes directly after another token (i.e. 2n).
- * Compiles the identifier then emits a multiply.
- */
-static void implMult(bool canAssign) {
-    ParseFn prefixRule = getRule(parser.previous.type)->prefix;
-
-    if (prefixRule == NULL) {
-        error("Expected expression");
-        return;
-    }
-    
-    prefixRule(canAssign);
-
-    emitByte(OP_MULTIPLY);
+static void call(Parser* parser, bool canAssign) {
+    uint8_t argCount = argumentList(parser);
+    emitBytes(parser, OP_CALL, argCount);
 }
 
-static void call(bool canAssign) {
-    uint8_t argCount = argumentList();
-    emitBytes(OP_CALL, argCount);
-}
-
-static void subscript(bool canAssign) {
+static void subscript(Parser* parser, bool canAssign) {
     int isSlice = 0;
 
-    if (match(TOKEN_ELLIPSIS)) {
-        // [:x]
+    if (match(parser, TOKEN_ELLIPSIS)) {
+        // [... x]
         isSlice = 1;
-        emitByte(OP_NULL);
-        expression(true);
+        emitByte(parser, OP_NULL);
+        expression(parser, true);
     } else {
-        expression(true);
+        expression(parser, true);
 
-        if (match(TOKEN_ELLIPSIS)) {
+        if (match(parser, TOKEN_ELLIPSIS)) {
             isSlice = 1;
-            if (check(TOKEN_RIGHT_SQUARE)) {
-                // [x:]
-                emitByte(OP_NULL);
+            if (check(parser, TOKEN_RIGHT_SQUARE)) {
+                // [x ...]
+                emitByte(parser, OP_NULL);
             } else {
-                // [x:y]
-                expression(true);
+                // [x ... y]
+                expression(parser, true);
             }
         }
     }
 
-    consume(TOKEN_RIGHT_SQUARE, "Expected ']' after expression");
-    emitBytes(OP_SUBSCRIPT, isSlice);
+    consume(parser, TOKEN_RIGHT_SQUARE, "Expected ']' after expression");
+    emitBytes(parser, OP_SUBSCRIPT, isSlice);
 }
 
-static void literal(bool canAssign) {
-    switch (parser.previous.type) {
-        case TOKEN_FALSE: emitByte(OP_FALSE); break;
-        case TOKEN_NULL:  emitByte(OP_NULL);  break;
-        case TOKEN_TRUE:  emitByte(OP_TRUE);  break;
+static void literal(Parser* parser, bool canAssign) {
+    switch (parser->previous.type) {
+        case TOKEN_FALSE: emitByte(parser, OP_FALSE); break;
+        case TOKEN_NULL:  emitByte(parser, OP_NULL);  break;
+        case TOKEN_TRUE:  emitByte(parser, OP_TRUE);  break;
         default: return;
     }
 }
@@ -695,59 +674,59 @@ static void literal(bool canAssign) {
  * or:                         (f ... l)
  * or:                         (f, n, ... l)
  */
-static void tuple() {
-    if (check(TOKEN_ELLIPSIS)) {
+static void tuple(Parser* parser) {
+    if (check(parser, TOKEN_ELLIPSIS)) {
         // Omission operation without 'next'
-        advance();
-        expression(true);
-        emitBytes(OP_TUPLE_OMISSION, 0);
+        advance(parser);
+        expression(parser, true);
+        emitBytes(parser, OP_TUPLE_OMISSION, 0);
     } else {
-        if (match(TOKEN_COMMA)) {
-            if (check(TOKEN_RIGHT_PAREN)) {
+        if (match(parser, TOKEN_COMMA)) {
+            if (check(parser, TOKEN_RIGHT_PAREN)) {
                 // 1-tuple
-                emitBytes(OP_CREATE_TUPLE, 1);
+                emitBytes(parser, OP_CREATE_TUPLE, 1);
                 return;
             }
 
-            expression(true);
+            expression(parser, true);
 
-            if (check(TOKEN_ELLIPSIS)) {
+            if (check(parser, TOKEN_ELLIPSIS)) {
                 // Omission operation with 'next'
-                advance();
-                expression(true);
-                emitBytes(OP_TUPLE_OMISSION, 1);
+                advance(parser);
+                expression(parser, true);
+                emitBytes(parser, OP_TUPLE_OMISSION, 1);
             } else {
                 // Normal tuple construction
                 int count = 2;
-                while (match(TOKEN_COMMA)) {
-                    expression(true);
+                while (match(parser, TOKEN_COMMA)) {
+                    expression(parser, true);
                     if (count < UINT8_MAX) {
                         count++;
                     } else {
-                        error("(Internal) Can't have more than 255 elements in a tuple literal");
+                        error(parser, "(Internal) Can't have more than 255 elements in a tuple literal");
                     }
                 }
 
-                emitBytes(OP_CREATE_TUPLE, count);
+                emitBytes(parser, OP_CREATE_TUPLE, count);
             }
         }
     }
 }
 
-static void grouping(bool canAssign) {
+static void grouping(Parser* parser, bool canAssign) {
     // If its an empty parentheses, make an empty tuple
-    if (check(TOKEN_RIGHT_PAREN)) {
-        advance();
-        emitBytes(OP_CREATE_TUPLE, 0);
+    if (check(parser, TOKEN_RIGHT_PAREN)) {
+        advance(parser);
+        emitBytes(parser, OP_CREATE_TUPLE, 0);
         return;
     }
 
-    expression(true);
+    expression(parser, true);
 
     // Could be a tuple
-    tuple();  
+    tuple(parser);  
 
-    consume(TOKEN_RIGHT_PAREN, "Expected ')' after expression");
+    consume(parser, TOKEN_RIGHT_PAREN, "Expected ')' after expression");
 }
 
 // ======================================================================
@@ -764,34 +743,34 @@ static void growArray(uint8_t** array, size_t currentSize, uint8_t newVal) {
     *array = newArray;
 }
 
-static bool parseSetBuilderGenerator(int oldCount, uint8_t** generatorSlots, uint8_t** iteratorSlots, uint8_t** loopStarts, uint8_t** exitJumps) {
-    Parser temp = parser;
+static bool parseSetBuilderGenerator(Parser* parser, int oldCount, uint8_t** generatorSlots, uint8_t** iteratorSlots, uint8_t** loopStarts, uint8_t** exitJumps) {
+    Parser temp = *parser;
     // Check if its a generator 'x ∈'
-    bool isGenerator = match(TOKEN_IDENTIFIER) && match(TOKEN_IN);
-    parser = temp;
+    bool isGenerator = match(parser, TOKEN_IDENTIFIER) && match(parser, TOKEN_IN);
+    *parser = temp;
 
     if (isGenerator) {
-        uint8_t generatorSlot = parseGenerator();
+        uint8_t generatorSlot = parseGenerator(parser);
         if (generatorSlot == 0) {
-            parser = temp;
+            *parser = temp;
             return false; // Return false if already defined
         }
 
-        uint8_t iteratorSlot = syntheticLocal(OP_CREATE_ITERATOR, "@iter");
+        uint8_t iteratorSlot = syntheticLocal(parser, OP_CREATE_ITERATOR, "@iter");
 
         growArray(generatorSlots, oldCount, generatorSlot);
         growArray(iteratorSlots, oldCount, iteratorSlot);
 
         // Generate loop
-        int loopStart = currentChunk()->count;
-        emitBytes(OP_GET_LOCAL, iteratorSlot);
-        emitByte(OP_ITERATE);
+        int loopStart = currentChunk(parser)->count;
+        emitBytes(parser, OP_GET_LOCAL, iteratorSlot);
+        emitByte(parser, OP_ITERATE);
 
-        int exitJump = emitJump(OP_JUMP_IF_FALSE);
-        emitByte(OP_POP); // Pop check
+        int exitJump = emitJump(parser, OP_JUMP_IF_FALSE);
+        emitByte(parser, OP_POP); // Pop check
 
-        emitBytes(OP_SET_LOCAL, generatorSlot);
-        emitByte(OP_POP);
+        emitBytes(parser, OP_SET_LOCAL, generatorSlot);
+        emitByte(parser, OP_POP);
 
         growArray(loopStarts, oldCount, loopStart);
         growArray(exitJumps, oldCount, exitJump);
@@ -805,13 +784,13 @@ static bool parseSetBuilderGenerator(int oldCount, uint8_t** generatorSlots, uin
 /**
  * @brief Parse a set builder.
  */
-static void setBuilder() {
+static void setBuilder(Parser* parser) {
     // Set anonymous function name and to implicit return
-    current->function->name = copyString(parser.gc, "@setb", 5);
-    current->implicitReturn = true;
+    parser->currentCompiler->function->name = copyString(parser->gc, "@setb", 5);
+    parser->currentCompiler->implicitReturn = true;
 
     // Store an opened set as a local
-    uint8_t setSlot = syntheticLocal(OP_SET_CREATE, "@set");
+    uint8_t setSlot = syntheticLocal(parser, OP_SET_CREATE, "@set");
 
     uint8_t* generatorSlots = NULL;
     uint8_t* iteratorSlots = NULL;
@@ -823,67 +802,67 @@ static void setBuilder() {
     int skipCount = 0;
 
     // Check if expression is a generator, otherwise skip to pipe
-    Parser initialParser = parser;
+    Parser initialParser = *parser;
     bool hasLHSGenerator = false;
-    if (parseSetBuilderGenerator(generatorCount, &generatorSlots, & iteratorSlots, &loopStarts, &exitJumps)) {
+    if (parseSetBuilderGenerator(parser, generatorCount, &generatorSlots, &iteratorSlots, &loopStarts, &exitJumps)) {
         generatorCount++;
         hasLHSGenerator = true;
     } else {
-        while (!check(TOKEN_PIPE)) advance();
+        while (!check(parser, TOKEN_PIPE)) advance(parser);
     }
-    consume(TOKEN_PIPE, "Expected '|' after expression or generator");
+    consume(parser, TOKEN_PIPE, "Expected '|' after expression or generator");
 
     // Parse qualifiers (generators and filters)
     bool hasRHS = false;
     do {
-        if (check(TOKEN_RIGHT_BRACE)) break;
+        if (check(parser, TOKEN_RIGHT_BRACE)) break;
         hasRHS = true;
 
         // Check if it is a generator
-        if (parseSetBuilderGenerator(generatorCount, &generatorSlots, & iteratorSlots, &loopStarts, &exitJumps)) {
+        if (parseSetBuilderGenerator(parser, generatorCount, &generatorSlots, & iteratorSlots, &loopStarts, &exitJumps)) {
             generatorCount++;
             continue;
         }
 
         // Not a generator, so a predicate
-        expression(false);
-        int skipJump = emitJump(OP_JUMP_IF_FALSE_2);
-        emitByte(OP_POP);
+        expression(parser, false);
+        int skipJump = emitJump(parser, OP_JUMP_IF_FALSE_2);
+        emitByte(parser, OP_POP);
 
         growArray(&skipJumps, skipCount, skipJump);
         skipCount++;
-    } while (match(TOKEN_COMMA));
+    } while (match(parser, TOKEN_COMMA));
 
-    if (!hasRHS) errorAtCurrent("Set-builder must have at one qualifier");
-    if (generatorCount == 0) errorAtCurrent("Set-builder must have at least one generator");
-    Parser endParser = parser;
-    parser = initialParser;
+    if (!hasRHS) errorAtCurrent(parser, "Set-builder must have at one qualifier");
+    if (generatorCount == 0) errorAtCurrent(parser, "Set-builder must have at least one generator");
+    Parser endParser = *parser;
+    *parser = initialParser;
 
     // Load set and insert expression
-    emitBytes(OP_GET_LOCAL, setSlot);
+    emitBytes(parser, OP_GET_LOCAL, setSlot);
     if (hasLHSGenerator) {
-        emitBytes(OP_GET_LOCAL, generatorSlots[0]);
+        emitBytes(parser, OP_GET_LOCAL, generatorSlots[0]);
     } else {
-        expression(false);
+        expression(parser, false);
     }
-    emitBytes(OP_SET_INSERT, 1); // This seems to update without OP_SET_LOCAL - pointer fault?
-    emitByte(OP_POP);
+    emitBytes(parser, OP_SET_INSERT, 1); // This seems to update without OP_SET_LOCAL - pointer fault?
+    emitByte(parser, OP_POP);
 
     // Patch jumps and emit loops
     for (int i = skipCount - 1; i >= 0; i--) {
-        patchJump(skipJumps[i]);
+        patchJump(parser, skipJumps[i]);
     }
 
     for (int i = generatorCount - 1; i >= 0; i--) {
-        emitLoop(loopStarts[i]);
-        patchJump(exitJumps[i]);
-        emitByte(OP_POP);
+        emitLoop(parser, loopStarts[i]);
+        patchJump(parser, exitJumps[i]);
+        emitByte(parser, OP_POP);
     }
     
-    parser = endParser;
-    consume(TOKEN_RIGHT_BRACE, "Expected '}' after set-builder");
-    emitBytes(OP_GET_LOCAL, setSlot); // Push the completed set
-    emitByte(OP_STASH);
+    *parser = endParser;
+    consume(parser, TOKEN_RIGHT_BRACE, "Expected '}' after set-builder");
+    emitBytes(parser, OP_GET_LOCAL, setSlot); // Push the completed set
+    emitByte(parser, OP_STASH);
 
     free(generatorSlots);
     free(iteratorSlots);
@@ -897,27 +876,27 @@ static void setBuilder() {
  *
  * Assumes a left brace has been opened.
  */
-static bool isSetBuilder() {
-    Parser initialParser = parser;
+static bool isSetBuilder(Parser* parser) {
+    Parser initialParser = *parser;
     // Currently in an open brace, braceDepth should end at 1 or less in case of nested sets
     int braceDepth = 1; 
 
     // Find the pipe (to show we are in a set builder)
-    while (!check(TOKEN_PIPE) && !check(TOKEN_EOF)) {
-        if (check(TOKEN_LEFT_BRACE)) braceDepth++;
-        if (check(TOKEN_RIGHT_BRACE)) braceDepth--;
+    while (!check(parser, TOKEN_PIPE) && !check(parser, TOKEN_EOF)) {
+        if (check(parser, TOKEN_LEFT_BRACE)) braceDepth++;
+        if (check(parser, TOKEN_RIGHT_BRACE)) braceDepth--;
         if (braceDepth == 0) break;
 
-        advance();
+        advance(parser);
     }
 
-    bool isBuilder = check(TOKEN_PIPE);
-    parser = initialParser;
+    bool isBuilder = check(parser, TOKEN_PIPE);
+    *parser = initialParser;
     if (!isBuilder) return false;
 
     // Call set builder and implicitly return its value
-    functionWrapper(TYPE_FUNCTION, setBuilder);
-    emitBytes(OP_CALL, 0);
+    functionWrapper(parser, TYPE_FUNCTION, setBuilder);
+    emitBytes(parser, OP_CALL, 0);
     return true;
 }
 
@@ -932,79 +911,79 @@ static bool isSetBuilder() {
  * or:                       {f ... l},
  * or:                       {f, n, ..., l}
  */
-static void set(bool canAssign) {
-    if (!check(TOKEN_RIGHT_BRACE)) {
+static void set(Parser* parser, bool canAssign) {
+    if (!check(parser, TOKEN_RIGHT_BRACE)) {
         // Check if its a set builder
-        if (isSetBuilder()) return;
+        if (isSetBuilder(parser)) return;
         
-        emitByte(OP_SET_CREATE);
-        expression(true);
+        emitByte(parser, OP_SET_CREATE);
+        expression(parser, true);
 
-        if (check(TOKEN_ELLIPSIS)) {
+        if (check(parser, TOKEN_ELLIPSIS)) {
             // Omission operation without 'next'
-            advance();
-            expression(true);
-            emitBytes(OP_SET_OMISSION, 0);
+            advance(parser);
+            expression(parser, true);
+            emitBytes(parser, OP_SET_OMISSION, 0);
         } else {
-            if (match(TOKEN_COMMA)) {
-                expression(true);
+            if (match(parser, TOKEN_COMMA)) {
+                expression(parser, true);
 
-                if (check(TOKEN_ELLIPSIS)) {
+                if (check(parser, TOKEN_ELLIPSIS)) {
                     // Omission operation with 'next'
-                    advance();
-                    expression(true);
-                    emitBytes(OP_SET_OMISSION, 1);
+                    advance(parser);
+                    expression(parser, true);
+                    emitBytes(parser, OP_SET_OMISSION, 1);
                 } else {
                     // Normal set construction
-                    emitBytes(OP_SET_INSERT, 2);
+                    emitBytes(parser, OP_SET_INSERT, 2);
 
                     int count = 0;
-                    while (match(TOKEN_COMMA)) {
-                        expression(true);
+                    while (match(parser, TOKEN_COMMA)) {
+                        expression(parser, true);
                         count++;
                     }
-                    if (count > 0) emitBytes(OP_SET_INSERT, count);
+                    if (count > 0) emitBytes(parser, OP_SET_INSERT, count);
                 }
             } else {
                 // Singleton set
-                emitBytes(OP_SET_INSERT, 1);
+                emitBytes(parser, OP_SET_INSERT, 1);
             }
         }
     } else {
         // Empty set
-        emitByte(OP_SET_CREATE);
+        emitByte(parser, OP_SET_CREATE);
     }
     
-    consume(TOKEN_RIGHT_BRACE, "Expected '}' after set literal");
+    consume(parser, TOKEN_RIGHT_BRACE, "Expected '}' after set literal");
 }
 // ----------------------
 
-static void number(bool canAssign) {
+static void number(Parser* parser, bool canAssign) {
     // Convert string to double
-    double value = strtod(parser.previous.start, NULL);
-    emitConstant(NUMBER_VAL(value));
+    double value = strtod(parser->previous.start, NULL);
+    emitConstant(parser, NUMBER_VAL(value));
 }
 
-static void and_(bool canAssign) {
+static void and_(Parser* parser, bool canAssign) {
     // If left operand is false (currently on stack), emit call to jump to the end
-    int endJump = emitJump(OP_JUMP_IF_FALSE);
+    int endJump = emitJump(parser, OP_JUMP_IF_FALSE);
     
     // Pop left operand if true and evaluate right operand
-    emitByte(OP_POP);
-    parsePrecedence(PREC_AND, false);
+    emitByte(parser, OP_POP);
+    parsePrecedence(parser, PREC_AND, false);
     
-    patchJump(endJump);
+    patchJump(parser, endJump);
 }
 
-static void or_(bool canAssign) {
-    int elseJump = emitJump(OP_JUMP_IF_FALSE);
-    int endJump = emitJump(OP_JUMP);
+static void or_(Parser* parser, bool canAssign) {
+    int elseJump = emitJump(parser, OP_JUMP_IF_FALSE);
+    int endJump = emitJump(parser, OP_JUMP);
 
-    patchJump(elseJump);
-    emitByte(OP_POP);
+    patchJump(parser, elseJump);
+    emitByte(parser, OP_POP);
 
-    parsePrecedence(PREC_OR, false);
-    patchJump(endJump);
+    parsePrecedence(parser, PREC_OR, false);
+    patchJump(parser, endJump);
 }
 
 /**
@@ -1015,7 +994,7 @@ static void or_(bool canAssign) {
  * @param length The length of the string
  * @returns      The size of the new string
  */
-static size_t decodeEscapeString(unsigned char* output, const unsigned char* chars, size_t length) {
+static size_t decodeEscapeString(Parser* parser, unsigned char* output, const unsigned char* chars, size_t length) {
     size_t outputLength = 0;
 
     size_t i = 0;
@@ -1026,7 +1005,7 @@ static size_t decodeEscapeString(unsigned char* output, const unsigned char* cha
         }
 
         if (i + 1 >= length) {
-            errorAtCurrent("Incomplete escape sequence");
+            errorAtCurrent(parser, "Incomplete escape sequence");
         }
 
         unsigned char escChar = chars[++i]; // Char after '\'
@@ -1038,14 +1017,14 @@ static size_t decodeEscapeString(unsigned char* output, const unsigned char* cha
         } else if (type == ESC_HEX || type == ESC_UNICODE || type == ESC_UNICODE_LG) {
             size_t hexCount = type; // Type is encoded as the number of hex digits
             if (i + hexCount >= length) {
-                errorAtCurrent("Incomplete hex/unicode escape sequence");
+                errorAtCurrent(parser, "Incomplete hex/unicode escape sequence");
             }
 
             uint32_t codePoint = 0;
             for (size_t j = 0; j < hexCount; j++) {
                 unsigned char c = chars[++i];
                 if (!isHex(c)) {
-                    errorAtCurrent("Invalid hex digit in escape");
+                    errorAtCurrent(parser, "Invalid hex digit in escape");
                 }
                 codePoint = (codePoint << 4) | hexToValue(c);
             }
@@ -1057,200 +1036,200 @@ static size_t decodeEscapeString(unsigned char* output, const unsigned char* cha
                 output[outputLength++] = utf8Buf[j];
             }
         } else {
-            errorAtCurrent("Unknown escape sequence");
+            errorAtCurrent(parser, "Unknown escape sequence");
         }
     }
     
     return outputLength;
 }
 
-static void character(bool canAssign) {
+static void character(Parser* parser, bool canAssign) {
     // Copy the char bytes from the source, +1 and -2 to trim quotation mark
-    size_t length = parser.previous.length - 2;
+    size_t length = parser->previous.length - 2;
     unsigned char decoded[length];
-    size_t newLength = decodeEscapeString(decoded, parser.previous.start + 1, length);
+    size_t newLength = decodeEscapeString(parser, decoded, parser->previous.start + 1, length);
 
     uint32_t value = utf8ToUnicode(decoded, newLength);
 
     if (value > UNICODE_MAX) {
-        errorAtCurrent("Unsupported character");
+        errorAtCurrent(parser, "Unsupported character");
     }
 
-    emitConstant(CHAR_VAL(value));
+    emitConstant(parser, CHAR_VAL(value));
 }
 
-static void string(bool canAssign) {
+static void string(Parser* parser, bool canAssign) {
     // Copy the string from the source, +1 and -2 to trim quotation marks
-    size_t length = parser.previous.length - 2;
+    size_t length = parser->previous.length - 2;
     unsigned char decoded[length];
-    size_t newLength = decodeEscapeString(decoded, parser.previous.start + 1, length);
+    size_t newLength = decodeEscapeString(parser, decoded, parser->previous.start + 1, length);
 
-    Value s = OBJ_VAL(copyString(parser.gc, decoded, newLength));
+    Value s = OBJ_VAL(copyString(parser->gc, decoded, newLength));
 
-    pushTemp(parser.gc, s);
-    emitConstant(s);
-    popTemp(parser.gc);
+    pushTemp(parser->gc, s);
+    emitConstant(parser, s);
+    popTemp(parser->gc);
 }
 
-static void namedVariable(Token name, bool canAssign) {
+static void namedVariable(Parser* parser, Token name, bool canAssign) {
     uint8_t getOp, setOp;
-    int arg = resolveLocal(current, &name);
+    int arg = resolveLocal(parser, parser->currentCompiler, &name);
 
     if (arg != -1) {
         getOp = OP_GET_LOCAL;
         setOp = OP_SET_LOCAL;
-    } else if ((arg = resolveUpvalue(current, &name)) != -1) {
+    } else if ((arg = resolveUpvalue(parser, parser->currentCompiler, &name)) != -1) {
         getOp = OP_GET_UPVALUE;
         setOp = OP_SET_UPVALUE;
     } else {
-        arg = identifierConstant(&name);
+        arg = identifierConstant(parser, &name);
         getOp = OP_GET_GLOBAL;
         setOp = OP_SET_GLOBAL;
     }
 
-    if (canAssign && match(TOKEN_ASSIGN)) {
-        expression(false);
+    if (canAssign && match(parser, TOKEN_ASSIGN)) {
+        expression(parser, false);
 
         if (setOp == OP_SET_GLOBAL) {
-            emitOpShort(setOp, (uint16_t)arg);
+            emitOpShort(parser, setOp, (uint16_t)arg);
         } else {
-            emitBytes(setOp, (uint8_t)arg);
+            emitBytes(parser, setOp, (uint8_t)arg);
         }
     } else {
         if (getOp == OP_GET_GLOBAL) {
-            emitOpShort(getOp, (uint16_t)arg);
+            emitOpShort(parser, getOp, (uint16_t)arg);
         } else {
-            emitBytes(getOp, (uint8_t)arg);
+            emitBytes(parser, getOp, (uint8_t)arg);
         }
     }
 }
 
-static void variable(bool canAssign) {
-    namedVariable(parser.previous, canAssign);
+static void variable(Parser* parser, bool canAssign) {
+    namedVariable(parser, parser->previous, canAssign);
 }
 
-static void unary(bool canAssign) {
-    TokenType operatorType = parser.previous.type;
+static void unary(Parser* parser, bool canAssign) {
+    TokenType operatorType = parser->previous.type;
 
     // Compile the operand
-    parsePrecedence(PREC_UNARY, false);
+    parsePrecedence(parser, PREC_UNARY, false);
 
     // Emit the operator instruction
     switch (operatorType) {
-        case TOKEN_NOT:     emitByte(OP_NOT);    break;
-        case TOKEN_MINUS:   emitByte(OP_NEGATE); break;
+        case TOKEN_NOT:     emitByte(parser, OP_NOT);    break;
+        case TOKEN_MINUS:   emitByte(parser, OP_NEGATE); break;
         case TOKEN_PLUS:    break;
-        case TOKEN_HASHTAG: emitByte(OP_SIZE);   break;
-        case TOKEN_ARB:     emitByte(OP_ARB);   break;
+        case TOKEN_HASHTAG: emitByte(parser, OP_SIZE);   break;
+        case TOKEN_ARB:     emitByte(parser, OP_ARB);   break;
         default: return;
     } 
 }
 
-static void quantifier() {
+static void quantifier(Parser* parser) {
     // Set anonymous function name and to implicit return
-    current->function->name = copyString(parser.gc, "@quan", 5);
-    current->implicitReturn = true;
+    parser->currentCompiler->function->name = copyString(parser->gc, "@quan", 5);
+    parser->currentCompiler->implicitReturn = true;
 
-    TokenType operatorType = parser.previous.type;
+    TokenType operatorType = parser->previous.type;
 
     // === FOR LOAN CODE ===
-    uint8_t loopVarSlot = parseGenerator();
-    if (loopVarSlot == 0) error("Variable with this identifier already defined in this scope");
-    uint8_t iteratorSlot = syntheticLocal(OP_CREATE_ITERATOR, "@iter");
+    uint8_t loopVarSlot = parseGenerator(parser);
+    if (loopVarSlot == 0) error(parser, "Variable with this identifier already defined in this scope");
+    uint8_t iteratorSlot = syntheticLocal(parser, OP_CREATE_ITERATOR, "@iter");
 
-    int loopStart = currentChunk()->count;
+    int loopStart = currentChunk(parser)->count;
 
     // Load and iterate the iterator
-    emitBytes(OP_GET_LOCAL, iteratorSlot);
-    emitByte(OP_ITERATE); // Push next value + bool for if there is a current value
+    emitBytes(parser, OP_GET_LOCAL, iteratorSlot);
+    emitByte(parser, OP_ITERATE); // Push next value + bool for if there is a current value
 
     // If no current value -> jump to after-loop
-    int loopEnd = emitJump(OP_JUMP_IF_FALSE);
-    emitByte(OP_POP); // Pop check
+    int loopEnd = emitJump(parser, OP_JUMP_IF_FALSE);
+    emitByte(parser, OP_POP); // Pop check
 
     // If loop is fine, set iterative variable
-    emitBytes(OP_SET_LOCAL, loopVarSlot);
-    emitByte(OP_POP);
+    emitBytes(parser, OP_SET_LOCAL, loopVarSlot);
+    emitByte(parser, OP_POP);
     // =====================
 
     // Predicate
-    consume(TOKEN_PIPE, "Expected pipe after generator of quantifier");
-    expression(false);
+    consume(parser, TOKEN_PIPE, "Expected pipe after generator of quantifier");
+    expression(parser, false);
 
     // Invert expression for exists and some
     if (operatorType == TOKEN_EXISTS || operatorType == TOKEN_SOME) {
-        emitByte(OP_NOT);
+        emitByte(parser, OP_NOT);
     }
 
-    int loopEarlyExit = emitJump(OP_JUMP_IF_FALSE_2);
-    emitByte(OP_POP);
+    int loopEarlyExit = emitJump(parser, OP_JUMP_IF_FALSE_2);
+    emitByte(parser, OP_POP);
 
-    emitLoop(loopStart);
+    emitLoop(parser, loopStart);
 
     // Early exit
-    patchJump(loopEarlyExit);
+    patchJump(parser, loopEarlyExit);
 
     if (operatorType == TOKEN_SOME) {
-        emitBytes(OP_GET_LOCAL, loopVarSlot);
+        emitBytes(parser, OP_GET_LOCAL, loopVarSlot);
     } else {
-        emitByte(operatorType == TOKEN_FORALL ? OP_FALSE : OP_TRUE);
+        emitByte(parser, operatorType == TOKEN_FORALL ? OP_FALSE : OP_TRUE);
     }
 
-    emitByte(OP_STASH);
-    emitBytes(OP_RETURN, current->implicitReturn); // Return manually
+    emitByte(parser, OP_STASH);
+    emitBytes(parser, OP_RETURN, parser->currentCompiler->implicitReturn); // Return manually
 
     // Loop end
-    patchJump(loopEnd);
-    emitByte(OP_POP);
+    patchJump(parser, loopEnd);
+    emitByte(parser, OP_POP);
 
     if (operatorType == TOKEN_SOME) {
-        emitByte(OP_NULL);
+        emitByte(parser, OP_NULL);
     } else {
-        emitByte(operatorType == TOKEN_FORALL ? OP_TRUE : OP_FALSE); 
+        emitByte(parser, operatorType == TOKEN_FORALL ? OP_TRUE : OP_FALSE); 
     }
 
-    emitByte(OP_STASH);
+    emitByte(parser, OP_STASH);
 }
 
 /**
  * @brief Wrapper for quantifier to call it as an anonymous function.
  */
-static void quantWrap(bool canAssign) {
-    functionWrapper(TYPE_FUNCTION, quantifier);
-    emitBytes(OP_CALL, 0);
+static void quantWrap(Parser* parser, bool canAssign) {
+    functionWrapper(parser, TYPE_FUNCTION, quantifier);
+    emitBytes(parser, OP_CALL, 0);
 }
 
-static void anonymousFunction() {
+static void anonymousFunction(Parser* parser) {
     // Set anonymous function name and to implicit return
-    current->function->name = copyString(parser.gc, "@anon", 5);
-    current->implicitReturn = true;
+    parser->currentCompiler->function->name = copyString(parser->gc, "@anon", 5);
+    parser->currentCompiler->implicitReturn = true;
 
-    consume(TOKEN_LEFT_PAREN, "Expected '(' after anonymous function declaration");
+    consume(parser, TOKEN_LEFT_PAREN, "Expected '(' after anonymous function declaration");
 
-    if (!check(TOKEN_RIGHT_PAREN)) {
+    if (!check(parser, TOKEN_RIGHT_PAREN)) {
         do {
-            current->function->arity++;
-            if(current->function->arity > 255) {
-                errorAtCurrent("Can't have more than 255 parameters");
+            parser->currentCompiler->function->arity++;
+            if(parser->currentCompiler->function->arity > 255) {
+                errorAtCurrent(parser, "Can't have more than 255 parameters");
             }
 
-            uint16_t constant = parseVariable("Expected parameter name");
-            defineVariable(constant);
-        } while (match(TOKEN_COMMA));
+            uint16_t constant = parseVariable(parser, "Expected parameter name");
+            defineVariable(parser, constant);
+        } while (match(parser, TOKEN_COMMA));
     }
 
-    consume(TOKEN_RIGHT_PAREN, "Expected ')' after anonymous function parameters");
-    consume(TOKEN_MAPS_TO, "Expected '->' or '→' after anonymous function signature");
+    consume(parser, TOKEN_RIGHT_PAREN, "Expected ')' after anonymous function parameters");
+    consume(parser, TOKEN_MAPS_TO, "Expected '->' or '→' after anonymous function signature");
 
-    // Compile the as an expression
-    expressionStatement();
+    // Compile the body as an expression
+    expressionStatement(parser);
 }
 
 /**
  * @brief Wrapper for creating an anonymous function.
  */ 
-static void anonWrap(bool canAssign) {
-    functionWrapper(TYPE_FUNCTION, anonymousFunction);
+static void anonWrap(Parser* parser, bool canAssign) {
+    functionWrapper(parser, TYPE_FUNCTION, anonymousFunction);
 }
 
 ParseRule rules[] = {
@@ -1323,42 +1302,42 @@ ParseRule rules[] = {
     [TOKEN_EOF]           = {NULL,       NULL,      PREC_NONE},
 };
 
-static void parsePrecedence(Precedence precendence, bool ignoreNewlines) {
-    advance();
+static void parsePrecedence(Parser* parser, Precedence precendence, bool ignoreNewlines) {
+    advance(parser);
 
     // Ignore newline tokens if the flag is set
-    if (ignoreNewlines) skipNewlines();
+    if (ignoreNewlines) skipNewlines(parser);
 
     // Get which function to call for the prefix as the first token of an expression is always a prefix (inc. numbers)
-    ParseFn prefixRule = getRule(parser.previous.type)->prefix;
+    ParseFn prefixRule = getRule(parser->previous.type)->prefix;
 
     if (prefixRule == NULL) {
-        error("Expected expression");
+        error(parser, "Expected expression");
         return;
     }
     
     // Call the prefix function
     bool canAssign = precendence <= PREC_ASSIGNMENT;
-    prefixRule(canAssign);
+    prefixRule(parser, canAssign);
     
-    while (precendence <= getRule(parser.current.type)->precedence) {
-        advance();
+    while (precendence <= getRule(parser->current.type)->precedence) {
+        advance(parser);
 
         // Ignore newline tokens if the flag is set
-        if (ignoreNewlines) skipNewlines();
-        ParseFn infixRule = getRule(parser.previous.type)->infix;
+        if (ignoreNewlines) skipNewlines(parser);
+        ParseFn infixRule = getRule(parser->previous.type)->infix;
 
         if (infixRule == NULL) {
-            error("Invalid syntax");
+            error(parser, "Invalid syntax");
             return;
         }
 
         // Call the function for the infix operation
-        infixRule(canAssign);
+        infixRule(parser, canAssign);
     }
 
-    if (canAssign && match(TOKEN_ASSIGN)) {
-        error("Invalid assignment target");
+    if (canAssign && match(parser, TOKEN_ASSIGN)) {
+        error(parser, "Invalid assignment target");
     }
 }
 
@@ -1374,185 +1353,186 @@ static ParseRule* getRule(TokenType type) {
  * This requires an ignore newlines flag as the parser should ignore newlines when parsing
  * expressions such as groupings.
  */
-static void expression(bool ignoreNewlines) {
-    parsePrecedence(PREC_ASSIGNMENT, ignoreNewlines);
+static void expression(Parser* parser, bool ignoreNewlines) {
+    parsePrecedence(parser, PREC_ASSIGNMENT, ignoreNewlines);
 }
 
-static void block() {
-    skipNewlines();
+static void block(Parser* parser) {
+    skipNewlines(parser);
 
-    while (!check(TOKEN_DEDENT) && !check(TOKEN_EOF)) {
-        declaration();
+    while (!check(parser, TOKEN_DEDENT) && !check(parser, TOKEN_EOF)) {
+        declaration(parser);
     }
 
-    consume(TOKEN_DEDENT, "Expected 'DEDENT' after block");
+    consume(parser, TOKEN_DEDENT, "Expected 'DEDENT' after block");
 }
 
-static void function() {
-    consume(TOKEN_LEFT_PAREN, "Expected '(' after function name");
+static void function(Parser* parser) {
+    consume(parser, TOKEN_LEFT_PAREN, "Expected '(' after function name");
 
-    if (!check(TOKEN_RIGHT_PAREN)) {
+    if (!check(parser, TOKEN_RIGHT_PAREN)) {
         do {
-            current->function->arity++;
-            if(current->function->arity > 255) {
-                errorAtCurrent("Can't have more than 255 parameters");
+            parser->currentCompiler->function->arity++;
+            if(parser->currentCompiler->function->arity > 255) {
+                errorAtCurrent(parser, "Can't have more than 255 parameters");
             }
 
-            uint16_t constant = parseVariable("Expected parameter name");
-            defineVariable(constant);
-        } while (match(TOKEN_COMMA));
+            uint16_t constant = parseVariable(parser, "Expected parameter name");
+            defineVariable(parser, constant);
+        } while (match(parser, TOKEN_COMMA));
     }
 
-    consume(TOKEN_RIGHT_PAREN, "Expected ')' after function parameters");
-    consume(TOKEN_EQUAL, "Expected '=' after function signature");
+    consume(parser, TOKEN_RIGHT_PAREN, "Expected ')' after function parameters");
+    consume(parser, TOKEN_EQUAL, "Expected '=' after function signature");
 
     // Compile the body
-    skipNewlines();
-    statement(true, false);
+    skipNewlines(parser);
+    statement(parser, true, false);
 }
 
-static void functionDeclaration() {
-    uint16_t global = parseVariable("Expected function name");
-    markInitialised();
-    functionWrapper(TYPE_FUNCTION, function);
-    defineVariable(global);
+static void functionDeclaration(Parser* parser) {
+    uint16_t global = parseVariable(parser, "Expected function name");
+    markInitialised(parser);
+    functionWrapper(parser, TYPE_FUNCTION, function);
+    defineVariable(parser, global);
 }
 
-static void letDeclaration() {
-    uint16_t global = parseVariable("Expected variable name");
+static void letDeclaration(Parser* parser) {
+    uint16_t global = parseVariable(parser, "Expected variable name");
 
-    if (match(TOKEN_EQUAL)) {
+    if (match(parser, TOKEN_EQUAL)) {
         // Declare a variable with an expression as its initial value
-        expression(false);
+        expression(parser, false);
     } else {
         // Declare it with a null value
-        emitByte(OP_NULL);
+        emitByte(parser, OP_NULL);
     }
 
-    defineVariable(global);
+    defineVariable(parser, global);
 
-    consumeSeparator();
+    consumeSeparator(parser);
 }
 
-static void withDeclaration() {
+static void withDeclaration(Parser* parser) {
     // Consume a path
-    consume(TOKEN_STRING, "Expected a string after with");
+    consume(parser, TOKEN_STRING, "Expected a string after with declaration");
 
     // Path is here
-    printf("%.*s", parser.previous.length, parser.previous.start);
+    printf("%.*s", parser->previous.length, parser->previous.start);
 
-    error("Unimplemented");
+    error(parser, "Unimplemented");
 }
 
-static void expressionStatement() {
-    expression(false);
-    emitByte(current->implicitReturn ? OP_STASH : OP_POP);
+static void expressionStatement(Parser* parser) {
+    expression(parser, false);
+    emitByte(parser, parser->currentCompiler->implicitReturn ? OP_STASH : OP_POP);
 }
 
-static void ifStatement() {
-    expression(false);
-    skipNewlines();
-    consume(TOKEN_THEN, "Expected 'then' after condition");
+static void ifStatement(Parser* parser) {
+    expression(parser, false);
+    skipNewlines(parser);
+    consume(parser, TOKEN_THEN, "Expected 'then' after condition");
 
-    int thenJump = emitJump(OP_JUMP_IF_FALSE);
-    emitByte(OP_POP);
-    statement(true, true);
+    int thenJump = emitJump(parser, OP_JUMP_IF_FALSE);
+    emitByte(parser, OP_POP);
+    statement(parser, true, true);
 
-    int elseJump = emitJump(OP_JUMP);
+    int elseJump = emitJump(parser, OP_JUMP);
 
-    patchJump(thenJump);
-    emitByte(OP_POP);
+    patchJump(parser, thenJump);
+    emitByte(parser, OP_POP);
 
-    skipNewlines(); // Skip newlines to search for else
-    if(match(TOKEN_ELSE)) statement(true, false);
-    skipNewlines();
+    skipNewlines(parser); // Skip newlines to search for else
+    if (match(parser, TOKEN_ELSE)) statement(parser, true, false);
+    skipNewlines(parser);
     
-    patchJump(elseJump);
+    patchJump(parser, elseJump);
 }
 
-static void returnStatement() {
-    if(current->type == TYPE_SCRIPT) {
-        error("Can't return from top-level code");
+static void returnStatement(Parser* parser) {
+    if (parser->currentCompiler->type == TYPE_SCRIPT) {
+        error(parser, "Can't return from top-level code");
     }
 
-    if(match(TOKEN_SEMICOLON) || match(TOKEN_NEWLINE)) { // Interesting
-        emitReturn();
+    if (match(parser, TOKEN_SEMICOLON) || match(parser, TOKEN_NEWLINE)) { // Interesting
+        emitReturn(parser);
     } else {
-        expression(false);
-        emitBytes(OP_RETURN, 0);
+        expression(parser, false);
+        emitBytes(parser, OP_RETURN, 0);
     }
 }
 
-static void whileStatement() {
-    int loopStart = currentChunk()->count;
-    expression(false);
-    consume(TOKEN_DO, "Expected 'do' after condition");
+static void whileStatement(Parser* parser) {
+    int loopStart = currentChunk(parser)->count;
+    expression(parser, false);
+    consume(parser, TOKEN_DO, "Expected 'do' after condition");
 
-    int exitJump = emitJump(OP_JUMP_IF_FALSE);
-    emitByte(OP_POP); // Pop condition to check
-    skipNewlines();
-    statement(true, false);
-    emitLoop(loopStart);
+    int exitJump = emitJump(parser, OP_JUMP_IF_FALSE);
+    emitByte(parser, OP_POP); // Pop condition to check
+    skipNewlines(parser);
+    statement(parser, true, false);
+    emitLoop(parser, loopStart);
 
-    patchJump(exitJump);
-    emitByte(OP_POP);
+    patchJump(parser, exitJump);
+    emitByte(parser, OP_POP);
 }
 
-static void forStatement() {
-    beginScope();
+static void forStatement(Parser* parser) {
+    beginScope(parser);
 
-    uint8_t loopVarSlot = parseGenerator();
-    if (loopVarSlot == 0) error("Variable with this identifier already defined in this scope");
-    uint8_t iteratorSlot = syntheticLocal(OP_CREATE_ITERATOR, "@iter");
+    uint8_t loopVarSlot = parseGenerator(parser);
+    if (loopVarSlot == 0) error(parser, "Variable with this identifier already defined in this scope");
+    uint8_t iteratorSlot = syntheticLocal(parser, OP_CREATE_ITERATOR, "@iter");
 
-    int loopStart = currentChunk()->count;
+    int loopStart = currentChunk(parser)->count;
 
     // Load and iterate the iterator
-    emitBytes(OP_GET_LOCAL, iteratorSlot);
-    emitByte(OP_ITERATE); // Push next value then the bool for if there is a current value
+    emitBytes(parser, OP_GET_LOCAL, iteratorSlot);
+    emitByte(parser, OP_ITERATE); // Push next value then the bool for if there is a current value
 
     // If no current value -> jump to after-loop
-    int exitJump = emitJump(OP_JUMP_IF_FALSE);
-    emitByte(OP_POP); // Pop check
+    int exitJump = emitJump(parser, OP_JUMP_IF_FALSE);
+    emitByte(parser, OP_POP); // Pop check
     
     // If loop is fine, set iterative variable
-    emitBytes(OP_SET_LOCAL, loopVarSlot);
-    emitByte(OP_POP);
+    emitBytes(parser, OP_SET_LOCAL, loopVarSlot);
+    emitByte(parser, OP_POP);
 
     // Compile optional predicate
-    if (match(TOKEN_PIPE)) {
-        expression(false);
-        consume(TOKEN_DO, "Expected expression");
+    if (match(parser, TOKEN_PIPE)) {
+        expression(parser, false);
+        consume(parser, TOKEN_DO, "Expected expression");
 
         // Skip statement if predicate is false
-        int skipJump = emitJump(OP_JUMP_IF_FALSE_2);
-        emitByte(OP_POP); // Pop predicate
+        int skipJump = emitJump(parser, OP_JUMP_IF_FALSE_2);
+        emitByte(parser, OP_POP); // Pop predicate
 
-        statement(true, false);
+        statement(parser, true, false);
 
         // Loop and patch
-        patchJump(skipJump);
+        patchJump(parser, skipJump);
 
     } else {
-        consume(TOKEN_DO, "Expected expression");
-        statement(true, false);
+        consume(parser, TOKEN_DO, "Expected expression");
+        statement(parser, true, false);
     }
 
-    emitLoop(loopStart);
+    emitLoop(parser, loopStart);
 
-    patchJump(exitJump);
-    emitByte(OP_POP);
-    endScope();
+    patchJump(parser, exitJump);
+    emitByte(parser, OP_POP);
+    endScope(parser);
 }
 
-static void synchronise() {
-    parser.panicMode = false;
+static void synchronise(Parser* parser) {
+    parser->panicMode = false;
 
-    while(parser.current.type != TOKEN_EOF) {
-        if(parser.previous.type == TOKEN_SEMICOLON) return;
-        switch(parser.current.type) {
+    while(parser->current.type != TOKEN_EOF) {
+        if(parser->previous.type == TOKEN_SEMICOLON) return;
+        switch(parser->current.type) {
             case TOKEN_FUNCTION:
             case TOKEN_LET:
+            case TOKEN_WITH:
             case TOKEN_IF:
             case TOKEN_WHILE:
             case TOKEN_FOR:
@@ -1562,81 +1542,83 @@ static void synchronise() {
         }
     }
 
-    advance();
+    advance(parser);
 }
 
-static void declaration() {
-    if (match(TOKEN_FUNCTION)) {
-        functionDeclaration();
-    } else if (match(TOKEN_LET)) {
-        letDeclaration();
-    } else if (match(TOKEN_WITH)) {
-        withDeclaration();
+static void declaration(Parser* parser) {
+    if (match(parser, TOKEN_FUNCTION)) {
+        functionDeclaration(parser);
+    } else if (match(parser, TOKEN_LET)) {
+        letDeclaration(parser);
+    } else if (match(parser, TOKEN_WITH)) {
+        withDeclaration(parser);
     } else {
-        statement(false, false);
+        statement(parser, false, false);
     }
 
-    if(parser.panicMode) synchronise();
+    if (parser->panicMode) synchronise(parser);
 
-    skipNewlines();
+    skipNewlines(parser);
 }
 
-static void statement(bool blockAllowed, bool ignoreSeparator) {
-    if(current->type == TYPE_SCRIPT) current->implicitReturn = false;
+static void statement(Parser* parser, bool blockAllowed, bool ignoreSeparator) {
+    if (parser->currentCompiler->type == TYPE_SCRIPT) parser->currentCompiler->implicitReturn = false;
     
-    if (match(TOKEN_IF)) {
-        ifStatement();
-    } else if (match(TOKEN_RETURN)) {
-        returnStatement();
-        if(!ignoreSeparator) consumeSeparator();
-    } else if (match(TOKEN_WHILE)) {
-        whileStatement();
-    } else if (match(TOKEN_FOR)) {
-        forStatement();
-    } else if(match(TOKEN_INDENT)) {
-        if (!blockAllowed) error("Unexpected indent");
+    if (match(parser, TOKEN_IF)) {
+        ifStatement(parser);
+    } else if (match(parser, TOKEN_RETURN)) {
+        returnStatement(parser);
+        if(!ignoreSeparator) consumeSeparator(parser);
+    } else if (match(parser, TOKEN_WHILE)) {
+        whileStatement(parser);
+    } else if (match(parser, TOKEN_FOR)) {
+        forStatement(parser);
+    } else if(match(parser, TOKEN_INDENT)) {
+        if (!blockAllowed) error(parser, "Unexpected indent");
 
-        beginScope();
-        block();
-        endScope();
+        beginScope(parser);
+        block(parser);
+        endScope(parser);
     } else {
         // Set the implicit return flag if in a function
-        if(current->type == TYPE_FUNCTION) {
-            current->implicitReturn = true;
+        if(parser->currentCompiler->type == TYPE_FUNCTION) {
+            parser->currentCompiler->implicitReturn = true;
         } 
-        expressionStatement();
-        if(!ignoreSeparator) consumeSeparator();
+        expressionStatement(parser);
+        if (!ignoreSeparator) consumeSeparator(parser);
     }
 }
 
 ObjFunction* compile(GC* gc, const unsigned char* source) {
+    Parser parser;
+    parser.currentCompiler = NULL;
     parser.gc = gc;
     parser.hadError = false;
     parser.panicMode = false;
 
     initScanner(&parser.scanner, source);
     Compiler compiler;
-    initCompiler(&compiler, TYPE_SCRIPT);
+    initCompiler(&parser, &compiler, TYPE_SCRIPT);
 
-    advance();
+    advance(&parser);
 
     // Consume statements
-    while(!match(TOKEN_EOF)) {
+    while(!match(&parser, TOKEN_EOF)) {
         // Ignore lines that are just newlines or semicolons 
-        if (match(TOKEN_NEWLINE) || match(TOKEN_SEMICOLON)) continue;
+        if (match(&parser, TOKEN_NEWLINE) || match(&parser, TOKEN_SEMICOLON)) continue;
 
-        declaration();
+        declaration(&parser);
     }
 
-    ObjFunction* function = endCompiler();
+    ObjFunction* function = endCompiler(&parser);
     return parser.hadError ? NULL : function;
 }
 
-void markCompilerRoots() {
-    Compiler* compiler = current;
+void markCompilerRoots(Parser* parser) {
+    Compiler* compiler = parser->currentCompiler;
      
     while(compiler != NULL) {
-        markObject(parser.gc, (Obj*)compiler->function);
+        markObject(parser->gc, (Obj*)compiler->function);
         compiler = compiler->enclosing;
     }
 }

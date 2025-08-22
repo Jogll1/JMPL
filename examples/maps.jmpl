@@ -1,4 +1,4 @@
-let Map = {(0, "a"), (2, "r"), (5, "c")}
+// let Map = {(0, "a"), (2, "r"), (5, "c")}
 
 func get(M, k) =
     for t ∈ M | t[0] == k do
@@ -10,7 +10,7 @@ func add(M, k, v) = M ∪ {(k, v)}
 func remove(M, k) = {t ∈ M | t[0] ≠ k}
 
 // Examples
-Map := add(Map, 6, "z")
-println(get(Map, 0))
-Map := remove(Map, 0)
-println(Map)
+// Map := add(Map, 6, "z")
+// println(get(Map, 0))
+// Map := remove(Map, 0)
+// println(Map)

@@ -59,7 +59,8 @@ typedef enum {
     OP_SUBSCRIPT, // b
     OP_CREATE_ITERATOR,
     OP_ITERATE,
-    OP_ARB
+    OP_ARB,
+    OP_IMPORT_LIB
 } OpCode;
 
 typedef struct {

@@ -3,6 +3,7 @@
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "common.h"
 #include "compiler.h"
@@ -242,7 +243,7 @@ static void setInsertN(int count) {
     push(OBJ_VAL(set));
 }
 
-static int setOmission(bool hasNext) {
+static InterpretResult setOmission(bool hasNext) {
     if (hasNext) {
         if (!IS_INTEGER(peek(0)) || !IS_INTEGER(peek(1)) || !IS_INTEGER(peek(2)) || !IS_SET(peek(3))) {
             runtimeError("Expected: {int, int ... int}");
@@ -290,7 +291,7 @@ static int setOmission(bool hasNext) {
     return INTERPRET_OK;
 }
 
-static int tupleOmission(bool hasNext) {
+static InterpretResult tupleOmission(bool hasNext) {
     if (hasNext) {
         if (!IS_INTEGER(peek(0)) || !IS_INTEGER(peek(1)) || !IS_INTEGER(peek(2))) {
             runtimeError("Expected: (int, int ... int)");
@@ -391,7 +392,7 @@ static int getSize(Value value) {
     return -1;
 }
 
-static int indexObj() {
+static InterpretResult indexObj() {
     if (!IS_INTEGER(peek(0))) {
         runtimeError("Index must be an integer");
         return INTERPRET_RUNTIME_ERROR;
@@ -425,7 +426,7 @@ static int indexObj() {
     return INTERPRET_OK;
 }
 
-static int sliceObj() {
+static InterpretResult sliceObj() {
     if (!IS_INTEGER(peek(0)) && !IS_NULL(peek(0)) || !IS_INTEGER(peek(1)) && !IS_NULL(peek(1))) {
         runtimeError("Slice index must be an integer or null");
         return INTERPRET_RUNTIME_ERROR;
@@ -468,6 +469,60 @@ static int sliceObj() {
 
     return INTERPRET_OK;
 }
+
+// ===================================================
+// =============       Module Test      ==============
+// ===================================================
+static unsigned char* resolvePath(unsigned char* path) {
+    // Check path extension is .jmpl
+    unsigned char* jmplExt = "jmpl";
+    if (strcmp(path + strlen(path) - strlen(jmplExt), jmplExt) != 0) {
+        runtimeError("File must have extension '.jmpl'");
+        return NULL;
+    }
+
+    FILE* file = fopen(path, "rb");
+    if(file == NULL) {
+        runtimeError("Could not open file \"%s\".\n", path);
+        return NULL;
+    }
+
+    fseek(file, 0L, SEEK_END);
+    size_t fileSize = ftell(file);
+    rewind(file);
+
+    unsigned char* buffer = (unsigned char*)malloc(fileSize + 1);
+    if (buffer == NULL) {
+        fprintf(stderr, "Not enough memory to read \"%s\".\n", path);
+        exit(IO_ERROR);
+    }
+
+    size_t bytesRead = fread(buffer, sizeof(unsigned char), fileSize, file);
+    if (bytesRead < fileSize) {
+        fprintf(stderr, "Could not read file \"%s\".\n", path);
+        exit(IO_ERROR);
+    }
+
+    buffer[bytesRead] = '\0';
+
+    fclose(file);
+    return buffer;
+}
+
+static InterpretResult importModule(ObjString* path) {
+    unsigned char* libSource = resolvePath(path->utf8);
+    if (libSource == NULL) {
+        return INTERPRET_RUNTIME_ERROR;
+    }
+
+    // use realpath to normalise paths
+
+    runtimeError("Unimplemented");
+    return INTERPRET_RUNTIME_ERROR;
+}
+// ===================================================
+// ===================================================
+// ===================================================
 
 static InterpretResult run() {
     CallFrame* frame = &vm.frames[vm.frameCount - 1];
@@ -769,7 +824,7 @@ static InterpretResult run() {
             }
             case OP_SET_OMISSION: {
                 bool omissionParameter = READ_BYTE();
-                int status = setOmission(omissionParameter);
+                InterpretResult status = setOmission(omissionParameter);
                 if (status != INTERPRET_OK) return status;
                 break;
             }
@@ -808,13 +863,13 @@ static InterpretResult run() {
             }
             case OP_TUPLE_OMISSION: {
                 bool omissionParameter = READ_BYTE();
-                int status = tupleOmission(omissionParameter);
+                InterpretResult status = tupleOmission(omissionParameter);
                 if (status != INTERPRET_OK) return status;
                 break;
             }
             case OP_SUBSCRIPT: {
                 bool isSlice = READ_BYTE();
-                int status;
+                InterpretResult status;
                 if (isSlice) {
                     status = sliceObj();
                 } else {
@@ -854,6 +909,12 @@ static InterpretResult run() {
                 push(getArb(set));
                 break;
             }
+            case OP_IMPORT_LIB: {
+                ObjString* path = READ_STRING();
+                InterpretResult status = importModule(path);
+                if (status != INTERPRET_OK) return status;
+                break;
+            }
             default: {
                 runtimeError("(Internal) Invalid Opcode");
                 return INTERPRET_RUNTIME_ERROR;
@@ -871,7 +932,7 @@ static InterpretResult run() {
 InterpretResult interpret(const unsigned char* source) {
     ObjFunction* function = compile(&vm.gc, source);
 
-    if(function == NULL) {
+    if (function == NULL) {
         return INTERPRET_COMPILE_ERROR;
     }
 

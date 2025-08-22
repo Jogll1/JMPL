@@ -1416,11 +1416,10 @@ static void letDeclaration(Parser* parser) {
 static void withDeclaration(Parser* parser) {
     // Consume a path
     consume(parser, TOKEN_STRING, "Expected a string after with declaration");
+    uint16_t libConstant = makeConstant(parser, OBJ_VAL(copyString(parser->gc, parser->previous.start + 1, parser->previous.length - 2)));
 
-    // Path is here
-    printf("%.*s", parser->previous.length, parser->previous.start);
-
-    error(parser, "Unimplemented");
+    emitOpShort(parser, OP_IMPORT_LIB, libConstant);
+    emitByte(parser, OP_POP);
 }
 
 static void expressionStatement(Parser* parser) {

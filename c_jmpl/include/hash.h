@@ -3,8 +3,6 @@
 
 #include "common.h"
 #include "value.h"
-#include "set.h"
-#include "tuple.h"
 
 // #define FNV_INIT_HASH 2166136261u
 // #define FNV_PRIME     16777619

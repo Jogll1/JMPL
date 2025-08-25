@@ -66,11 +66,26 @@ ObjUpvalue* newUpvalue(GC* gc, Value* slot) {
     return upvalue;
 }
 
+ObjModule* newModule(GC* gc, ObjString* name) {
+    ObjModule* module = ALLOCATE_OBJ(gc, ObjModule, OBJ_MODULE, false);
+    module->name = name;
+    initTable(&module->globals);
+    return module;
+}
+
 static void printFunction(ObjFunction* function) {
     if(function->name == NULL) {
         printf("<script>");
     } else {
         printf("<fn %s>", function->name->utf8);
+    }
+}
+
+static void printModule(ObjModule* module) {
+    if(module->name == NULL) {
+        printf("<module>");
+    } else {
+        printf("<module %s>", module->name->utf8);
     }
 }
 
@@ -84,6 +99,9 @@ void printObject(Value value, bool simple) {
             break;
         case OBJ_NATIVE:
             printf("<native>");
+            break;
+        case OBJ_MODULE:
+            printModule(AS_MODULE(value));
             break;
         case OBJ_STRING:
             printJMPLString(AS_STRING(value));

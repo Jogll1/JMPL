@@ -93,6 +93,11 @@ static void blackenObject(GC* gc, Obj* object) {
             markArray(gc, &function->chunk.constants);
             break;
         }
+        case OBJ_MODULE: {
+            ObjModule* module = (ObjModule*)object;
+            markTable(gc, &module->globals);
+            break;
+        }
         case OBJ_UPVALUE: {
             markValue(gc, ((ObjUpvalue*)object)->closed);
             break;
@@ -143,6 +148,12 @@ static void freeObject(GC* gc, Obj* object) {
         }
         case OBJ_NATIVE: {
             FREE(gc, ObjNative, object);
+            break;
+        }
+        case OBJ_MODULE: {
+            ObjModule* module = (ObjModule*)object;
+            freeTable(gc, &module->globals);
+            FREE(gc, ObjModule, object);
             break;
         }
         case OBJ_STRING: {

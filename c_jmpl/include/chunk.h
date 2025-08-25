@@ -7,20 +7,21 @@
  * @brief Opcodes for the VM.
  * 
  * A 'b' tag means the opcode takes a byte as a parameter.
+ * A 'c' tag means the opcode takes a constant (short) as a parameter.
  */
 typedef enum {
-    OP_CONSTANT,
+    OP_CONSTANT, // c
     OP_NULL,
     OP_TRUE,
     OP_FALSE,
     OP_POP,
-    OP_GET_LOCAL, // b
-    OP_SET_LOCAL, // b
+    OP_GET_LOCAL, 
+    OP_SET_LOCAL, 
     OP_GET_GLOBAL,
-    OP_DEFINE_GLOBAL,
+    OP_DEFINE_GLOBAL, // c
     OP_SET_GLOBAL,
-    OP_GET_UPVALUE, // b
-    OP_SET_UPVALUE, // b
+    OP_GET_UPVALUE, // c
+    OP_SET_UPVALUE, // c
     OP_EQUAL,
     OP_NOT_EQUAL,
     OP_GREATER,
@@ -60,7 +61,7 @@ typedef enum {
     OP_CREATE_ITERATOR,
     OP_ITERATE,
     OP_ARB,
-    OP_IMPORT_LIB
+    OP_IMPORT_LIB // c
 } OpCode;
 
 typedef struct {

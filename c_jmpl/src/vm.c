@@ -478,24 +478,24 @@ static InterpretResult sliceObj() {
 // ===================================================
 static InterpretResult importModule(ObjString* path) {
     // Get the module name (file path without the extension)
-    unsigned char fileName[PATH_MAX];
-    getFileName(path->utf8, fileName, PATH_MAX);
+    unsigned char fileName[MAX_PATH_SIZE];
+    getFileName(path->utf8, fileName, MAX_PATH_SIZE);
     ObjString* moduleName = copyString(&vm.gc, fileName, strlen(fileName));
+    printf("Module name: %s\n", moduleName->utf8);
 
     // Check if module is loaded
-    Value module;
-    if (tableGet(&vm.modules, moduleName, &module)) {
-        printf("Module loaded\n");
+    Value cached;
+    if (tableGet(&vm.modules, moduleName, &cached)) {
+        printObject(cached, false);
+        printf("\n");
         return INTERPRET_OK;
     }
-    
-    printf("Module not loaded\n");
-    tableSet(&vm.gc, &vm.modules, moduleName, NULL_VAL);
 
-    // unsigned char* libSource = resolvePath(path->utf8);
-    // if (libSource == NULL) {
-    //     return INTERPRET_RUNTIME_ERROR;
-    // }
+    // Create new module
+    ObjModule* module = newModule(&vm.gc, moduleName);
+    tableSet(&vm.gc, &vm.modules, moduleName, OBJ_VAL(module));
+
+    // Read and compile source
 
     return INTERPRET_OK;
 }

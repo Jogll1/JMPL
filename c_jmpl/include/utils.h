@@ -7,6 +7,8 @@
 
 // I/O
 
+#define MAX_PATH_SIZE 260
+
 bool getAbsolutePath(const char* path, char* resolved);
 void getFileName(const char* path, char* name, size_t resolvedSize);
 unsigned char* readFile(const char* path);

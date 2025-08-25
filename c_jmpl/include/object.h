@@ -2,6 +2,7 @@
 #define c_jmpl_object_h
 
 #include "common.h"
+#include "table.h"
 #include "chunk.h"
 #include "value.h"
 
@@ -17,6 +18,7 @@
 #define IS_UPVALUE(value)  isObjType(value, OBJ_UPVALUE)
 #define IS_FUNCTION(value) isObjType(value, OBJ_FUNCTION)
 #define IS_NATIVE(value)   isObjType(value, OBJ_NATIVE)
+#define IS_MODULE(value)   isObjType(value, OBJ_MODULE)
 #define IS_STRING(value)   isObjType(value, OBJ_STRING)
 #define IS_SET(value)      isObjType(value, OBJ_SET)
 #define IS_ITERATOR(value) isObjType(value, OBJ_ITERATOR)
@@ -28,6 +30,7 @@
 #define AS_FUNCTION(value) ((ObjFunction*)AS_OBJ(value))
 #define AS_NATIVE(value)   (((ObjNative*)AS_OBJ(value)))
 #define AS_STRING(value)   ((ObjString*)AS_OBJ(value))
+#define AS_MODULE(value)   ((ObjModule*)AS_OBJ(value))
 #define AS_CSTRING(value)  (((ObjString*)AS_OBJ(value))->utf8)
 #define AS_SET(value)      (((ObjSet*)AS_OBJ(value)))
 #define AS_ITERATOR(value) (((ObjIterator*)AS_OBJ(value)))
@@ -40,6 +43,7 @@ typedef enum {
     OBJ_CLOSURE,
     OBJ_FUNCTION,
     OBJ_NATIVE,
+    OBJ_MODULE,
     OBJ_STRING,
     OBJ_UPVALUE,
     OBJ_SET,
@@ -86,6 +90,12 @@ typedef struct {
     int upvalueCount;
 } ObjClosure;
 
+typedef struct {
+    Obj obj;
+    Table globals;
+    ObjString* name;
+} ObjModule;
+
 // ------
 
 Obj* allocateObject(GC* gc, size_t size, ObjType type, bool isIterable);
@@ -94,6 +104,7 @@ ObjClosure* newClosure(GC* gc, ObjFunction* function);
 ObjFunction* newFunction(GC* gc);
 ObjNative* newNative(GC* gc, NativeFn function, int arity);
 ObjUpvalue* newUpvalue(GC* gc, Value* slot);
+ObjModule* newModule(GC* gc, ObjString* name);
 
 void printObject(Value value, bool simple);
 

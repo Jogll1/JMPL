@@ -118,7 +118,7 @@ unsigned char* valueToString(Value value) {
                 return strdup(name->utf8);
             }
 
-            return strdup("<anon>");
+            return strdup("<script>");
         }
 
         if (IS_CLOSURE(value)) {
@@ -127,11 +127,20 @@ unsigned char* valueToString(Value value) {
                 return strdup(name->utf8);
             }
 
-            return strdup("<anon>");
+            return strdup("<script>");
         }
 
         if (IS_NATIVE(value)) {
             return strdup("<native>");
+        }
+
+        if (IS_MODULE(value)) {
+            ObjString* name = AS_MODULE(value)->name;
+            if (name != NULL) {
+                return strdup(name->utf8);
+            }
+
+            return strdup("<module>");
         }
 
         if (IS_SET(value)) {

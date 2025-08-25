@@ -2,7 +2,7 @@
 
 func get(M, k) =
     for t ∈ M | t[0] == k do
-        return t
+        return t[1]
     null
 
 func add(M, k, v) = M ∪ {(k, v)}

@@ -6,76 +6,10 @@
 #include "obj_string.h"
 #include "memory.h"
 #include "object.h"
-#include "unicode.h"
+#include "utils.h"
 #include "gc.h"
 #include "vm.h"
 #include "hash.h"
-
-// ===================================
-// ======== Escape Characters ========
-// ===================================
-
-bool isHex(unsigned char c) {
-    return c >= '0' && c <= '9' ||
-           c >= 'a' && c <= 'f' ||
-           c >= 'A' && c <= 'F';
-}
-
-int hexToValue(unsigned char c) {
-    assert(isHex(c));
-    if (c >= '0' && c <= '9') return (unsigned char)(c - '0');
-    if (c >= 'A' && c <= 'F') return (unsigned char)(c - 'A' + 10);
-    if (c >= 'a' && c <= 'f') return (unsigned char)(c - 'a' + 10);
-    return 0;
-}
-
-/**
- * @brief Returns the corresponding escaped character given a character.
- * 
- * @param esc The character to escape
- * @return    The escaped character
- */
-unsigned char decodeSimpleEscape(unsigned char esc) {
-    switch (esc) {
-        case 'a':  return '\a';
-        case 'b':  return '\b';
-        case 'e':  return '\e';
-        case 'f':  return '\f';
-        case 'n':  return '\n';
-        case 'r':  return '\r';
-        case 't':  return '\t';
-        case 'v':  return '\v';
-        case '\\': return '\\';
-        case '\'': return '\'';
-        case '\"': return '\"';
-        default:   return esc;
-    }
-}
-
-EscapeType getEscapeType(unsigned char esc) {
-    switch (esc) {
-        case 'a':
-        case 'b':
-        case 'e':
-        case 'f':
-        case 'n':
-        case 'r':
-        case 't':
-        case 'v':
-        case '\\':
-        case '\'':
-        case '\0':
-        case '"': return ESC_SIMPLE;
-        case 'x': return ESC_HEX;
-        case 'u': return ESC_UNICODE;
-        case 'U': return ESC_UNICODE_LG;
-        default:  return ESC_INVALID;
-    }
-}
-
-// ===================================
-// ========      Strings      ========
-// ===================================
 
 void freeString(GC* gc, ObjString* string) {
     FREE_ARRAY(gc, char, string->utf8, string->utf8Length + 1);

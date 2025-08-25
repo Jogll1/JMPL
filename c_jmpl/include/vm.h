@@ -23,6 +23,7 @@ typedef struct VM {
     Value* stackTop;
     Table globals;
     Table strings; // Table for string interning
+    Table modules; // Table for resolving modules
     ObjUpvalue* openUpvalues;
 
     GC gc;

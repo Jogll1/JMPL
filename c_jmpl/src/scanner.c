@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "unicode.h"
+#include "utils.h"
 #include "common.h"
 #include "scanner.h"
 #include "obj_string.h"

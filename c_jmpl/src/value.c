@@ -9,7 +9,7 @@
 #include "set.h"
 #include "tuple.h"
 #include "memory.h"
-#include "unicode.h"
+#include "utils.h"
 #include "hash.h"
 
 void initValueArray(ValueArray* array) {

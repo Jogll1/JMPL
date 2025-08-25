@@ -3,7 +3,7 @@
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
-#include <unistd.h>
+#include <stdio.h>
 
 #include "common.h"
 #include "compiler.h"
@@ -15,6 +15,7 @@
 #include "memory.h"
 #include "native.h"
 #include "debug.h"
+#include "utils.h"
 #include "gc.h"
 #include "iterator.h"
 
@@ -77,6 +78,7 @@ void initVM() {
 
     initTable(&vm.globals);
     initTable(&vm.strings);
+    initTable(&vm.modules);
 
     // --- Add native functions ---
 
@@ -110,6 +112,7 @@ void initVM() {
 void freeVM() {
     freeTable(&vm.gc, &vm.globals);
     freeTable(&vm.gc, &vm.strings);
+    freeTable(&vm.gc, &vm.modules);
     freeGC(&vm.gc);
 }
 
@@ -473,52 +476,28 @@ static InterpretResult sliceObj() {
 // ===================================================
 // =============       Module Test      ==============
 // ===================================================
-static unsigned char* resolvePath(unsigned char* path) {
-    // Check path extension is .jmpl
-    unsigned char* jmplExt = "jmpl";
-    if (strcmp(path + strlen(path) - strlen(jmplExt), jmplExt) != 0) {
-        runtimeError("File must have extension '.jmpl'");
-        return NULL;
-    }
-
-    FILE* file = fopen(path, "rb");
-    if(file == NULL) {
-        runtimeError("Could not open file \"%s\".\n", path);
-        return NULL;
-    }
-
-    fseek(file, 0L, SEEK_END);
-    size_t fileSize = ftell(file);
-    rewind(file);
-
-    unsigned char* buffer = (unsigned char*)malloc(fileSize + 1);
-    if (buffer == NULL) {
-        fprintf(stderr, "Not enough memory to read \"%s\".\n", path);
-        exit(IO_ERROR);
-    }
-
-    size_t bytesRead = fread(buffer, sizeof(unsigned char), fileSize, file);
-    if (bytesRead < fileSize) {
-        fprintf(stderr, "Could not read file \"%s\".\n", path);
-        exit(IO_ERROR);
-    }
-
-    buffer[bytesRead] = '\0';
-
-    fclose(file);
-    return buffer;
-}
-
 static InterpretResult importModule(ObjString* path) {
-    unsigned char* libSource = resolvePath(path->utf8);
-    if (libSource == NULL) {
-        return INTERPRET_RUNTIME_ERROR;
+    // Get the module name (file path without the extension)
+    unsigned char fileName[PATH_MAX];
+    getFileName(path->utf8, fileName, PATH_MAX);
+    ObjString* moduleName = copyString(&vm.gc, fileName, strlen(fileName));
+
+    // Check if module is loaded
+    Value module;
+    if (tableGet(&vm.modules, moduleName, &module)) {
+        printf("Module loaded\n");
+        return INTERPRET_OK;
     }
+    
+    printf("Module not loaded\n");
+    tableSet(&vm.gc, &vm.modules, moduleName, NULL_VAL);
 
-    // use realpath to normalise paths
+    // unsigned char* libSource = resolvePath(path->utf8);
+    // if (libSource == NULL) {
+    //     return INTERPRET_RUNTIME_ERROR;
+    // }
 
-    runtimeError("Unimplemented");
-    return INTERPRET_RUNTIME_ERROR;
+    return INTERPRET_OK;
 }
 // ===================================================
 // ===================================================

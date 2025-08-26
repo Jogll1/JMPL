@@ -27,6 +27,8 @@ ObjString* tableFindString(GC* gc, Table* table, const unsigned char* chars, int
 Entry* tableFindJoinedStrings(GC* gc, Table* table, const unsigned char* a, int aLen, const unsigned char* b, int bLen, hash_t hash);
 void tableRemoveWhite(Table* table);
 void markTable(GC* gc, Table* table);
+
+void printDebugTable(Table* table);
 void tableDebugStats(Table* table);
 
 #endif

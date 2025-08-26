@@ -25,7 +25,7 @@ void freeTable(GC* gc, Table* table) {
     initTable(table);
 }
 
-static void printDebugTable(Table* table) {
+void printDebugTable(Table* table) {
     printf("\n=================================\n");
     for (int i = 0; i < table->capacity; i++) {
         if (table->entries[i].key == NULL) {

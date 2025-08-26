@@ -476,28 +476,40 @@ static InterpretResult sliceObj() {
 // ===================================================
 // =============       Module Test      ==============
 // ===================================================
-static InterpretResult importModule(ObjString* path) {
+static Value importModule(ObjString* path) {
     // Get the module name (file path without the extension)
     unsigned char fileName[MAX_PATH_SIZE];
     getFileName(path->utf8, fileName, MAX_PATH_SIZE);
     ObjString* moduleName = copyString(&vm.gc, fileName, strlen(fileName));
     printf("Module name: %s\n", moduleName->utf8);
 
-    // Check if module is loaded
+    // Check if module is already loaded
     Value cached;
     if (tableGet(&vm.modules, moduleName, &cached)) {
-        printObject(cached, false);
-        printf("\n");
-        return INTERPRET_OK;
+        return cached;
     }
 
     // Create new module
+    pushTemp(&vm.gc, OBJ_VAL(moduleName));
     ObjModule* module = newModule(&vm.gc, moduleName);
     tableSet(&vm.gc, &vm.modules, moduleName, OBJ_VAL(module));
+    popTemp(&vm.gc);
 
-    // Read and compile source
+    // Read library source
+    unsigned char* moduleSource = readFile(path->utf8);
 
-    return INTERPRET_OK;
+    // Compile module and run
+    ObjFunction* function = compile(&vm.gc, moduleSource);
+    if (function == NULL) {
+        runtimeError("Could not compile module");
+        return NULL_VAL;
+    }
+
+    push(OBJ_VAL(function));
+    ObjClosure* closure = newClosure(&vm.gc, function);
+    pop();
+
+    return OBJ_VAL(closure);
 }
 // ===================================================
 // ===================================================
@@ -890,8 +902,17 @@ static InterpretResult run() {
             }
             case OP_IMPORT_LIB: {
                 ObjString* path = READ_STRING();
-                InterpretResult status = importModule(path);
-                if (status != INTERPRET_OK) return status;
+                push(importModule(path));
+                if (IS_CLOSURE(peek(0))) {
+                    ObjClosure* closure = AS_CLOSURE(pop());
+                    call(closure, 0);
+                } else if (IS_MODULE(peek(0))) {
+                    pop();
+                    printf("***Module already loaded***\n");
+                } else {
+                    pop();
+                    return INTERPRET_RUNTIME_ERROR;
+                }
                 break;
             }
             default: {
@@ -910,7 +931,6 @@ static InterpretResult run() {
 
 InterpretResult interpret(const unsigned char* source) {
     ObjFunction* function = compile(&vm.gc, source);
-
     if (function == NULL) {
         return INTERPRET_COMPILE_ERROR;
     }

@@ -1419,7 +1419,7 @@ static void withDeclaration(Parser* parser) {
     uint16_t libConstant = makeConstant(parser, OBJ_VAL(copyString(parser->gc, parser->previous.start + 1, parser->previous.length - 2)));
 
     emitOpShort(parser, OP_IMPORT_LIB, libConstant);
-    // emitByte(parser, OP_POP); // Pop module result
+    emitByte(parser, OP_POP); // Pop module result
 }
 
 static void expressionStatement(Parser* parser) {

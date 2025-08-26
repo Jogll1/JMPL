@@ -481,7 +481,6 @@ static Value importModule(ObjString* path) {
     unsigned char fileName[MAX_PATH_SIZE];
     getFileName(path->utf8, fileName, MAX_PATH_SIZE);
     ObjString* moduleName = copyString(&vm.gc, fileName, strlen(fileName));
-    printf("Module name: %s\n", moduleName->utf8);
 
     // Check if module is already loaded
     Value cached;
@@ -495,11 +494,11 @@ static Value importModule(ObjString* path) {
     tableSet(&vm.gc, &vm.modules, moduleName, OBJ_VAL(module));
     popTemp(&vm.gc);
 
-    // Read library source
+    // Read library source and compile
     unsigned char* moduleSource = readFile(path->utf8);
-
-    // Compile module and run
     ObjFunction* function = compile(&vm.gc, moduleSource);
+    free(moduleSource);
+    
     if (function == NULL) {
         runtimeError("Could not compile module");
         return NULL_VAL;
@@ -903,9 +902,11 @@ static InterpretResult run() {
             case OP_IMPORT_LIB: {
                 ObjString* path = READ_STRING();
                 push(importModule(path));
+
                 if (IS_CLOSURE(peek(0))) {
                     ObjClosure* closure = AS_CLOSURE(pop());
                     call(closure, 0);
+                    frame = &vm.frames[vm.frameCount - 1];
                 } else if (IS_MODULE(peek(0))) {
                     pop();
                     printf("***Module already loaded***\n");
@@ -913,6 +914,7 @@ static InterpretResult run() {
                     pop();
                     return INTERPRET_RUNTIME_ERROR;
                 }
+
                 break;
             }
             default: {

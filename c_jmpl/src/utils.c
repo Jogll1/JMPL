@@ -12,7 +12,7 @@
     #include <direct.h>
     #define DIR_SEP1 '\\'
     #define DIR_SEP2 '/'
-    #define PORTABLE_REAL_PATH(path, resolved) (_access(_fullpath(resolved, path, MAX_PATH_SIZE), 0))
+    #define PORTABLE_REAL_PATH(path, resolved) (_access(_fullpath(resolved, path, MAX_PATH_SIZE), 0) == 0)
 #else
     #include <unistd.h>
     #define DIR_SEP1 '/'

@@ -480,7 +480,7 @@ static InterpretResult sliceObj() {
 static Value importModule(ObjString* path) {
     // Resolve path
     unsigned char absolutePath[MAX_PATH_SIZE];
-    if (getAbsolutePath(path->utf8, absolutePath)) {
+    if (!getAbsolutePath(path->utf8, absolutePath)) {
         runtimeError("Could not resolve path '%s'", absolutePath);
         return NULL_VAL;
     }

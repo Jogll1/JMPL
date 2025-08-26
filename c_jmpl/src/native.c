@@ -17,6 +17,8 @@
     #include <unistd.h>
 #endif
 
+#define DEF_NATIVE(name) Value name##Native(VM* vm, int argCount, Value* args)
+
 #define JMPL_PI 3.14159265358979323846
 #define JMPL_EPSILON 1e-10
 
@@ -27,7 +29,7 @@
  * 
  * Returns how long the program has elapsed in seconds.
  */
-Value clockNative(VM* vm, int argCount, Value* args) {
+DEF_NATIVE(clock) {
     return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
 }
 
@@ -36,7 +38,7 @@ Value clockNative(VM* vm, int argCount, Value* args) {
  * 
  * Sleeps for x seconds.
  */
-Value sleepNative(VM* vm, int argCount, Value* args) {
+DEF_NATIVE(sleep) {
     if(!IS_NUMBER(args[0])) return NULL_VAL;
 
     double seconds = AS_NUMBER(args[0]);
@@ -59,7 +61,7 @@ Value sleepNative(VM* vm, int argCount, Value* args) {
  * 
  * Returns the type of a value as a string.
  */
-Value typeNative(VM* vm, int argCount, Value* args) {
+DEF_NATIVE(type) {
     Value value = args[0];
 
     unsigned char* str;
@@ -96,7 +98,7 @@ Value typeNative(VM* vm, int argCount, Value* args) {
  * Prints a value to the console.
  * Returns null.
  */
-Value printNative(VM* vm, int argCount, Value* args) {
+DEF_NATIVE(print) {
     printValue(args[0], false);
 
     return NULL_VAL;
@@ -108,7 +110,7 @@ Value printNative(VM* vm, int argCount, Value* args) {
  * Prints a value to the console with a newline.
  * Returns null.
  */
-Value printlnNative(VM* vm, int argCount, Value* args) {
+DEF_NATIVE(println) {
     printValue(args[0], false);
     printf("\n");
 
@@ -120,7 +122,7 @@ Value printlnNative(VM* vm, int argCount, Value* args) {
  * 
  * Reads a line of input.
  */
-Value inputNative(VM* vm, int argCount, Value* args) {
+DEF_NATIVE(input) {
     size_t size = 32;
     size_t len = 0;
     unsigned char* buffer = malloc(size);
@@ -130,7 +132,7 @@ Value inputNative(VM* vm, int argCount, Value* args) {
     }
 
     int c;
-    while((c = getchar()) != EOF && c != '\n') {
+    while ((c = getchar()) != EOF && c != '\n') {
         buffer[len++] = c; 
 
         if (len == size) {
@@ -158,7 +160,7 @@ Value inputNative(VM* vm, int argCount, Value* args) {
  * 
  * Returns the numerical value of pi.
  */
-Value piNative(VM* vm, int argCount, Value* args) {
+DEF_NATIVE(pi) {
     return NUMBER_VAL(JMPL_PI);
 }
 
@@ -169,7 +171,7 @@ Value piNative(VM* vm, int argCount, Value* args) {
  * Returns null if x is not a number.
  * Manually returns 0 for all +/- n * pi
  */
-Value sinNative(VM* vm, int argCount, Value* args) {
+DEF_NATIVE(sin) {
     if(!IS_NUMBER(args[0])) return NULL_VAL;
 
     double arg = AS_NUMBER(args[0]);
@@ -188,7 +190,7 @@ Value sinNative(VM* vm, int argCount, Value* args) {
  * Returns null if x is not a number.
  * Manually returns 0 for all +/- (2n + 1) * pi / 2
  */
-Value cosNative(VM* vm, int argCount, Value* args) {
+DEF_NATIVE(cos) {
     if(!IS_NUMBER(args[0])) return NULL_VAL;
     
     double arg = AS_NUMBER(args[0]);
@@ -207,7 +209,7 @@ Value cosNative(VM* vm, int argCount, Value* args) {
  * Returns null if x is not a number.
  * Manually returns 0 for all +/- n * pi
  */
-Value tanNative(VM* vm, int argCount, Value* args) {
+DEF_NATIVE(tan) {
     if(!IS_NUMBER(args[0])) return NULL_VAL;
     
     double arg = AS_NUMBER(args[0]);
@@ -228,7 +230,7 @@ Value tanNative(VM* vm, int argCount, Value* args) {
  * Returns the arcsine of x (in radians).
  * Returns null if x is not a number.
  */
-Value arcsinNative(VM* vm, int argCount, Value* args) {
+DEF_NATIVE(arcsin) {
     if(!IS_NUMBER(args[0])) return NULL_VAL; 
 
     return NUMBER_VAL(asin(AS_NUMBER(args[0])));
@@ -240,7 +242,7 @@ Value arcsinNative(VM* vm, int argCount, Value* args) {
  * Returns the arccosine of x (in radians).
  * Returns null if x is not a number.
  */
-Value arccosNative(VM* vm, int argCount, Value* args) {
+DEF_NATIVE(arccos) {
     if(!IS_NUMBER(args[0])) return NULL_VAL; 
 
     return NUMBER_VAL(acos(AS_NUMBER(args[0])));
@@ -252,7 +254,7 @@ Value arccosNative(VM* vm, int argCount, Value* args) {
  * Returns the arctangent of x (in radians).
  * Returns null if x is not a number.
  */
-Value arctanNative(VM* vm, int argCount, Value* args) {
+DEF_NATIVE(arctan) {
     if(!IS_NUMBER(args[0])) return NULL_VAL; 
 
     return NUMBER_VAL(atan(AS_NUMBER(args[0])));
@@ -264,7 +266,7 @@ Value arctanNative(VM* vm, int argCount, Value* args) {
  * Returns the maximum of x and y.
  * Returns null if either x or y is not a number.
  */
-Value maxNative(VM* vm, int argCount, Value* args) {
+DEF_NATIVE(max) {
     if(!IS_NUMBER(args[0]) || !IS_NUMBER(args[1])) return NULL_VAL;
     
     double arg1 = AS_NUMBER(args[0]);
@@ -279,7 +281,7 @@ Value maxNative(VM* vm, int argCount, Value* args) {
  * Returns the minimum of x and y.
  * Returns null if either x or y is not a number.
  */
-Value minNative(VM* vm, int argCount, Value* args) {
+DEF_NATIVE(min) {
     if(!IS_NUMBER(args[0]) || !IS_NUMBER(args[1])) return NULL_VAL;
     
     double arg1 = AS_NUMBER(args[0]);
@@ -294,7 +296,7 @@ Value minNative(VM* vm, int argCount, Value* args) {
  * Returns the floor of x.
  * Returns null if x is not a number.
  */
-Value floorNative(VM* vm, int argCount, Value* args) {
+DEF_NATIVE(floor) {
     if(!IS_NUMBER(args[0])) return NULL_VAL;
     
     return NUMBER_VAL(floor(AS_NUMBER(args[0])));
@@ -306,7 +308,7 @@ Value floorNative(VM* vm, int argCount, Value* args) {
  * Returns the ceiling of x.
  * Returns null if x is not a number.
  */
-Value ceilNative(VM* vm, int argCount, Value* args) {
+DEF_NATIVE(ceil) {
     if(!IS_NUMBER(args[0])) return NULL_VAL;
     
     return NUMBER_VAL(ceil(AS_NUMBER(args[0])));
@@ -318,7 +320,7 @@ Value ceilNative(VM* vm, int argCount, Value* args) {
  * Returns the rounded value of x.
  * Returns null if x is not a number.
  */
-Value roundNative(VM* vm, int argCount, Value* args) {
+DEF_NATIVE(round) {
     if(!IS_NUMBER(args[0])) return NULL_VAL;
     
     return NUMBER_VAL(round(AS_NUMBER(args[0])));

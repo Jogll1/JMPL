@@ -476,10 +476,18 @@ static InterpretResult sliceObj() {
 // ===================================================
 // =============       Module Test      ==============
 // ===================================================
+
 static Value importModule(ObjString* path) {
+    // Resolve path
+    unsigned char absolutePath[MAX_PATH_SIZE];
+    if (getAbsolutePath(path->utf8, absolutePath)) {
+        runtimeError("Could not resolve path '%s'", absolutePath);
+        return NULL_VAL;
+    }
+
     // Get the module name (file path without the extension)
     unsigned char fileName[MAX_PATH_SIZE];
-    getFileName(path->utf8, fileName, MAX_PATH_SIZE);
+    getFileName(absolutePath, fileName, MAX_PATH_SIZE);
     ObjString* moduleName = copyString(&vm.gc, fileName, strlen(fileName));
 
     // Check if module is already loaded
@@ -495,7 +503,7 @@ static Value importModule(ObjString* path) {
     popTemp(&vm.gc);
 
     // Read library source and compile
-    unsigned char* moduleSource = readFile(path->utf8);
+    unsigned char* moduleSource = readFile(absolutePath);
     ObjFunction* function = compile(&vm.gc, moduleSource);
     free(moduleSource);
     

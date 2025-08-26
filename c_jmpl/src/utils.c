@@ -12,16 +12,16 @@
     #include <direct.h>
     #define DIR_SEP1 '\\'
     #define DIR_SEP2 '/'
-    #define PORTABLE_REALPATH(path, resolved) _fullpath(resolved, path, MAX_PATH_SIZE)
+    #define PORTABLE_REAL_PATH(path, resolved) (_access(_fullpath(resolved, path, MAX_PATH_SIZE), 0))
 #else
     #include <unistd.h>
     #define DIR_SEP1 '/'
     #define DIR_SEP2 '/'
-    #define PORTABLE_REALPATH(path, resolved) realpath(path, resolved)
+    #define PORTABLE_REAL_PATH(path, resolved) (realpath(path, resolved) != NULL)
 #endif
 
 bool getAbsolutePath(const char* path, char* resolved) {
-    return PORTABLE_REALPATH(path, resolved);
+    return PORTABLE_REAL_PATH(path, resolved);
 }
 
 void getFileName(const char* path, char* name, size_t resolvedSize) {
@@ -52,7 +52,7 @@ unsigned char* readFile(const char* path) {
     // Open file
     FILE* file = fopen(path, "rb");
 
-    if(file == NULL) {
+    if (file == NULL) {
         fprintf(stderr, "Could not open file \"%s\".\n", path);
         exit(IO_ERROR);
     }

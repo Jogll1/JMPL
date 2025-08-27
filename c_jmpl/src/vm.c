@@ -523,7 +523,7 @@ static Value importModule(ObjString* path) {
 // ===================================================
 
 static InterpretResult run() {
-    register CallFrame* frame;
+    CallFrame* frame;
 
 #define READ_BYTE()     (*frame->ip++)
 #define READ_SHORT()    (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))

@@ -22,7 +22,7 @@ ObjIterator* newIterator(GC* gc, Obj* target) {
             ObjSet* set = (ObjSet*)target;
 
             // Find index of first value in set
-            for (int i = 0; i < set->capacity; i++) {
+            for (size_t i = 0; i < set->capacity; i++) {
                 if (IS_NULL(set->elements[i])) continue;
 
                 iterator->currentIndex = i;
@@ -46,6 +46,7 @@ ObjIterator* newIterator(GC* gc, Obj* target) {
             } 
             break;
         }
+        default: break;
     }
 
     popTemp(gc);
@@ -61,7 +62,7 @@ static bool iterateSet(ObjIterator* iterator, Value* value) {
 
     ObjSet* set = (ObjSet*)iterator->target;
 
-    int capacity = set->capacity;
+    size_t capacity = set->capacity;
     int current = iterator->currentIndex;
     if (current == -1 || capacity == 0 || current >= capacity) return false;
 
@@ -69,7 +70,7 @@ static bool iterateSet(ObjIterator* iterator, Value* value) {
     *(value) = set->elements[current];
 
     // Get next iteration
-    for (int i = current + 1; i < capacity; i++) {
+    for (size_t i = current + 1; i < capacity; i++) {
         if (IS_NULL(set->elements[i])) continue;
 
         iterator->currentIndex = i;
@@ -126,7 +127,6 @@ bool iterateObj(ObjIterator* iterator, Value* value) {
         case OBJ_SET:    return iterateSet(iterator, value);
         case OBJ_TUPLE:  return iterateTuple(iterator, value);
         case OBJ_STRING: return iterateString(iterator, value);
+        default:         return false;
     }
-
-    return false;
 }

@@ -16,3 +16,6 @@ find_library(MATH_LIBRARY m)
 if(MATH_LIBRARY)
     target_link_libraries(v0-2-2 PUBLIC ${MATH_LIBRARY})
 endif()
+
+# Warnings
+# set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wpedantic -Wshadow -Wconversion")

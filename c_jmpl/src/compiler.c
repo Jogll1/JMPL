@@ -126,7 +126,7 @@ static void fprintfRawString(FILE* f, const unsigned char* string, int length) {
     }
 }
 
-static void errorAt(Parser* parser, Token* token, const unsigned char* message) {
+static void errorAt(Parser* parser, Token* token, const char* message) {
     if(parser->panicMode) return;
     parser->panicMode = true;
     
@@ -147,11 +147,11 @@ static void errorAt(Parser* parser, Token* token, const unsigned char* message) 
     parser->hadError = true;
 }
 
-static void error(Parser* parser, const unsigned char* message) {
+static void error(Parser* parser, const char* message) {
     errorAt(parser, &parser->previous, message);
 }
 
-static void errorAtCurrent(Parser* parser, const unsigned char* message) {
+static void errorAtCurrent(Parser* parser, const char* message) {
     errorAt(parser, &parser->current, message);
 }
 
@@ -598,6 +598,8 @@ static uint8_t argumentList(Parser* parser) {
 }
 
 static void binary(Parser* parser, bool canAssign) {
+    (void)canAssign;
+
     TokenType operatorType = parser->previous.type;
     ParseRule* rule = getRule(operatorType);
     parsePrecedence(parser, (Precedence)(rule->precedence + 1), false);
@@ -626,11 +628,15 @@ static void binary(Parser* parser, bool canAssign) {
 }
 
 static void call(Parser* parser, bool canAssign) {
+    (void)canAssign;
+
     uint8_t argCount = argumentList(parser);
     emitBytes(parser, OP_CALL, argCount);
 }
 
 static void subscript(Parser* parser, bool canAssign) {
+    (void)canAssign;
+
     int isSlice = 0;
 
     if (match(parser, TOKEN_ELLIPSIS)) {
@@ -658,6 +664,8 @@ static void subscript(Parser* parser, bool canAssign) {
 }
 
 static void literal(Parser* parser, bool canAssign) {
+    (void)canAssign;
+
     switch (parser->previous.type) {
         case TOKEN_FALSE: emitByte(parser, OP_FALSE); break;
         case TOKEN_NULL:  emitByte(parser, OP_NULL);  break;
@@ -714,6 +722,8 @@ static void tuple(Parser* parser) {
 }
 
 static void grouping(Parser* parser, bool canAssign) {
+    (void)canAssign;
+
     // If its an empty parentheses, make an empty tuple
     if (check(parser, TOKEN_RIGHT_PAREN)) {
         advance(parser);
@@ -912,6 +922,8 @@ static bool isSetBuilder(Parser* parser) {
  * or:                       {f, n, ..., l}
  */
 static void set(Parser* parser, bool canAssign) {
+    (void)canAssign;
+
     if (!check(parser, TOKEN_RIGHT_BRACE)) {
         // Check if its a set builder
         if (isSetBuilder(parser)) return;
@@ -959,12 +971,16 @@ static void set(Parser* parser, bool canAssign) {
 // ----------------------
 
 static void number(Parser* parser, bool canAssign) {
+    (void)canAssign;
+
     // Convert string to double
     double value = strtod(parser->previous.start, NULL);
     emitConstant(parser, NUMBER_VAL(value));
 }
 
 static void and_(Parser* parser, bool canAssign) {
+    (void)canAssign;
+
     // If left operand is false (currently on stack), emit call to jump to the end
     int endJump = emitJump(parser, OP_JUMP_IF_FALSE);
     
@@ -976,6 +992,8 @@ static void and_(Parser* parser, bool canAssign) {
 }
 
 static void or_(Parser* parser, bool canAssign) {
+    (void)canAssign;
+
     int elseJump = emitJump(parser, OP_JUMP_IF_FALSE);
     int endJump = emitJump(parser, OP_JUMP);
 
@@ -1044,6 +1062,8 @@ static size_t decodeEscapeString(Parser* parser, unsigned char* output, const un
 }
 
 static void character(Parser* parser, bool canAssign) {
+    (void)canAssign;
+
     // Copy the char bytes from the source, +1 and -2 to trim quotation mark
     size_t length = parser->previous.length - 2;
     unsigned char decoded[length];
@@ -1059,6 +1079,8 @@ static void character(Parser* parser, bool canAssign) {
 }
 
 static void string(Parser* parser, bool canAssign) {
+    (void)canAssign;
+
     // Copy the string from the source, +1 and -2 to trim quotation marks
     size_t length = parser->previous.length - 2;
     unsigned char decoded[length];
@@ -1109,6 +1131,8 @@ static void variable(Parser* parser, bool canAssign) {
 }
 
 static void unary(Parser* parser, bool canAssign) {
+    (void)canAssign;
+
     TokenType operatorType = parser->previous.type;
 
     // Compile the operand
@@ -1195,6 +1219,8 @@ static void quantifier(Parser* parser) {
  * @brief Wrapper for quantifier to call it as an anonymous function.
  */
 static void quantWrap(Parser* parser, bool canAssign) {
+    (void)canAssign;
+
     functionWrapper(parser, TYPE_FUNCTION, quantifier);
     emitBytes(parser, OP_CALL, 0);
 }
@@ -1229,6 +1255,8 @@ static void anonymousFunction(Parser* parser) {
  * @brief Wrapper for creating an anonymous function.
  */ 
 static void anonWrap(Parser* parser, bool canAssign) {
+    (void)canAssign;
+
     functionWrapper(parser, TYPE_FUNCTION, anonymousFunction);
 }
 

@@ -7,6 +7,7 @@
 typedef struct Obj Obj;
 
 #define INTIAL_GC 1024 * 1024
+// #define INTIAL_GC 1024
 #define GC_HEAP_GROW_FACTOR 2
 
 typedef struct GC {

@@ -7,10 +7,12 @@
 #include "tuple.h"
 #include "obj_string.h"
 #include "memory.h"
+#include "gc.h"
 
 ObjIterator* newIterator(GC* gc, Obj* target) {
     assert(target->isIterable);
 
+    pushTemp(gc, OBJ_VAL(target));
     ObjIterator* iterator = ALLOCATE_OBJ(gc, ObjIterator, OBJ_ITERATOR, false);
     iterator->target = target;
     iterator->currentIndex = -1;
@@ -46,6 +48,7 @@ ObjIterator* newIterator(GC* gc, Obj* target) {
         }
     }
 
+    popTemp(gc);
     return iterator;
 }
 

@@ -162,11 +162,11 @@ static void advance(Parser* parser) {
         parser->current = scanToken(&parser->scanner);
 #ifdef DEBUG_PRINT_TOKENS
         // Debug tokens
-        printf("%s", getTokenName(parser.current.type));
+        printf("%s", getTokenName(parser->current.type));
         printf("(");
-        fprintfRawString(stderr, parser.current.start, parser.current.length);
+        fprintfRawString(stderr, parser->current.start, parser->current.length);
         printf(") ");
-        if (parser.current.type == TOKEN_NEWLINE || parser.current.type == TOKEN_DEDENT || parser.current.type == TOKEN_EOF) printf("\n\n");
+        if (parser->current.type == TOKEN_NEWLINE || parser->current.type == TOKEN_DEDENT || parser->current.type == TOKEN_EOF) printf("\n\n");
 #endif
 
         if(parser->current.type != TOKEN_ERROR) break;

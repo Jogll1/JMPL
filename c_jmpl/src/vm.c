@@ -523,13 +523,12 @@ static Value importModule(ObjString* path) {
 // ===================================================
 
 static InterpretResult run() {
-    CallFrame* frame;
+    CallFrame* frame = &vm.frames[vm.frameCount - 1];
 
 #define READ_BYTE()     (*frame->ip++)
 #define READ_SHORT()    (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
 #define READ_CONSTANT() (frame->closure->function->chunk.constants.values[READ_SHORT()])
 #define READ_STRING()   AS_STRING(READ_CONSTANT())
-#define LOAD_FRAME()    frame = &vm.frames[vm.frameCount - 1];
 // --- Ugly ---
 #define BINARY_OP(valueType, op) \
     do { \
@@ -566,8 +565,6 @@ static InterpretResult run() {
         push(valueType(setFunction(setA, setB))); \
     } while (false)
 // ---
-
-    LOAD_FRAME();
 
     while(true) {
 #ifdef DEBUG_TRACE_EXECUTION
@@ -763,7 +760,7 @@ static InterpretResult run() {
                 if (!callValue(peek(argCount), argCount)) {
                     return INTERPRET_RUNTIME_ERROR;
                 }
-                LOAD_FRAME();
+                frame = &vm.frames[vm.frameCount - 1];
                 break;
             }
             case OP_CLOSURE: {
@@ -805,7 +802,7 @@ static InterpretResult run() {
 
                 vm.stackTop = frame->slots;
                 push(result);
-                LOAD_FRAME();
+                frame = &vm.frames[vm.frameCount - 1];
                 break;
             }
             case OP_STASH: {
@@ -917,7 +914,7 @@ static InterpretResult run() {
                 if (IS_CLOSURE(peek(0))) {
                     ObjClosure* closure = AS_CLOSURE(pop());
                     call(closure, 0);
-                    LOAD_FRAME();
+                    frame = &vm.frames[vm.frameCount - 1];
                 } else if (IS_MODULE(peek(0))) {
                     pop();
                     printf("***Module already loaded***\n");
@@ -938,7 +935,6 @@ static InterpretResult run() {
 #undef READ_SHORT
 #undef READ_CONSTANT
 #undef READ_STRING
-#undef LOAD_FRAME
 #undef BINARY_OP
 #undef SET_OP
 }

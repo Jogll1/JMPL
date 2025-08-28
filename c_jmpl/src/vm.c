@@ -55,21 +55,6 @@ static void runtimeError(const unsigned char* format, ...) {
     resetStack();
 }
 
-/**
- * @brief Adds a native function.
- * 
- * @param name     The name of the function in JMPL
- * @param arity    How many parameters it should have
- * @param function The C function that is called
- */
-static void defineNative(const unsigned char* name, int arity, NativeFn function) {
-    push(OBJ_VAL(copyString(&vm.gc, name, (int)strlen(name))));
-    push(OBJ_VAL(newNative(&vm.gc, function, arity)));
-    tableSet(&vm.gc, &vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
-    pop();
-    pop();
-}
-
 void initVM() {
     resetStack();
     initGC(&vm.gc);
@@ -80,33 +65,8 @@ void initVM() {
     initTable(&vm.strings);
     initTable(&vm.modules);
 
-    // --- Add native functions ---
-
-    // General purpose
-    defineNative("clock", 0, clockNative);
-    defineNative("sleep", 1, sleepNative);
-
-    defineNative("type", 1, typeNative);
-
-    // I/O
-    defineNative("print", 1, printNative);
-    defineNative("println", 1, printlnNative);
-
-    defineNative("input", 0, inputNative);
-
-    // Maths library
-    defineNative("pi", 0, piNative);
-    defineNative("sin", 1, sinNative);
-    defineNative("cos", 1, cosNative);
-    defineNative("tan", 1, tanNative);
-    defineNative("arcsin", 1, arcsinNative);
-    defineNative("arccos", 1, arccosNative);
-    defineNative("arctan", 1, arctanNative);
-    defineNative("max", 2, maxNative);
-    defineNative("min", 2, minNative);
-    defineNative("floor", 1, floorNative);
-    defineNative("ceil", 1, ceilNative);
-    defineNative("round", 1, roundNative);
+    // --- Load core library ---
+    loadModule(defineCoreLibrary());
 }
 
 void freeVM() {
@@ -473,21 +433,26 @@ static InterpretResult sliceObj() {
     return INTERPRET_OK;
 }
 
-// ===================================================
-// =============       Module Test      ==============
-// ===================================================
-
 static Value importModule(ObjString* path) {
-    // Resolve path
+    pushTemp(&vm.gc, OBJ_VAL(path));
+
+    // Resolve path name
     unsigned char absolutePath[MAX_PATH_SIZE];
     if (!getAbsolutePath(path->utf8, absolutePath)) {
-        runtimeError("Could not resolve path '%s'", absolutePath);
-        return NULL_VAL;
+        // Check if its a built in module
+        if (strcmp(path->utf8, "math") == 0) {
+            ObjModule* module = defineMathLibrary();
+            printf("Name: %s\n", module->name->utf8);
+            return OBJ_VAL(module);
+        } else {
+            runtimeError("Could not resolve module at '%s'", absolutePath);
+            return NULL_VAL;
+        }
     }
 
     // Get the module name (file path without the extension)
     unsigned char fileName[MAX_PATH_SIZE];
-    getFileName(absolutePath, fileName, MAX_PATH_SIZE);
+    getFileName(path->utf8, fileName, MAX_PATH_SIZE);
     ObjString* moduleName = copyString(&vm.gc, fileName, strlen(fileName));
 
     // Check if module is already loaded
@@ -503,7 +468,7 @@ static Value importModule(ObjString* path) {
     popTemp(&vm.gc);
 
     // Read library source and compile
-    unsigned char* moduleSource = readFile(absolutePath);
+    unsigned char* moduleSource = readFile(path->utf8);
     ObjFunction* function = compile(&vm.gc, moduleSource);
     free(moduleSource);
     
@@ -516,11 +481,10 @@ static Value importModule(ObjString* path) {
     ObjClosure* closure = newClosure(&vm.gc, function);
     pop();
 
+    popTemp(&vm.gc); // Path
+
     return OBJ_VAL(closure);
 }
-// ===================================================
-// ===================================================
-// ===================================================
 
 static InterpretResult run() {
     register CallFrame* frame;
@@ -919,13 +883,14 @@ static InterpretResult run() {
                     call(closure, 0);
                     LOAD_FRAME();
                 } else if (IS_MODULE(peek(0))) {
-                    pop();
-                    printf("***Module already loaded***\n");
+                    // Built-in or cached
+                    ObjModule* module = AS_MODULE(pop());
+                    loadModule(module);
                 } else {
+                    // Resolve error
                     pop();
                     return INTERPRET_RUNTIME_ERROR;
                 }
-
                 break;
             }
             default: {

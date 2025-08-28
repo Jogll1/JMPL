@@ -3,37 +3,49 @@
 
 #include "value.h"
 
-// NATIVE FUNCTIONS
+#define DEF_NATIVE(name) Value name##Native(VM* vm, int argCount, Value* args)
+
+void loadModule(ObjModule* module);
+
+// ==============================================================
+// ===================== Core              =====================
+// ==============================================================
 
 // --- General purpose ---
 
-Value clockNative(VM* vm, int argCount, Value* args);
-Value sleepNative(VM* vm, int argCount, Value* args);
+DEF_NATIVE(clock);
+DEF_NATIVE(sleep);
 
-Value typeNative(VM* vm, int argCount, Value* args);
+DEF_NATIVE(type);
 
 // --- I/O ---
 
-Value printNative(VM* vm, int argCount, Value* args);
-Value printlnNative(VM* vm, int argCount, Value* args);
+DEF_NATIVE(print);
+DEF_NATIVE(println);
 
-Value inputNative(VM* vm, int argCount, Value* args);
+DEF_NATIVE(input);
 
-// --- Maths library (built-in by design) ---
+ObjModule* defineCoreLibrary();
 
-Value piNative(VM* vm, int argCount, Value* args);
+// ==============================================================
+// ===================== Maths              =====================
+// ==============================================================
 
-Value sinNative(VM* vm, int argCount, Value* args);
-Value cosNative(VM* vm, int argCount, Value* args);
-Value tanNative(VM* vm, int argCount, Value* args);
-Value arcsinNative(VM* vm, int argCount, Value* args);
-Value arccosNative(VM* vm, int argCount, Value* args);
-Value arctanNative(VM* vm, int argCount, Value* args);
+DEF_NATIVE(pi);
 
-Value maxNative(VM* vm, int argCount, Value* args);
-Value minNative(VM* vm, int argCount, Value* args);
-Value floorNative(VM* vm, int argCount, Value* args);
-Value ceilNative(VM* vm, int argCount, Value* args);
-Value roundNative(VM* vm, int argCount, Value* args);
+DEF_NATIVE(sin);
+DEF_NATIVE(cos);
+DEF_NATIVE(tan);
+DEF_NATIVE(arcsin);
+DEF_NATIVE(arccos);
+DEF_NATIVE(arctan);
+
+DEF_NATIVE(max);
+DEF_NATIVE(min);
+DEF_NATIVE(floor);
+DEF_NATIVE(ceil);
+DEF_NATIVE(round);
+
+ObjModule* defineMathLibrary();
 
 #endif

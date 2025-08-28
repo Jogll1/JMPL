@@ -17,10 +17,36 @@
     #include <unistd.h>
 #endif
 
-#define DEF_NATIVE(name) Value name##Native(VM* vm, int argCount, Value* args)
-
 #define JMPL_PI 3.14159265358979323846
 #define JMPL_EPSILON 1e-10
+
+#define LOAD_NATIVE(name) name##Native
+
+/**
+ * @brief Adds a native function.
+ * 
+ * @param name     The name of the function in JMPL
+ * @param arity    How many parameters it should have
+ * @param function The C function that is called
+ */
+static void defineNative(ObjModule* module, const unsigned char* name, int arity, NativeFn function) {
+    ObjString* nameStr = copyString(&vm.gc, name, (int)strlen(name));
+    pushTemp(&vm.gc, OBJ_VAL(nameStr));
+    ObjNative* native = newNative(&vm.gc, function, arity);
+    pushTemp(&vm.gc, OBJ_VAL(native));
+
+    tableSet(&vm.gc, &module->globals, nameStr, OBJ_VAL(native));
+    popTemp(&vm.gc);
+    popTemp(&vm.gc); 
+}
+
+void loadModule(ObjModule* module) {
+    tableAddAll(&vm.gc, &module->globals, &vm.globals);
+}
+
+// ==============================================================
+// ===================== Core               =====================
+// ==============================================================
 
 // --- General purpose ---
 
@@ -153,7 +179,35 @@ DEF_NATIVE(input) {
     return OBJ_VAL(str);
 }
 
-// --- Maths library ---
+/**
+ * @brief Define the natives in the core library.
+ */
+ObjModule* defineCoreLibrary() {
+    unsigned char* name = "core";
+    ObjModule* core = newModule(&vm.gc, copyString(&vm.gc, name, strlen(name)));
+    
+    // General purpose
+    defineNative(core, "clock", 0, LOAD_NATIVE(clock));
+    defineNative(core, "sleep", 1, LOAD_NATIVE(sleep));
+
+    defineNative(core, "type", 1, LOAD_NATIVE(type));
+
+    // I/O
+    defineNative(core, "print", 1, LOAD_NATIVE(print));
+    defineNative(core, "println", 1, LOAD_NATIVE(println));
+
+    defineNative(core, "input", 0, LOAD_NATIVE(input));
+
+    pushTemp(&vm.gc, OBJ_VAL(core));
+    tableSet(&vm.gc, &vm.modules, core->name, OBJ_VAL(core));
+    popTemp(&vm.gc);
+
+    return core;
+}
+
+// ==============================================================
+// ===================== Maths              =====================
+// ==============================================================
 
 /**
  * pi()
@@ -324,4 +378,33 @@ DEF_NATIVE(round) {
     if(!IS_NUMBER(args[0])) return NULL_VAL;
     
     return NUMBER_VAL(round(AS_NUMBER(args[0])));
+}
+
+/**
+ * @brief Define the natives in the maths library.
+ */
+ObjModule* defineMathLibrary() {
+    unsigned char* name = "math";
+    ObjModule* math = newModule(&vm.gc, copyString(&vm.gc, name, strlen(name)));
+
+    defineNative(math, "pi", 0, LOAD_NATIVE(pi));
+
+    defineNative(math, "sin", 1, LOAD_NATIVE(sin));
+    defineNative(math, "cos", 1, LOAD_NATIVE(cos));
+    defineNative(math, "tan", 1, LOAD_NATIVE(tan));
+    defineNative(math, "arcsin", 1, LOAD_NATIVE(arcsin));
+    defineNative(math, "arccos", 1, LOAD_NATIVE(arccos));
+    defineNative(math, "arctan", 1, LOAD_NATIVE(arctan));
+
+    defineNative(math, "max", 2, LOAD_NATIVE(max));
+    defineNative(math, "min", 2, LOAD_NATIVE(min));
+    defineNative(math, "floor", 1, LOAD_NATIVE(floor));
+    defineNative(math, "ceil", 1, LOAD_NATIVE(ceil));
+    defineNative(math, "round", 1, LOAD_NATIVE(round));
+
+    pushTemp(&vm.gc, OBJ_VAL(math));
+    tableSet(&vm.gc, &vm.modules, math->name, OBJ_VAL(math));
+    popTemp(&vm.gc);
+
+    return math;
 }

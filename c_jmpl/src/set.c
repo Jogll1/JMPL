@@ -163,20 +163,15 @@ ObjSet* setUnion(GC* gc, ObjSet* a, ObjSet* b) {
         b = temp;
     }
 
-    // Mem copy a
-    Value* elements = ALLOCATE(gc, Value, a->capacity);
+    // Mem copy a and b
+    size_t size = a->capacity + b->capacity;
+    Value* elements = ALLOCATE(gc, Value, size);
     memcpy(elements, a->elements, a->capacity * sizeof(Value));
+    memcpy(elements + a->capacity, b->elements, b->capacity * sizeof(Value));
 
     result->elements = elements;
-    result->capacity = a->capacity;
-    result->count = a->count;
-
-    // Add in b
-    for (int i = 0; i < b->capacity; i++) {
-        Value valB = b->elements[i];
-        if (IS_NULL(valB)) continue;
-        setInsert(gc, result, valB);
-    }
+    result->capacity = size;
+    result->count = a->count + b->count;
 
     popTemp(gc);
     return result;

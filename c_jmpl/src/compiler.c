@@ -44,7 +44,6 @@ typedef struct Compiler {
 
 typedef struct {
     Scanner scanner;
-    Compiler* currentCompiler;
     GC* gc;
 
     Token current;
@@ -93,8 +92,10 @@ typedef struct {
     Precedence precedence;
 } ParseRule;
 
+Compiler* current = NULL;
+
 static Chunk* currentChunk(Parser* parser) {
-    return &parser->currentCompiler->function->chunk;
+    return &current->function->chunk;
 }
 
 /**
@@ -261,11 +262,11 @@ static int emitJump(Parser* parser, uint8_t instruction) {
 
 static void emitReturn(Parser* parser) {
     // Implicitly returns null if function returns nothing
-    if (!parser->currentCompiler->implicitReturn || parser->currentCompiler->type != TYPE_FUNCTION) {
+    if (!current->implicitReturn || current->type != TYPE_FUNCTION) {
         emitByte(parser, OP_NULL);
     }
 
-    emitBytes(parser, OP_RETURN, parser->currentCompiler->implicitReturn);
+    emitBytes(parser, OP_RETURN, current->implicitReturn);
 }
 
 static uint16_t makeConstant(Parser* parser, Value value) {
@@ -299,7 +300,7 @@ static void patchJump(Parser* parser, int offset) {
 }
 
 static void initCompiler(Parser* parser, Compiler* compiler, FunctionType type) {
-    compiler->enclosing = parser->currentCompiler;
+    compiler->enclosing = current;
     compiler->function = NULL;
     compiler->type = type;
     compiler->localCount = 0;
@@ -307,13 +308,13 @@ static void initCompiler(Parser* parser, Compiler* compiler, FunctionType type) 
     compiler->implicitReturn = false;
     compiler->function = newFunction(parser->gc);
 
-    parser->currentCompiler = compiler;
+    current = compiler;
 
     if (type != TYPE_SCRIPT) {
-        parser->currentCompiler->function->name = copyString(parser->gc, parser->previous.start, parser->previous.length);
+        current->function->name = copyString(parser->gc, parser->previous.start, parser->previous.length);
     }
 
-    Local* local = &parser->currentCompiler->locals[parser->currentCompiler->localCount++];
+    Local* local = &current->locals[current->localCount++];
     local->depth = 0;
     local->isCaptured = false;
     local->name.start = "";
@@ -322,7 +323,7 @@ static void initCompiler(Parser* parser, Compiler* compiler, FunctionType type) 
 
 static ObjFunction* endCompiler(Parser* parser) {
     emitReturn(parser);
-    ObjFunction* function = parser->currentCompiler->function;
+    ObjFunction* function = current->function;
 
 #ifdef DEBUG_PRINT_CODE
     if (!parser->hadError) {
@@ -330,24 +331,24 @@ static ObjFunction* endCompiler(Parser* parser) {
     }
 #endif
 
-    parser->currentCompiler = parser->currentCompiler->enclosing;
+    current = current->enclosing;
     return function;
 }
 
 static void beginScope(Parser* parser) {
-    parser->currentCompiler->scopeDepth++;
+    current->scopeDepth++;
 }
 
 static void endScope(Parser* parser) {
-    parser->currentCompiler->scopeDepth--;
+    current->scopeDepth--;
 
-    while (parser->currentCompiler->localCount > 0 && parser->currentCompiler->locals[parser->currentCompiler->localCount - 1].depth > parser->currentCompiler->scopeDepth) {
-        if (parser->currentCompiler->locals[parser->currentCompiler->localCount - 1].isCaptured) {
+    while (current->localCount > 0 && current->locals[current->localCount - 1].depth > current->scopeDepth) {
+        if (current->locals[current->localCount - 1].isCaptured) {
             emitByte(parser, OP_CLOSE_UPVALUE);
         } else {
             emitByte(parser, OP_POP);
         }
-        parser->currentCompiler->localCount--;
+        current->localCount--;
     }
 }
 
@@ -423,12 +424,12 @@ static int resolveUpvalue(Parser* parser, Compiler* compiler, Token* name) {
 }
 
 static void addLocal(Parser* parser, Token name) {
-    if (parser->currentCompiler->localCount == UINT8_COUNT) {
+    if (current->localCount == UINT8_COUNT) {
         error(parser, "(Internal) Too many local variables in current scope");
         return;
     }
 
-    Local* local = &parser->currentCompiler->locals[parser->currentCompiler->localCount++];
+    Local* local = &current->locals[current->localCount++];
     local->name = name;
     local->depth = -1;
     local->isCaptured = false;
@@ -440,14 +441,14 @@ static void addLocal(Parser* parser, Token name) {
  * @return Whether the variable is already defined
  */
 static void declareVariable(Parser* parser) {
-    if (parser->currentCompiler->scopeDepth == 0) return;
+    if (current->scopeDepth == 0) return;
 
     Token* name = &parser->previous;
 
-    for (int i = parser->currentCompiler->localCount - 1; i >= 0; i--) {
-        Local* local = &parser->currentCompiler->locals[i];
+    for (int i = current->localCount - 1; i >= 0; i--) {
+        Local* local = &current->locals[i];
 
-        if (local->depth != -1 && local->depth < parser->currentCompiler->scopeDepth) {
+        if (local->depth != -1 && local->depth < current->scopeDepth) {
             break;
         }
 
@@ -471,18 +472,18 @@ static uint16_t parseVariable(Parser* parser, const unsigned char* errorMessage)
     consume(parser, TOKEN_IDENTIFIER, errorMessage);
 
     declareVariable(parser);
-    if (parser->currentCompiler->scopeDepth > 0) return 0;
+    if (current->scopeDepth > 0) return 0;
 
     return identifierConstant(parser, &parser->previous);
 }
 
 static void markInitialised(Parser* parser) {
-    if (parser->currentCompiler->scopeDepth == 0) return;
-    parser->currentCompiler->locals[parser->currentCompiler->localCount - 1].depth = parser->currentCompiler->scopeDepth;
+    if (current->scopeDepth == 0) return;
+    current->locals[current->localCount - 1].depth = current->scopeDepth;
 }
 
 static void defineVariable(Parser* parser, uint16_t global) {
-    if (parser->currentCompiler->scopeDepth > 0) {
+    if (current->scopeDepth > 0) {
         markInitialised(parser);
         return;
     }
@@ -506,7 +507,7 @@ static Token syntheticToken(const char* name) {
 static uint8_t syntheticLocal(Parser* parser, OpCode code, const char* name) {
     emitByte(parser, code);
     
-    uint8_t varSlot = parser->currentCompiler->localCount;
+    uint8_t varSlot = current->localCount;
     addLocal(parser, syntheticToken(name));
     markInitialised(parser);
     emitBytes(parser, OP_SET_LOCAL, varSlot);
@@ -523,16 +524,16 @@ static uint8_t syntheticLocal(Parser* parser, OpCode code, const char* name) {
  */
 static uint8_t parseGenerator(Parser* parser) {
     // Parse the local variable that will be the generator
-    uint8_t localVarSlot = parser->currentCompiler->localCount;
+    uint8_t localVarSlot = current->localCount;
     consume(parser, TOKEN_IDENTIFIER, "Expected identifier");
     
     // === Check if name is already defined ===
     Token* name = &parser->previous;
 
-    for (int i = parser->currentCompiler->localCount - 1; i >= 0; i--) {
-        Local* local = &parser->currentCompiler->locals[i];
+    for (int i = current->localCount - 1; i >= 0; i--) {
+        Local* local = &current->locals[i];
 
-        if (local->depth != -1 && local->depth < parser->currentCompiler->scopeDepth) {
+        if (local->depth != -1 && local->depth < current->scopeDepth) {
             break;
         }
 
@@ -796,8 +797,8 @@ static bool parseSetBuilderGenerator(Parser* parser, int oldCount, uint8_t** gen
  */
 static void setBuilder(Parser* parser) {
     // Set anonymous function name and to implicit return
-    parser->currentCompiler->function->name = copyString(parser->gc, "@setb", 5);
-    parser->currentCompiler->implicitReturn = true;
+    current->function->name = copyString(parser->gc, "@setb", 5);
+    current->implicitReturn = true;
 
     // Store an opened set as a local
     uint8_t setSlot = syntheticLocal(parser, OP_SET_CREATE, "@set");
@@ -1095,12 +1096,12 @@ static void string(Parser* parser, bool canAssign) {
 
 static void namedVariable(Parser* parser, Token name, bool canAssign) {
     uint8_t getOp, setOp;
-    int arg = resolveLocal(parser, parser->currentCompiler, &name);
+    int arg = resolveLocal(parser, current, &name);
 
     if (arg != -1) {
         getOp = OP_GET_LOCAL;
         setOp = OP_SET_LOCAL;
-    } else if ((arg = resolveUpvalue(parser, parser->currentCompiler, &name)) != -1) {
+    } else if ((arg = resolveUpvalue(parser, current, &name)) != -1) {
         getOp = OP_GET_UPVALUE;
         setOp = OP_SET_UPVALUE;
     } else {
@@ -1151,8 +1152,8 @@ static void unary(Parser* parser, bool canAssign) {
 
 static void quantifier(Parser* parser) {
     // Set anonymous function name and to implicit return
-    parser->currentCompiler->function->name = copyString(parser->gc, "@quan", 5);
-    parser->currentCompiler->implicitReturn = true;
+    current->function->name = copyString(parser->gc, "@quan", 5);
+    current->implicitReturn = true;
 
     TokenType operatorType = parser->previous.type;
 
@@ -1200,7 +1201,7 @@ static void quantifier(Parser* parser) {
     }
 
     emitByte(parser, OP_STASH);
-    emitBytes(parser, OP_RETURN, parser->currentCompiler->implicitReturn); // Return manually
+    emitBytes(parser, OP_RETURN, current->implicitReturn); // Return manually
 
     // Loop end
     patchJump(parser, loopEnd);
@@ -1227,15 +1228,15 @@ static void quantWrap(Parser* parser, bool canAssign) {
 
 static void anonymousFunction(Parser* parser) {
     // Set anonymous function name and to implicit return
-    parser->currentCompiler->function->name = copyString(parser->gc, "@anon", 5);
-    parser->currentCompiler->implicitReturn = true;
+    current->function->name = copyString(parser->gc, "@anon", 5);
+    current->implicitReturn = true;
 
     consume(parser, TOKEN_LEFT_PAREN, "Expected '(' after anonymous function declaration");
 
     if (!check(parser, TOKEN_RIGHT_PAREN)) {
         do {
-            parser->currentCompiler->function->arity++;
-            if(parser->currentCompiler->function->arity > 255) {
+            current->function->arity++;
+            if(current->function->arity > 255) {
                 errorAtCurrent(parser, "Can't have more than 255 parameters");
             }
 
@@ -1400,8 +1401,8 @@ static void function(Parser* parser) {
 
     if (!check(parser, TOKEN_RIGHT_PAREN)) {
         do {
-            parser->currentCompiler->function->arity++;
-            if(parser->currentCompiler->function->arity > 255) {
+            current->function->arity++;
+            if(current->function->arity > 255) {
                 errorAtCurrent(parser, "Can't have more than 255 parameters");
             }
 
@@ -1452,7 +1453,7 @@ static void withDeclaration(Parser* parser) {
 
 static void expressionStatement(Parser* parser) {
     expression(parser, false);
-    emitByte(parser, parser->currentCompiler->implicitReturn ? OP_STASH : OP_POP);
+    emitByte(parser, current->implicitReturn ? OP_STASH : OP_POP);
 }
 
 static void ifStatement(Parser* parser) {
@@ -1477,7 +1478,7 @@ static void ifStatement(Parser* parser) {
 }
 
 static void returnStatement(Parser* parser) {
-    if (parser->currentCompiler->type == TYPE_SCRIPT) {
+    if (current->type == TYPE_SCRIPT) {
         error(parser, "Can't return from top-level code");
     }
 
@@ -1589,7 +1590,7 @@ static void declaration(Parser* parser) {
 }
 
 static void statement(Parser* parser, bool blockAllowed, bool ignoreSeparator) {
-    if (parser->currentCompiler->type == TYPE_SCRIPT) parser->currentCompiler->implicitReturn = false;
+    if (current->type == TYPE_SCRIPT) current->implicitReturn = false;
     
     if (match(parser, TOKEN_IF)) {
         ifStatement(parser);
@@ -1608,8 +1609,8 @@ static void statement(Parser* parser, bool blockAllowed, bool ignoreSeparator) {
         endScope(parser);
     } else {
         // Set the implicit return flag if in a function
-        if(parser->currentCompiler->type == TYPE_FUNCTION) {
-            parser->currentCompiler->implicitReturn = true;
+        if(current->type == TYPE_FUNCTION) {
+            current->implicitReturn = true;
         } 
         expressionStatement(parser);
         if (!ignoreSeparator) consumeSeparator(parser);
@@ -1618,7 +1619,7 @@ static void statement(Parser* parser, bool blockAllowed, bool ignoreSeparator) {
 
 ObjFunction* compile(GC* gc, const unsigned char* source) {
     Parser parser;
-    parser.currentCompiler = NULL;
+    
     parser.gc = gc;
     parser.hadError = false;
     parser.panicMode = false;
@@ -1642,7 +1643,7 @@ ObjFunction* compile(GC* gc, const unsigned char* source) {
 }
 
 void markCompilerRoots(Parser* parser) {
-    Compiler* compiler = parser->currentCompiler;
+    Compiler* compiler = current;
      
     while(compiler != NULL) {
         markObject(parser->gc, (Obj*)compiler->function);

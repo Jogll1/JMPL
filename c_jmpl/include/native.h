@@ -35,7 +35,13 @@ ObjModule* defineCoreLibrary();
 // ===================== Maths              =====================
 // ==============================================================
 
+// --- Constants --- 
+
 DEF_NATIVE(pi);
+DEF_NATIVE(e);
+DEF_NATIVE(epsilon);
+
+// --- Trigonometry --- 
 
 DEF_NATIVE(sin);
 DEF_NATIVE(cos);
@@ -43,6 +49,8 @@ DEF_NATIVE(tan);
 DEF_NATIVE(arcsin);
 DEF_NATIVE(arccos);
 DEF_NATIVE(arctan);
+
+// --- Misc. --- 
 
 DEF_NATIVE(max);
 DEF_NATIVE(min);

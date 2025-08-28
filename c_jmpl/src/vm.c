@@ -206,17 +206,17 @@ static void setInsertN(int count) {
     push(OBJ_VAL(set));
 }
 
-static InterpretResult setOmission(bool hasNext) {
-    if (hasNext) {
-        if (!IS_INTEGER(peek(0)) || !IS_INTEGER(peek(1)) || !IS_INTEGER(peek(2)) || !IS_SET(peek(3))) {
-            runtimeError("Expected: {int, int ... int}");
-            return INTERPRET_RUNTIME_ERROR; 
-        }
-    } else {
-        if (!IS_INTEGER(peek(0)) || !IS_INTEGER(peek(1)) || !IS_SET(peek(2))) {
-            runtimeError("Expected: {int ... int}");
-            return INTERPRET_RUNTIME_ERROR; 
-        }
+/**
+ * @brief Create an omission set or tuple.
+ * 
+ * @param isSet   If true -> set, if false -> tuple
+ * @param hasNext If there is a 'step' value
+ * @return        If the operation succeeded
+ */
+static InterpretResult omission(bool isSet, bool hasNext) {
+    if (!IS_INTEGER(peek(0)) || !IS_INTEGER(peek(1)) || (hasNext && !IS_INTEGER(peek(2)))) {
+        runtimeError("Terms of an omission operation must be integers or characters");
+        return INTERPRET_RUNTIME_ERROR; 
     }
 
     int last = (int)AS_NUMBER(pop());
@@ -231,77 +231,49 @@ static InterpretResult setOmission(bool hasNext) {
         gap = abs(next - first);
 
         if (gap == 0) {
-            runtimeError("Set omission gap cannot be zero");
+            runtimeError("Omission gap cannot be zero");
             return INTERPRET_RUNTIME_ERROR; 
         }
     }
 
-    ObjSet* set = AS_SET(pop());
-    pushTemp(&vm.gc, OBJ_VAL(set));
+    int size = (int)floorl((double)abs(first - last) / (double)gap) + 1;
 
-    if (last > first) {
-        for (int i = first; i <= last; i += gap) {
-            setInsert(&vm.gc, set, NUMBER_VAL(i));
-        }   
+    if (isSet) {
+        ObjSet* set = AS_SET(pop());
+        pushTemp(&vm.gc, OBJ_VAL(set));
+
+        if (last > first) {
+            for (int i = first; i <= last; i += gap) {
+                setInsert(&vm.gc, set, NUMBER_VAL(i));
+            }   
+        } else {
+            for (int i = first; i >= last; i -= gap) {
+                setInsert(&vm.gc, set, NUMBER_VAL(i));
+            }   
+        }
+
+        popTemp(&vm.gc);
+        push(OBJ_VAL(set));
     } else {
-        for (int i = first; i >= last; i -= gap) {
-            setInsert(&vm.gc, set, NUMBER_VAL(i));
-        }   
-    }
-
-    popTemp(&vm.gc);
-    push(OBJ_VAL(set));
-    return INTERPRET_OK;
-}
-
-static InterpretResult tupleOmission(bool hasNext) {
-    if (hasNext) {
-        if (!IS_INTEGER(peek(0)) || !IS_INTEGER(peek(1)) || !IS_INTEGER(peek(2))) {
-            runtimeError("Expected: (int, int ... int)");
-            return INTERPRET_RUNTIME_ERROR; 
-        }
-    } else {
-        if (!IS_INTEGER(peek(0)) || !IS_INTEGER(peek(1))) {
-            runtimeError("Expected: (int ... int)");
-            return INTERPRET_RUNTIME_ERROR; 
-        }
-    }
-
-    int last = (int)AS_NUMBER(pop());
-    int next;
-    if (hasNext) {
-        next = (int)AS_NUMBER(pop());
-    }
-    int first = (int)AS_NUMBER(pop());
-
-    int gap = 1;
-    if (hasNext) {
-        gap = abs(next - first);
-
-        if (gap == 0) {
-            runtimeError("Tuple omission gap cannot be zero");
-            return INTERPRET_RUNTIME_ERROR; 
-        }
-    }
-
-    int arity = (int)floorl((double)abs(first - last) / (double)gap) + 1;
-    ObjTuple* tuple = newTuple(&vm.gc, arity);
-    
-    int i = 0;
-    if (last > first) {
+        ObjTuple* tuple = newTuple(&vm.gc, size);
+        
         int i = 0;
-        for (int j = first; j <= last; j += gap) {
-            tuple->elements[i] = NUMBER_VAL(j);
-            i++;
-        }   
-    } else {
-        for (int j = first; j >= last; j -= gap) {
-            tuple->elements[i] = NUMBER_VAL(j);
-            i++;
-        }   
+        if (last > first) {
+            int i = 0;
+            for (int j = first; j <= last; j += gap) {
+                tuple->elements[i] = NUMBER_VAL(j);
+                i++;
+            }   
+        } else {
+            for (int j = first; j >= last; j -= gap) {
+                tuple->elements[i] = NUMBER_VAL(j);
+                i++;
+            }   
+        }
+
+        push(OBJ_VAL(tuple));
     }
 
-    push(OBJ_VAL(tuple));
     return INTERPRET_OK;
 }
 
@@ -808,7 +780,7 @@ static InterpretResult run() {
             }
             case OP_SET_OMISSION: {
                 bool omissionParameter = READ_BYTE();
-                InterpretResult status = setOmission(omissionParameter);
+                InterpretResult status = omission(true, omissionParameter);
                 if (status != INTERPRET_OK) return status;
                 break;
             }
@@ -847,7 +819,7 @@ static InterpretResult run() {
             }
             case OP_TUPLE_OMISSION: {
                 bool omissionParameter = READ_BYTE();
-                InterpretResult status = tupleOmission(omissionParameter);
+                InterpretResult status = omission(false, omissionParameter);
                 if (status != INTERPRET_OK) return status;
                 break;
             }

@@ -18,6 +18,7 @@
 #endif
 
 #define JMPL_PI 3.14159265358979323846
+#define JMPL_E  2.71828182845904523536
 #define JMPL_EPSILON 1e-10
 
 #define LOAD_NATIVE(name) name##Native
@@ -251,6 +252,8 @@ ObjModule* defineCoreLibrary() {
 // ===================== Maths              =====================
 // ==============================================================
 
+// --- Constants ---
+
 /**
  * pi()
  * 
@@ -259,6 +262,26 @@ ObjModule* defineCoreLibrary() {
 DEF_NATIVE(pi) {
     return NUMBER_VAL(JMPL_PI);
 }
+
+/**
+ * e()
+ * 
+ * Returns the numerical value of e.
+ */
+DEF_NATIVE(e) {
+    return NUMBER_VAL(JMPL_E);
+}
+
+/**
+ * epsilon()
+ * 
+ * Returns a very small number above 0.
+ */
+DEF_NATIVE(epsilon) {
+    return NUMBER_VAL(JMPL_EPSILON);
+}
+
+// --- Trigonometry ---
 
 /**
  * sin(x)
@@ -356,6 +379,8 @@ DEF_NATIVE(arctan) {
     return NUMBER_VAL(atan(AS_NUMBER(args[0])));
 }
 
+// --- Misc. ---
+
 /**
  * max(x, y)
  * 
@@ -429,8 +454,12 @@ ObjModule* defineMathLibrary() {
     unsigned char* name = "math";
     ObjModule* math = newModule(&vm.gc, copyString(&vm.gc, name, strlen(name)));
 
+    // Constants
     defineNative(math, "pi", 0, LOAD_NATIVE(pi));
+    defineNative(math, "e", 0, LOAD_NATIVE(e));
+    defineNative(math, "epsilon", 0, LOAD_NATIVE(epsilon));
 
+    // Trigonometry
     defineNative(math, "sin", 1, LOAD_NATIVE(sin));
     defineNative(math, "cos", 1, LOAD_NATIVE(cos));
     defineNative(math, "tan", 1, LOAD_NATIVE(tan));
@@ -438,6 +467,7 @@ ObjModule* defineMathLibrary() {
     defineNative(math, "arccos", 1, LOAD_NATIVE(arccos));
     defineNative(math, "arctan", 1, LOAD_NATIVE(arctan));
 
+    // Misc.
     defineNative(math, "max", 2, LOAD_NATIVE(max));
     defineNative(math, "min", 2, LOAD_NATIVE(min));
     defineNative(math, "floor", 1, LOAD_NATIVE(floor));

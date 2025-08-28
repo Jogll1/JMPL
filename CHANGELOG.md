@@ -80,15 +80,18 @@
 - Fixed garbage collector collecting sets while they are being created
 - Optimised Value code with NaN boxing
 
-## [v0.2.2] - 18/08/2025
+## [v0.2.2] - 28/08/2025
 ### Added
 - New native functions
     - `type(x)`
     - `input()`
+    - `toNum(x)`
+    - `toStr(x)`
 - Character data type, created with single quotes (`''`)
 - Several new escape sequence types (with 'H' meaning a hex character): `\uHHHH`, `\UHHHHHH`, `\xHH`, `\a`, `\b`, `\v`, `\f`, `\0`
 - Strings and tuple can now be sliced using `[x ... y]` subscript notation
 - Anonymous function expressions
+- Module system where modules can be imported using `with`
 ### Changed
 - Any syntax that uses generators (for loops, set builders, quantifiers) can now use any iterable object instead of just sets.
 - Quantfiers now use a pipe (`|`) instead of a comma (`,`) to be consistent with set-builder and for-loop syntax
@@ -97,6 +100,8 @@
 - Made the `arb` keyword return a random member of a set
 - Optimisations for strings and sets
 - Strings and tuples can now be indexed with negative indices to get the last elements (this extends to slicing as well)
+- Moved math native functions to their own module
+- Characters can now be compared using >, >=, <, and, <= 
 ### Fixed
 - Fixed multiple garabage collection errors
 - Strings have been refactored to store character Unicode code points as well as UTF-8 bytes

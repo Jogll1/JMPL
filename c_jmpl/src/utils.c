@@ -127,6 +127,7 @@ unsigned char decodeSimpleEscape(unsigned char esc) {
         case '\\': return '\\';
         case '\'': return '\'';
         case '\"': return '\"';
+        case '0': return '\0';
         default:   return esc;
     }
 }
@@ -143,7 +144,7 @@ EscapeType getEscapeType(unsigned char esc) {
         case 'v':
         case '\\':
         case '\'':
-        case '\0':
+        case '0':
         case '"': return ESC_SIMPLE;
         case 'x': return ESC_HEX;
         case 'u': return ESC_UNICODE;

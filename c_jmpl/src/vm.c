@@ -441,9 +441,7 @@ static Value importModule(ObjString* path) {
     if (!getAbsolutePath(path->utf8, absolutePath)) {
         // Check if its a built in module
         if (strcmp(path->utf8, "math") == 0) {
-            ObjModule* module = defineMathLibrary();
-            printf("Name: %s\n", module->name->utf8);
-            return OBJ_VAL(module);
+            return OBJ_VAL(defineMathLibrary());
         } else {
             runtimeError("Could not resolve module at '%s'", absolutePath);
             return NULL_VAL;
@@ -470,6 +468,7 @@ static Value importModule(ObjString* path) {
     // Read library source and compile
     unsigned char* moduleSource = readFile(path->utf8);
     ObjFunction* function = compile(&vm.gc, moduleSource);
+    function->name = moduleName;
     free(moduleSource);
     
     if (function == NULL) {
@@ -495,15 +494,17 @@ static InterpretResult run() {
 #define READ_STRING()   AS_STRING(READ_CONSTANT())
 #define LOAD_FRAME()    (frame = &vm.frames[vm.frameCount - 1])
 // --- Ugly ---
-#define BINARY_OP(valueType, op) \
+#define ORDER_OP(op) \
     do { \
-        if(!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) { \
-            runtimeError("Operands must be numbers"); \
+        if (!(IS_NUMBER(peek(0)) || IS_CHAR(peek(0))) || !(IS_NUMBER(peek(1)) || IS_CHAR(peek(1)))) { \
+            runtimeError("Operands must be numbers or characters"); \
             return INTERPRET_RUNTIME_ERROR; \
         } \
-        double b = AS_NUMBER(pop()); \
-        double a = AS_NUMBER(pop()); \
-        push(valueType(a op b)); \
+        Value vb = pop(); \
+        Value va = pop(); \
+        double b = IS_CHAR(vb) ? AS_NUMBER(AS_CHAR(vb)) : AS_NUMBER(vb); \
+        double a = IS_CHAR(va) ? AS_NUMBER(AS_CHAR(va)) : AS_NUMBER(va); \
+        push(BOOL_VAL(a op b)); \
     } while (false)
 #define SET_OP_GC(valueType, setFunction) \
     do { \
@@ -621,10 +622,10 @@ static InterpretResult run() {
                 push(BOOL_VAL(!valuesEqual(a, b)));
                 break;
             }
-            case OP_GREATER: BINARY_OP(BOOL_VAL, >); break;
-            case OP_GREATER_EQUAL: BINARY_OP(BOOL_VAL, >=); break;
-            case OP_LESS: BINARY_OP(BOOL_VAL, <); break;
-            case OP_LESS_EQUAL: BINARY_OP(BOOL_VAL, <=); break;
+            case OP_GREATER: ORDER_OP(>); break;
+            case OP_GREATER_EQUAL: ORDER_OP(>=); break;
+            case OP_LESS: ORDER_OP(<); break;
+            case OP_LESS_EQUAL: ORDER_OP(<=); break;
             case OP_ADD: {
                 if (IS_STRING(peek(0)) || IS_STRING(peek(1))) {
                     // Concatenate if at least one operand is a string
@@ -646,8 +647,26 @@ static InterpretResult run() {
                 }
                 break;
             }
-            case OP_SUBTRACT: BINARY_OP(NUMBER_VAL, -); break;
-            case OP_MULTIPLY: BINARY_OP(NUMBER_VAL, *); break;
+            case OP_SUBTRACT: {
+                if(!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
+                    runtimeError("Operands must be numbers");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                double b = AS_NUMBER(pop());
+                double a = AS_NUMBER(pop());
+                push(NUMBER_VAL(a - b));
+                break;
+            }
+            case OP_MULTIPLY: {
+                if(!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
+                    runtimeError("Operands must be numbers");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                double b = AS_NUMBER(pop());
+                double a = AS_NUMBER(pop());
+                push(NUMBER_VAL(a * b));
+                break;
+            }
             case OP_MOD: {
                 if (!IS_INTEGER(peek(0)) || !IS_INTEGER(peek(1))) {
                     runtimeError("Operands must be integers");
@@ -904,7 +923,7 @@ static InterpretResult run() {
 #undef READ_CONSTANT
 #undef READ_STRING
 #undef LOAD_FRAME
-#undef BINARY_OP
+#undef SET_OP_GC
 #undef SET_OP
 }
 

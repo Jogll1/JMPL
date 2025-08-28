@@ -1,12 +1,12 @@
-func power(S) = 
+func power_set(S) = 
     if S == {} then 
         {{}}
     else
         let e = arb S
         let T = S \ {e}
-        power(T) ∪ {t ∪ {e} | t ∈ power(T)}
+        power_set(T) ∪ {t ∪ {e} | t ∈ power_set(T)}
 
 // let S = {0, 1, 2, 3}
-// let pS = power(S)
+// let pS = power_set(S)
 // println(pS)
 // println("# = " + (#pS))

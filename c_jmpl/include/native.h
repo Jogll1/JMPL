@@ -16,14 +16,18 @@ void loadModule(ObjModule* module);
 DEF_NATIVE(clock);
 DEF_NATIVE(sleep);
 
-DEF_NATIVE(type);
-
 // --- I/O ---
 
 DEF_NATIVE(print);
 DEF_NATIVE(println);
 
 DEF_NATIVE(input);
+
+// --- Types ---
+
+DEF_NATIVE(type);
+DEF_NATIVE(toNum);
+DEF_NATIVE(toStr);
 
 ObjModule* defineCoreLibrary();
 

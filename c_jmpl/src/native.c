@@ -82,40 +82,6 @@ DEF_NATIVE(sleep) {
     return NULL_VAL;
 }
 
-/**
- * type(x)
- * 
- * Returns the type of a value as a string.
- */
-DEF_NATIVE(type) {
-    Value value = args[0];
-
-    unsigned char* str;
-    if (IS_BOOL(value)) {
-        str = "BOOL";
-    } else if (IS_NULL(value)) {
-        str = "NULL";
-    } else if (IS_CHAR(value)) {
-        str = "CHAR";
-    } else if (IS_NUMBER(value)) {
-        str = "NUMBER";
-    } else if (IS_OBJ(value)) {
-        switch(AS_OBJ(value)->type) {
-            case OBJ_FUNCTION: str = "FUNCTION"; break;
-            case OBJ_CLOSURE:  str = "FUNCTION"; break;
-            case OBJ_NATIVE:   str = "NATIVE";   break;
-            case OBJ_SET:      str = "SET";      break;
-            case OBJ_TUPLE:    str = "TUPLE";    break;
-            case OBJ_STRING:   str = "STRING";   break;
-            default:           str = "UNKNOWN";  break;
-        }
-    } else {
-        str = "UNKNOWN";
-    }
-
-    return OBJ_VAL(copyString(&vm->gc, str, strlen(str)));
-}
-
 // --- I/O ---
 
 /**
@@ -179,6 +145,79 @@ DEF_NATIVE(input) {
     return OBJ_VAL(str);
 }
 
+// --- Types ---
+
+/**
+ * type(x)
+ * 
+ * Returns the type of a value as a string.
+ */
+DEF_NATIVE(type) {
+    Value value = args[0];
+
+    unsigned char* str;
+    if (IS_BOOL(value)) {
+        str = "BOOL";
+    } else if (IS_NULL(value)) {
+        str = "NULL";
+    } else if (IS_CHAR(value)) {
+        str = "CHAR";
+    } else if (IS_NUMBER(value)) {
+        str = "NUMBER";
+    } else if (IS_OBJ(value)) {
+        switch(AS_OBJ(value)->type) {
+            case OBJ_FUNCTION: str = "FUNCTION"; break;
+            case OBJ_CLOSURE:  str = "FUNCTION"; break;
+            case OBJ_NATIVE:   str = "NATIVE";   break;
+            case OBJ_SET:      str = "SET";      break;
+            case OBJ_TUPLE:    str = "TUPLE";    break;
+            case OBJ_STRING:   str = "STRING";   break;
+            default:           str = "UNKNOWN";  break;
+        }
+    } else {
+        str = "UNKNOWN";
+    }
+
+    return OBJ_VAL(copyString(&vm->gc, str, strlen(str)));
+}
+
+/**
+ * toNum(x)
+ * 
+ * Casts a value to a number. Returns null for invalid types.
+ * Valid types are bool, number, char, and string.
+ */
+DEF_NATIVE(toNum) {
+    Value value = args[0];
+
+    if (IS_BOOL(value)) {
+        return NUMBER_VAL(AS_BOOL(value));
+    } else if (IS_CHAR(value)) {
+        return NUMBER_VAL(AS_CHAR(value));
+    } else if (IS_NUMBER(value)) {
+        return value;
+    } else if (IS_STRING(value)) {
+        ObjString* string = AS_STRING(value);
+        double value = strtod(string->utf8, NULL);
+        return NUMBER_VAL(value);
+    } else {
+        return NULL_VAL;
+    }
+}
+
+/**
+ * toStr(x)
+ * 
+ * Casts a value to an string. Works for all types.
+ */
+DEF_NATIVE(toStr) {
+    Value value = args[0];
+    unsigned char* str = valueToString(value);
+    ObjString* string = copyString(&vm->gc, str, strlen(str));
+    free(str);
+    return OBJ_VAL(string);
+}
+
 /**
  * @brief Define the natives in the core library.
  */
@@ -190,13 +229,16 @@ ObjModule* defineCoreLibrary() {
     defineNative(core, "clock", 0, LOAD_NATIVE(clock));
     defineNative(core, "sleep", 1, LOAD_NATIVE(sleep));
 
-    defineNative(core, "type", 1, LOAD_NATIVE(type));
-
     // I/O
     defineNative(core, "print", 1, LOAD_NATIVE(print));
     defineNative(core, "println", 1, LOAD_NATIVE(println));
 
     defineNative(core, "input", 0, LOAD_NATIVE(input));
+
+    // Types
+    defineNative(core, "type", 1, LOAD_NATIVE(type));
+    defineNative(core, "toNum", 1, LOAD_NATIVE(toNum));
+    defineNative(core, "toStr", 1, LOAD_NATIVE(toStr));
 
     pushTemp(&vm.gc, OBJ_VAL(core));
     tableSet(&vm.gc, &vm.modules, core->name, OBJ_VAL(core));

@@ -87,6 +87,7 @@
     - `input()`
     - `toNum(x)`
     - `toStr(x)`
+    - `toChar(x)`
 - Character data type, created with single quotes (`''`)
 - Several new escape sequence types (with 'H' meaning a hex character): `\uHHHH`, `\UHHHHHH`, `\xHH`, `\a`, `\b`, `\v`, `\f`, `\0`
 - Strings and tuple can now be sliced using `[x ... y]` subscript notation
@@ -102,6 +103,7 @@
 - Strings and tuples can now be indexed with negative indices to get the last elements (this extends to slicing as well)
 - Moved math native functions to their own module
 - Characters can now be compared using >, >=, <, and, <= 
+- Made characters work with omission operations
 ### Fixed
 - Fixed multiple garabage collection errors
 - Strings have been refactored to store character Unicode code points as well as UTF-8 bytes

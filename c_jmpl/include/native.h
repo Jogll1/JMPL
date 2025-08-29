@@ -28,6 +28,7 @@ DEF_NATIVE(input);
 DEF_NATIVE(type);
 DEF_NATIVE(toNum);
 DEF_NATIVE(toStr);
+DEF_NATIVE(toChar);
 
 ObjModule* defineCoreLibrary();
 

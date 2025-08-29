@@ -212,19 +212,23 @@ static void setInsertN(int count) {
  * @param isSet   If true -> set, if false -> tuple
  * @param hasNext If there is a 'step' value
  * @return        If the operation succeeded
+ * 
+ * Can be [int, int ... int] or [char, char ... char].
  */
 static InterpretResult omission(bool isSet, bool hasNext) {
-    if (!IS_INTEGER(peek(0)) || !IS_INTEGER(peek(1)) || (hasNext && !IS_INTEGER(peek(2)))) {
-        runtimeError("Terms of an omission operation must be integers or characters");
+    bool isIntOmission = IS_INTEGER(peek(0)) && IS_INTEGER(peek(1)) && (!hasNext || IS_INTEGER(peek(2)));
+    bool isCharOmission = IS_CHAR(peek(0)) && IS_CHAR(peek(1)) && (!hasNext || IS_CHAR(peek(2)));
+    if (!isIntOmission && !isCharOmission) {
+        runtimeError("Terms of an omission operation must be all integers or all characters");
         return INTERPRET_RUNTIME_ERROR; 
     }
 
-    int last = (int)AS_NUMBER(pop());
+    int last = (int)(isCharOmission ? AS_CHAR(pop()) : AS_NUMBER(pop()));
     int next;
     if (hasNext) {
-        next = (int)AS_NUMBER(pop());
+        next =  (int)(isCharOmission ? AS_CHAR(pop()) : AS_NUMBER(pop()));
     }
-    int first = (int)AS_NUMBER(pop());
+    int first =  (int)(isCharOmission ? AS_CHAR(pop()) : AS_NUMBER(pop()));
 
     int gap = 1;
     if (hasNext) {
@@ -238,17 +242,19 @@ static InterpretResult omission(bool isSet, bool hasNext) {
 
     int size = (int)floorl((double)abs(first - last) / (double)gap) + 1;
 
+#define CAST(num) (isCharOmission ? CHAR_VAL(num) : NUMBER_VAL(num))
+
     if (isSet) {
         ObjSet* set = AS_SET(pop());
         pushTemp(&vm.gc, OBJ_VAL(set));
 
         if (last > first) {
             for (int i = first; i <= last; i += gap) {
-                setInsert(&vm.gc, set, NUMBER_VAL(i));
+                setInsert(&vm.gc, set, CAST(i));
             }   
         } else {
             for (int i = first; i >= last; i -= gap) {
-                setInsert(&vm.gc, set, NUMBER_VAL(i));
+                setInsert(&vm.gc, set, CAST(i));
             }   
         }
 
@@ -261,18 +267,20 @@ static InterpretResult omission(bool isSet, bool hasNext) {
         if (last > first) {
             int i = 0;
             for (int j = first; j <= last; j += gap) {
-                tuple->elements[i] = NUMBER_VAL(j);
+                tuple->elements[i] = CAST(j);
                 i++;
             }   
         } else {
             for (int j = first; j >= last; j -= gap) {
-                tuple->elements[i] = NUMBER_VAL(j);
+                tuple->elements[i] = CAST(j);
                 i++;
             }   
         }
 
         push(OBJ_VAL(tuple));
     }
+
+#undef CAST
 
     return INTERPRET_OK;
 }

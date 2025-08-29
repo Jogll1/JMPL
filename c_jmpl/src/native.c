@@ -10,6 +10,7 @@
 #include "obj_string.h"
 #include "vm.h"
 #include "native.h"
+#include "utils.h"
 
 #ifdef _WIN32
     #include <windows.h>
@@ -24,7 +25,7 @@
 #define LOAD_NATIVE(name) name##Native
 
 /**
- * @brief Adds a native function.
+ * @brief Adds a native function to a module's globals table.
  * 
  * @param name     The name of the function in JMPL
  * @param arity    How many parameters it should have
@@ -201,9 +202,9 @@ DEF_NATIVE(toNum) {
         ObjString* string = AS_STRING(value);
         double value = strtod(string->utf8, NULL);
         return NUMBER_VAL(value);
-    } else {
-        return NULL_VAL;
     }
+
+    return NULL_VAL;
 }
 
 /**
@@ -217,6 +218,25 @@ DEF_NATIVE(toStr) {
     ObjString* string = copyString(&vm->gc, str, strlen(str));
     free(str);
     return OBJ_VAL(string);
+}
+
+/**
+ * toChar(x)
+ * 
+ * Casts an integer to a char.
+ */
+DEF_NATIVE(toChar) {
+    Value value = args[0];
+    
+    if (IS_INTEGER(value)) {
+        int integer = (int)AS_NUMBER(value);
+
+        if (integer >= 0 && integer <= UNICODE_MAX) {
+            return CHAR_VAL(integer);
+        }
+    }
+
+    return NULL_VAL;
 }
 
 /**
@@ -240,6 +260,7 @@ ObjModule* defineCoreLibrary() {
     defineNative(core, "type", 1, LOAD_NATIVE(type));
     defineNative(core, "toNum", 1, LOAD_NATIVE(toNum));
     defineNative(core, "toStr", 1, LOAD_NATIVE(toStr));
+    defineNative(core, "toChar", 1, LOAD_NATIVE(toChar));
 
     pushTemp(&vm.gc, OBJ_VAL(core));
     tableSet(&vm.gc, &vm.modules, core->name, OBJ_VAL(core));

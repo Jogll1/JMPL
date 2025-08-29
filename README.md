@@ -18,7 +18,7 @@ To build the interpreter, cd to the root of this repository and run the commands
 
 On Windows you may need to specify the generator: \
 MinGW: `cmake -G "MinGW Makefiles" -S . -B .\build` \
-MSVC: `cmake -G "Visual Studio VV YYYY" -S . -B .\build` (where VV is the version number and YYYY is the year) \
+MSVC: `cmake -G "Visual Studio VV YYYY" -S . -B .\build` (where VV is the version number and YYYY is the year)
 
 ### Run
 To run the interpreter, run the exe:

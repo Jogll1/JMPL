@@ -19,6 +19,7 @@ Value indexTuple(ObjTuple* tuple, int index);
 ObjTuple* sliceTuple(GC* gc, ObjTuple* tuple, int start, int end);
 ObjTuple* concatenateTuple(GC* gc, ObjTuple* a, ObjTuple* b);
 
+void printTuple(ObjTuple* tuple);
 unsigned char* tupleToString(ObjTuple* tuple);
 
 #endif

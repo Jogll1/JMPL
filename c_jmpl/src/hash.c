@@ -50,9 +50,9 @@ static hash_t hashSet(ObjSet* set) {
     hash_t hash = FNV_INIT_HASH;
 
     for (int i = 0; i < set->capacity; i++) {
-        Value element = set->elements[i];
-        if (!IS_NULL(element)) {
-            hash_t elemHash = hashValue(element);
+        SetEntry entry = set->entries[i];
+        if (!IS_NULL(entry.key)) {
+            hash_t elemHash = hashValue(entry.key);
 
             hash ^= elemHash;
             hash *= FNV_PRIME;
@@ -103,8 +103,7 @@ hash_t hashValue(Value value) {
     } else if (IS_NULL(value)) {
         return NULL_HASH;
     } else if (IS_NUMBER(value)) {
-        uint64_t bits = (uint64_t)AS_NUMBER(value);
-        return (hash_t)(bits ^ (bits >> 32));
+        return (hash_t)(AS_NUMBER(value));
     } else if (IS_CHAR(value)) {
         return (hash_t)(AS_CHAR(value));
     } else if (IS_OBJ(value)) {

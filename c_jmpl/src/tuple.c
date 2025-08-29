@@ -106,6 +106,32 @@ ObjTuple* concatenateTuple(GC* gc, ObjTuple* a, ObjTuple* b) {
     return tuple;
 }
 
+void printTuple(ObjTuple* tuple) {
+    int numElements = tuple->size;
+    int count = 0;
+    
+    fputc('{', stdout);
+    for (int i = 0; i < tuple->size; i++) {
+        Value value = tuple->elements[i];
+
+        if (IS_OBJ(value) && IS_STRING(value)) {
+            fputc('"', stdout);
+            printValue(value, false);
+            fputc('"', stdout);
+        } else if (IS_CHAR(value)) {
+            fputc('\'', stdout);
+            printValue(value, false);
+            fputc('\'', stdout);
+        } else {
+            printValue(value, false);
+        }
+
+        if (count < numElements - 1) fputs(", ", stdout);
+        count++;
+    }
+    fputc('}', stdout);
+}   
+
 /**
  * @brief Converts a tuple object to a string.
  * 

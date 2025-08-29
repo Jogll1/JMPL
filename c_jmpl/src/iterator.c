@@ -23,7 +23,7 @@ ObjIterator* newIterator(GC* gc, Obj* target) {
 
             // Find index of first value in set
             for (size_t i = 0; i < set->capacity; i++) {
-                if (IS_NULL(set->elements[i])) continue;
+                if (IS_NULL(getSetValue(set, i))) continue;
 
                 iterator->currentIndex = i;
                 break;
@@ -67,11 +67,11 @@ static bool iterateSet(ObjIterator* iterator, Value* value) {
     if (current == -1 || capacity == 0 || current >= capacity) return false;
 
     // Set value to point to the value pre-iteration
-    *(value) = set->elements[current];
+    *(value) = getSetValue(set, current);
 
     // Get next iteration
     for (size_t i = current + 1; i < capacity; i++) {
-        if (IS_NULL(set->elements[i])) continue;
+        if (IS_NULL(getSetValue(set, i))) continue;
 
         iterator->currentIndex = i;
         return true;

@@ -12,61 +12,64 @@
 #include "hash.h"
 #include "../lib/c-stringbuilder/sb.h"
 
-#define SET_MAX_LOAD 0.75
+#define SET_MAX_LOAD 0.65
 #define MAX_PRINT_ELEMENTS 100
 
 static void initSet(ObjSet* set) {
     set->count = 0;
     set->capacity = 0;
-    set->elements = NULL;
+    set->entries = NULL;
 }
 
 static void printDebugSet(ObjSet* set) {
     printf("\n==============\n");
     for (int i = 0; i < set->capacity; i++) {
-        unsigned char* str = valueToString(set->elements[i]);
+        unsigned char* str = valueToString(getSetValue(set, i));
         printf("%d. %s\n", i, str);
         free(str);
     }
     printf("==============\n");
 }
 
-static Value* findElement(Value* elements, size_t capacity, Value value) {
+static SetEntry* findEntry(SetEntry* entries, size_t capacity, Value key, hash_t hash) {
     // Map the key's hash code to an index in the array
-    hash_t index = hashValue(value) & (capacity - 1);
+    size_t index = hash & (capacity - 1);
+    size_t perturb = hash;
     
     while (true) {
-        Value* element = &elements[index];
+        SetEntry* entry = &entries[index];
 
-        if (IS_NULL(*element) || valuesEqual(*element, value)) {
-            return element;
+        if (IS_NULL(entry->key) || valuesEqual(entry->key, key)) {
+            return entry;
         }
 
-        // Collision, so start linear probing
-        index = (index + 1) & (capacity - 1);
+        // Collision, so start probing
+        index = (index * 5 + 1 + perturb) & (capacity - 1);
+        perturb >>= 5;
     }
 }
 
 static void adjustCapacity(GC* gc, ObjSet* set, size_t capacity) {
-    Value* elements = ALLOCATE(gc, Value, capacity);
-    // Initialise every element to be null
+    SetEntry* entries = ALLOCATE(gc, SetEntry, capacity);
+    // Initialise every entry's key to be null
     for (int i = 0; i < capacity; i++) {
-        elements[i] = NULL_VAL;
+        entries[i].key = NULL_VAL;
     }
 
     // Insert entries into array
     set->count = 0;
     for (int i = 0; i < set->capacity; i++) {
-        Value element = set->elements[i];
-        if(IS_NULL(element)) continue;
+        SetEntry* entry = &set->entries[i];
+        if(IS_NULL(entry->key)) continue;
 
-        Value* destination = findElement(elements, capacity, element);
-        *destination = element;
+        SetEntry* destination = findEntry(entries, capacity, entry->key, entry->hash);
+        destination->key = entry->key;
+        destination->hash = entry->hash;
         set->count++;
     }
 
-    FREE_ARRAY(gc, Value, set->elements, set->capacity);
-    set->elements = elements;
+    FREE_ARRAY(gc, SetEntry, set->entries, set->capacity);
+    set->entries = entries;
     set->capacity = capacity;
 }
 
@@ -78,7 +81,7 @@ ObjSet* newSet(GC* gc) {
 }
 
 void freeSet(GC* gc, ObjSet* set) {
-    FREE_ARRAY(gc, Value, set->elements, set->capacity);
+    FREE_ARRAY(gc, SetEntry, set->entries, set->capacity);
     initSet(set);
     FREE(gc, ObjSet, set); 
 }
@@ -91,11 +94,14 @@ bool setInsert(GC* gc, ObjSet* set, Value value) {
         adjustCapacity(gc, set, capacity);
     }
 
-    Value* element = findElement(set->elements, set->capacity, value);
-    bool isNewKey = IS_NULL(*element);
+    hash_t hash = hashValue(value);
+
+    SetEntry* entry = findEntry(set->entries, set->capacity, value, hash);
+    bool isNewKey = IS_NULL(entry->key); // Change for better NULL entry checking
     if (isNewKey) set->count++;
 
-    *element = value;
+    entry->key = value;
+    entry->hash = hash;
 
     popTemp(gc);
     return isNewKey;
@@ -104,9 +110,9 @@ bool setInsert(GC* gc, ObjSet* set, Value value) {
 bool setContains(ObjSet* set, Value value) {
     if(set->count == 0) return false;
 
-    Value* element = findElement(set->elements, set->capacity, value);
+    SetEntry* entry = findEntry(set->entries, set->capacity, value, hashValue(value));
 
-    return !IS_NULL(*element);
+    return !IS_NULL(entry->key);
 }
 
 bool setsEqual(ObjSet* a, ObjSet* b) {
@@ -115,7 +121,7 @@ bool setsEqual(ObjSet* a, ObjSet* b) {
     if (a->count != b->count) return false;
     
     for (int i = 0; i < a->capacity; i++) {
-        Value valA = a->elements[i];
+        Value valA = getSetValue(a, i);
         if (IS_NULL(valA)) continue;
 
         if (!setContains(b, valA)) {
@@ -140,7 +146,7 @@ ObjSet* setIntersect(GC* gc, ObjSet* a, ObjSet* b) {
     }
 
     for (int i = 0; i < a->capacity; i++) {
-        Value valA = a->elements[i];
+        Value valA = getSetValue(a, i);
         if (IS_NULL(valA)) continue;
 
         if (setContains(b, valA)) setInsert(gc, result, valA);
@@ -163,15 +169,20 @@ ObjSet* setUnion(GC* gc, ObjSet* a, ObjSet* b) {
         b = temp;
     }
 
-    // Mem copy a and b
-    size_t size = a->capacity + b->capacity;
-    Value* elements = ALLOCATE(gc, Value, size);
-    memcpy(elements, a->elements, a->capacity * sizeof(Value));
-    memcpy(elements + a->capacity, b->elements, b->capacity * sizeof(Value));
+    // Mem copy a
+    SetEntry* entries = ALLOCATE(gc, SetEntry, a->capacity);
+    memcpy(entries, a->entries, a->capacity * sizeof(SetEntry));
 
-    result->elements = elements;
-    result->capacity = size;
-    result->count = a->count + b->count;
+    result->entries = entries;
+    result->capacity = a->capacity;
+    result->count = a->count;
+
+    // Add in b - DO NOT COPY B - THE HASHES WILL BE MESSED UP
+    for (int i = 0; i < b->capacity; i++) {
+        Value valB = getSetValue(b, i);
+        if (IS_NULL(valB)) continue;
+        setInsert(gc, result, valB);
+    }
 
     popTemp(gc);
     return result;
@@ -184,7 +195,7 @@ ObjSet* setDifference(GC* gc, ObjSet* a, ObjSet* b) {
     pushTemp(gc, OBJ_VAL(result));
 
     for (int i = 0; i < a->capacity; i++) {
-        Value valA = a->elements[i];
+        Value valA = getSetValue(a, i);
         if (IS_NULL(valA)) continue;
 
         if (!setContains(b, valA)) {
@@ -202,7 +213,7 @@ bool isSubset(ObjSet* a, ObjSet* b) {
     if (a->count > b->count) return false;
 
     for (int i = 0; i < a->capacity; i++) {
-        Value valA = a->elements[i];
+        Value valA = getSetValue(a, i);
         if (IS_NULL(valA)) continue;
         
         if (!setContains(b, valA)) {
@@ -226,7 +237,7 @@ Value getArb(ObjSet* set) {
     int randIndex = rand() % set->capacity;
 
     for (int i = randIndex; i < set->capacity; i++) {
-        Value val = set->elements[i];
+        Value val = getSetValue(set, i);
         if (IS_NULL(val)) continue;
 
         return val;
@@ -234,6 +245,33 @@ Value getArb(ObjSet* set) {
     
     return getArb(set); // Repeat until one is found
 }
+
+void printSet(ObjSet* set) {
+    int numElements = set->count;
+    int count = 0;
+    
+    fputc('{', stdout);
+    for (int i = 0; i < set->capacity; i++) {
+        Value value = getSetValue(set, i);
+        if (!IS_NULL(value)) {
+            if (IS_OBJ(value) && IS_STRING(value)) {
+                fputc('"', stdout);
+                printValue(getSetValue(set, i), false);
+                fputc('"', stdout);
+            } else if (IS_CHAR(value)) {
+                fputc('\'', stdout);
+                printValue(getSetValue(set, i), false);
+                fputc('\'', stdout);
+            } else {
+                printValue(getSetValue(set, i), false);
+            }
+
+            if (count < numElements - 1) fputs(", ", stdout);
+            count++;
+        }
+    }
+    fputc('}', stdout);
+}   
 
 /**
  * @brief Converts a set to a C string.
@@ -255,7 +293,7 @@ unsigned char* setToString(ObjSet* set) {
     int count = 0;
 
     for (int i = 0; i < set->capacity; i++) {
-        Value value = set->elements[i];
+        Value value = getSetValue(set, i);
         if (!IS_NULL(value)) {
             // if (count == MAX_PRINT_ELEMENTS) {
             //     sb_appendf(sb, "...");

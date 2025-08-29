@@ -11,7 +11,6 @@
 #include "gc.h"
 #include "hash.h"
 
-// NOTE: should be fine-tuned once table implemented and tested
 #define TABLE_MAX_LOAD 0.75
 
 void initTable(Table* table) {

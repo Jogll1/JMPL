@@ -46,7 +46,7 @@ int findInValueArray(ValueArray* array, Value value) {
 }
 
 bool valuesEqual(Value a, Value b) {
-#ifdef NAN_BOXING
+#ifdef JMPL_NAN_BOXING
     if (IS_OBJ(a) && IS_OBJ(b)) {
         ObjType aType = AS_OBJ(a)->type;
         ObjType bType = AS_OBJ(b)->type;
@@ -157,7 +157,7 @@ unsigned char* valueToString(Value value) {
     }
 
     // If its a value
-#ifdef NAN_BOXING
+#ifdef JMPL_NAN_BOXING
     if (IS_BOOL(value)) {
         return strdup(BOOL_TO_STRING(AS_BOOL(value)));
     } else if (IS_NULL(value)) {
@@ -194,7 +194,7 @@ unsigned char* valueToString(Value value) {
 }
 
 void printValue(Value value, bool simple) {
-#ifdef NAN_BOXING
+#ifdef JMPL_NAN_BOXING
     if (IS_BOOL(value)) {
         printf(AS_BOOL(value) ? "true" : "false");
     } else if (IS_NULL(value)) {

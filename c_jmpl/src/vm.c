@@ -76,12 +76,12 @@ void freeVM() {
     freeGC(&vm.gc);
 }
 
-void push(Value value) {
+static inline void push(Value value) {
     *vm.stackTop = value;
     vm.stackTop++;
 }
 
-Value pop() {
+static inline Value pop() {
     vm.stackTop--;
     return *vm.stackTop;
 }
@@ -303,7 +303,7 @@ static bool isFalse(Value value) {
 }
 
 static int getSize(Value value) {
-#ifdef NAN_BOXING
+#ifdef JMPL_NAN_BOXING
     if (IS_NUMBER(value)) {
         return fabs(AS_NUMBER(value));
     } else if (IS_OBJ(value)) {
@@ -522,382 +522,402 @@ static InterpretResult run() {
     #define TRACE_EXECUTION() do {} while (false)
 #endif
 
+#ifdef JMPL_COMPUTED_GOTOS
+    static void* dispatchTable[] = {
+        #define OPCODE(name) &&op_##name,
+        #include "opcodes.h"
+        #undef OPCODE
+    };
+    
+    #define INTERPRET_LOOP() DISPATCH();
+    #define CASE_CODE(name)  op_##name
+
+    #define DISPATCH() \
+        do { \
+            TRACE_EXECUTION(); \
+            goto *dispatchTable[instruction = (OpCode)READ_BYTE()]; \
+        } while (false)
+#else
+    #define INTERPRET_LOOP() \
+        loop: \
+            TRACE_EXECUTION(); \
+            switch (instruction = (OpCode)READ_BYTE())
+
+    #define CASE_CODE(name) case OP_##name
+    #define DISPATCH()      goto loop
+#endif
+
     LOAD_FRAME();
 
-    while(true) {
-        TRACE_EXECUTION();
-
-        register uint8_t instruction;
-        switch(instruction = READ_BYTE()) {
-            case OP_CONSTANT: {
-                Value constant = READ_CONSTANT();
-                push(constant);
-                break;
-            }
-            case OP_NULL: push(NULL_VAL); break;
-            case OP_TRUE: push(BOOL_VAL(true)); break;
-            case OP_FALSE: push(BOOL_VAL(false)); break;
-            case OP_POP: pop(); break;
-            case OP_GET_LOCAL: {
-                uint8_t slot = READ_BYTE();
-                push(frame->slots[slot]);
-                break;
-            }
-            case OP_SET_LOCAL: {
-                uint8_t slot = READ_BYTE();
-                frame->slots[slot] = peek(0);
-                break;
-            }
-            case OP_GET_GLOBAL: {
-                ObjString* name = READ_STRING();
-                Value value;
-                if (!tableGet(&vm.globals, name, &value)) {
-                    runtimeError("Undefined variable '%s'", name->utf8);
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                push(value);
-                break;
-            }
-            case OP_DEFINE_GLOBAL: {
-                ObjString* name = READ_STRING();
-                tableSet(&vm.gc, &vm.globals, name, peek(0));
-                pop();
-                break;
-            }
-            case OP_SET_GLOBAL: {
-                ObjString* name = READ_STRING();
-                if (tableSet(&vm.gc, &vm.globals, name, peek(0))) {
-                    tableDelete(&vm.globals, name);
-                    runtimeError("Undefined variable '%s'", name->utf8);
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                break;
-            }
-            case OP_GET_UPVALUE: {
-                uint8_t slot = READ_BYTE();
-                push(*frame->closure->upvalues[slot]->location);
-                break;
-            }
-            case OP_SET_UPVALUE: {
-                uint8_t slot = READ_BYTE();
-                *frame->closure->upvalues[slot]->location = peek(0);
-                break;
-            }
-            case OP_EQUAL: {
-                Value b = pop();
-                Value a = pop();
-                
-                if (IS_BOOL(b) || IS_BOOL(a)) {
-                    // Use truth values
-                    push(BOOL_VAL(isFalse(b) == isFalse(a)));
-                } else {
-                    push(BOOL_VAL(valuesEqual(a, b)));
-                }
-
-                break;
-            }
-            case OP_NOT_EQUAL: {
-                Value b = pop();
-                Value a = pop();
-                push(BOOL_VAL(!valuesEqual(a, b)));
-                break;
-            }
-            case OP_GREATER: ORDER_OP(>); break;
-            case OP_GREATER_EQUAL: ORDER_OP(>=); break;
-            case OP_LESS: ORDER_OP(<); break;
-            case OP_LESS_EQUAL: ORDER_OP(<=); break;
-            case OP_ADD: {
-                if (IS_STRING(peek(0)) || IS_STRING(peek(1))) {
-                    // Concatenate if at least one operand is a string
-                    Value b = pop();
-                    Value a = pop();
-                    push(OBJ_VAL(concatenateStringsHelper(&vm.gc, a, b)));
-                } else if (IS_TUPLE(peek(0)) && IS_TUPLE(peek(1))) {
-                    ObjTuple* b = AS_TUPLE(pop());
-                    ObjTuple* a = AS_TUPLE(pop());
-                    push(OBJ_VAL(concatenateTuple(&vm.gc, a, b)));
-                } else if (IS_NUMBER(peek(0)) && IS_NUMBER(peek(1))) {
-                    // Else, numerically add
-                    double b = AS_NUMBER(pop());
-                    double a = AS_NUMBER(pop());
-                    push(NUMBER_VAL(a + b));
-                } else {
-                    runtimeError("Invalid operand type(s)");
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                break;
-            }
-            case OP_SUBTRACT: {
-                if(!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
-                    runtimeError("Operands must be numbers");
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                double b = AS_NUMBER(pop());
-                double a = AS_NUMBER(pop());
-                push(NUMBER_VAL(a - b));
-                break;
-            }
-            case OP_MULTIPLY: {
-                if(!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
-                    runtimeError("Operands must be numbers");
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                double b = AS_NUMBER(pop());
-                double a = AS_NUMBER(pop());
-                push(NUMBER_VAL(a * b));
-                break;
-            }
-            case OP_MOD: {
-                if (!IS_INTEGER(peek(0)) || !IS_INTEGER(peek(1))) {
-                    runtimeError("Operands must be integers");
-                    return INTERPRET_RUNTIME_ERROR;
-                } else if (IS_NUMBER(peek(0)) && AS_NUMBER(peek(0)) == 0) {
-                    // Return error if divisor is 0
-                    runtimeError("Division by 0");
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-
-                int b = AS_NUMBER(pop());
-                int a = AS_NUMBER(pop());
-                push(NUMBER_VAL(a % b));
-                break;
-            }
-            case OP_DIVIDE: {
-                if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
-                    runtimeError("Operands must be numbers");
-                    return INTERPRET_RUNTIME_ERROR;
-                } else if (IS_NUMBER(peek(0)) && AS_NUMBER(peek(0)) == 0) {
-                    // Return error if divisor is 0
-                    runtimeError("Division by 0");
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                double b = AS_NUMBER(pop());
-                double a = AS_NUMBER(pop());
-                push(NUMBER_VAL(a / b));
-                break;
-            }
-            case OP_EXPONENT: {
-                if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
-                    runtimeError("Operands must be numbers");
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                double b = AS_NUMBER(pop());
-                double a = AS_NUMBER(pop());
-                push(NUMBER_VAL(pow(a, b)));
-                break;
-            }
-            case OP_NOT: {   
-                push(BOOL_VAL(isFalse(pop()))); 
-                break;
-            }
-            case OP_NEGATE: {
-                if (!IS_NUMBER(peek(0))) {
-                    runtimeError("Operand must be a number");
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                push(NUMBER_VAL(-AS_NUMBER(pop())));
-                break;
-            }
-            case OP_JUMP: {
-                uint16_t offset = READ_SHORT();
-                frame->ip += offset;
-                break;
-            }
-            case OP_JUMP_IF_FALSE: {
-                uint16_t offset = READ_SHORT();
-                if (isFalse(peek(0))) frame->ip += offset;
-                break;
-            }
-            case OP_JUMP_IF_FALSE_2: { // Pops the condition always. Couldn't think of anything better
-                uint16_t offset = READ_SHORT();
-                if (isFalse(peek(0))) {
-                    frame->ip += offset;
-                    pop();
-                }
-                break;
-            }
-            case OP_LOOP: {
-                uint16_t offset = READ_SHORT();
-                frame->ip -= offset;
-                break;
-            }
-            case OP_CALL: {
-                int argCount = READ_BYTE();
-                if (!callValue(peek(argCount), argCount)) {
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                LOAD_FRAME();
-                break;
-            }
-            case OP_CLOSURE: {
-                ObjFunction* function = AS_FUNCTION(READ_CONSTANT());
-                ObjClosure* closure = newClosure(&vm.gc, function);
-                push(OBJ_VAL(closure));
-                for (int i = 0; i < closure->upvalueCount; i++) {
-                    uint8_t isLocal = READ_BYTE();
-                    uint8_t index = READ_BYTE();
-                    if (isLocal) {
-                        closure->upvalues[i] = captureUpvalue(frame->slots + index);
-                    } else {
-                        closure->upvalues[i] = frame->closure->upvalues[index];
-                    }
-                }
-                break;
-            }
-            case OP_CLOSE_UPVALUE: {
-                closeUpvalues(vm.stackTop - 1);
-                pop();
-                break;
-            }
-            case OP_RETURN: {
-                bool implicitReturn = READ_BYTE();
-                Value result;
-                if (implicitReturn) {
-                    result = vm.impReturnStash;
-                    vm.impReturnStash = NULL_VAL;
-                } else {
-                    result = pop();
-                }
-
-                closeUpvalues(frame->slots);
-                vm.frameCount--;
-                if (vm.frameCount == 0) {
-                    pop();
-                    return INTERPRET_OK;
-                }
-
-                vm.stackTop = frame->slots;
-                push(result);
-                LOAD_FRAME();
-                break;
-            }
-            case OP_STASH: {
-                vm.impReturnStash = pop();
-                break;
-            }
-            case OP_SET_CREATE: {
-                ObjSet* set = newSet(&vm.gc);
-                push(OBJ_VAL(set));
-                break;
-            }
-            case OP_SET_INSERT: {
-                uint8_t count = READ_BYTE();
-                assert(count > 0);
-                setInsertN(count);
-                break;
-            }
-            case OP_SET_OMISSION: {
-                bool omissionParameter = READ_BYTE();
-                InterpretResult status = omission(true, omissionParameter);
-                if (status != INTERPRET_OK) return status;
-                break;
-            }
-            case OP_SET_IN: {
-                if (!IS_SET(peek(0))) {
-                    runtimeError("Right hand operand must be a set");
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                ObjSet* set = AS_SET(pop());
-                Value value = pop();
-                push(BOOL_VAL(setContains(set, value)));
-                break;
-            }
-            case OP_SET_INTERSECT: SET_OP_GC(OBJ_VAL, setIntersect); break;
-            case OP_SET_UNION: SET_OP_GC(OBJ_VAL, setUnion); break;
-            case OP_SET_DIFFERENCE: SET_OP_GC(OBJ_VAL, setDifference); break;
-            case OP_SUBSET: SET_OP(BOOL_VAL, isProperSubset); break;
-            case OP_SUBSETEQ: SET_OP(BOOL_VAL, isSubset); break;
-            case OP_SIZE: {
-                int size = getSize(pop());
-                if (size == -1) {
-                    runtimeError("Invalid operand type");
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                push(NUMBER_VAL(size));
-                break;
-            }
-            case OP_CREATE_TUPLE: {
-                int arity = READ_BYTE();
-                ObjTuple* tuple = newTuple(&vm.gc, arity);
-                for (int i = arity - 1; i >= 0; i--) {
-                    tuple->elements[i] = pop();
-                }
-                push(OBJ_VAL(tuple));
-                break;
-            }
-            case OP_TUPLE_OMISSION: {
-                bool omissionParameter = READ_BYTE();
-                InterpretResult status = omission(false, omissionParameter);
-                if (status != INTERPRET_OK) return status;
-                break;
-            }
-            case OP_SUBSCRIPT: {
-                bool isSlice = READ_BYTE();
-                InterpretResult status;
-                if (isSlice) {
-                    status = sliceObj();
-                } else {
-                    status = indexObj();
-                }
-                if (status != INTERPRET_OK) return status;
-                break;
-            }
-            case OP_CREATE_ITERATOR: {
-                if (!IS_OBJ(peek(0)) || !AS_OBJ(peek(0))->isIterable) {
-                    runtimeError("Generator must iterate over a set, tuple, or a string");
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                Obj* target = AS_OBJ(pop());
-                ObjIterator* iterator = newIterator(&vm.gc, target);
-                push(OBJ_VAL(iterator));
-                break;
-            }
-            case OP_ITERATE: {
-                if (!IS_ITERATOR(peek(0))) {
-                    runtimeError("(Internal) Missing iterator");
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                ObjIterator* iterator = AS_ITERATOR(pop());
-                Value value;
-                bool hasCurrentVal = iterateObj(iterator, &value);
-                if (hasCurrentVal) push(value);
-                push(BOOL_VAL(hasCurrentVal));
-                break;
-            }
-            case OP_ARB: {
-                if (!IS_SET(peek(0))) {
-                    runtimeError("Expected set after some keyword");
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                ObjSet* set = AS_SET(pop());
-                push(getArb(set));
-                break;
-            }
-            case OP_IMPORT_LIB: {
-                ObjString* path = READ_STRING();
-                push(importModule(path));
-
-                if (IS_CLOSURE(peek(0))) {
-                    ObjClosure* closure = AS_CLOSURE(pop());
-                    call(closure, 0);
-                    LOAD_FRAME();
-                } else if (IS_MODULE(peek(0))) {
-                    // Built-in or cached
-                    ObjModule* module = AS_MODULE(pop());
-                    loadModule(module);
-                } else {
-                    // Resolve error
-                    pop();
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                break;
-            }
-            default: {
-                runtimeError("(Internal) Invalid Opcode");
+    OpCode instruction;
+    INTERPRET_LOOP() {
+        CASE_CODE(POP): pop(); DISPATCH();
+        CASE_CODE(CONSTANT): {
+            Value constant = READ_CONSTANT();
+            push(constant);
+            DISPATCH();
+        }
+        CASE_CODE(NULL): push(NULL_VAL); DISPATCH();
+        CASE_CODE(TRUE): push(BOOL_VAL(true)); DISPATCH();
+        CASE_CODE(FALSE): push(BOOL_VAL(false)); DISPATCH();
+        CASE_CODE(GET_LOCAL): {
+            uint8_t slot = READ_BYTE();
+            push(frame->slots[slot]);
+            DISPATCH();
+        }
+        CASE_CODE(SET_LOCAL): {
+            uint8_t slot = READ_BYTE();
+            frame->slots[slot] = peek(0);
+            DISPATCH();
+        }
+        CASE_CODE(GET_GLOBAL): {
+            ObjString* name = READ_STRING();
+            Value value;
+            if (!tableGet(&vm.globals, name, &value)) {
+                runtimeError("Undefined variable '%s'", name->utf8);
                 return INTERPRET_RUNTIME_ERROR;
             }
+            push(value);
+            DISPATCH();
+        }
+        CASE_CODE(DEFINE_GLOBAL): {
+            ObjString* name = READ_STRING();
+            tableSet(&vm.gc, &vm.globals, name, peek(0));
+            pop();
+            DISPATCH();
+        }
+        CASE_CODE(SET_GLOBAL): {
+            ObjString* name = READ_STRING();
+            if (tableSet(&vm.gc, &vm.globals, name, peek(0))) {
+                tableDelete(&vm.globals, name);
+                runtimeError("Undefined variable '%s'", name->utf8);
+                return INTERPRET_RUNTIME_ERROR;
+            }
+            DISPATCH();
+        }
+        CASE_CODE(GET_UPVALUE): {
+            uint8_t slot = READ_BYTE();
+            push(*frame->closure->upvalues[slot]->location);
+            DISPATCH();
+        }
+        CASE_CODE(SET_UPVALUE): {
+            uint8_t slot = READ_BYTE();
+            *frame->closure->upvalues[slot]->location = peek(0);
+            DISPATCH();
+        }
+        CASE_CODE(EQUAL): {
+            Value b = pop();
+            Value a = pop();
+            
+            if (IS_BOOL(b) || IS_BOOL(a)) {
+                // Use truth values
+                push(BOOL_VAL(isFalse(b) == isFalse(a)));
+            } else {
+                push(BOOL_VAL(valuesEqual(a, b)));
+            }
+
+            DISPATCH();
+        }
+        CASE_CODE(NOT_EQUAL): {
+            Value b = pop();
+            Value a = pop();
+            push(BOOL_VAL(!valuesEqual(a, b)));
+            DISPATCH();
+        }
+        CASE_CODE(GREATER): ORDER_OP(>); DISPATCH();
+        CASE_CODE(GREATER_EQUAL): ORDER_OP(>=); DISPATCH();
+        CASE_CODE(LESS): ORDER_OP(<); DISPATCH();
+        CASE_CODE(LESS_EQUAL): ORDER_OP(<=); DISPATCH();
+        CASE_CODE(ADD): {
+            if (IS_STRING(peek(0)) || IS_STRING(peek(1))) {
+                // Concatenate if at least one operand is a string
+                Value b = pop();
+                Value a = pop();
+                push(OBJ_VAL(concatenateStringsHelper(&vm.gc, a, b)));
+            } else if (IS_TUPLE(peek(0)) && IS_TUPLE(peek(1))) {
+                ObjTuple* b = AS_TUPLE(pop());
+                ObjTuple* a = AS_TUPLE(pop());
+                push(OBJ_VAL(concatenateTuple(&vm.gc, a, b)));
+            } else if (IS_NUMBER(peek(0)) && IS_NUMBER(peek(1))) {
+                // Else, numerically add
+                double b = AS_NUMBER(pop());
+                double a = AS_NUMBER(pop());
+                push(NUMBER_VAL(a + b));
+            } else {
+                runtimeError("Invalid operand type(s)");
+                return INTERPRET_RUNTIME_ERROR;
+            }
+            DISPATCH();
+        }
+        CASE_CODE(SUBTRACT): {
+            if(!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
+                runtimeError("Operands must be numbers");
+                return INTERPRET_RUNTIME_ERROR;
+            }
+            double b = AS_NUMBER(pop());
+            double a = AS_NUMBER(pop());
+            push(NUMBER_VAL(a - b));
+            DISPATCH();
+        }
+        CASE_CODE(MULTIPLY): {
+            if(!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
+                runtimeError("Operands must be numbers");
+                return INTERPRET_RUNTIME_ERROR;
+            }
+            double b = AS_NUMBER(pop());
+            double a = AS_NUMBER(pop());
+            push(NUMBER_VAL(a * b));
+            DISPATCH();
+        }
+        CASE_CODE(MOD): {
+            if (!IS_INTEGER(peek(0)) || !IS_INTEGER(peek(1))) {
+                runtimeError("Operands must be integers");
+                return INTERPRET_RUNTIME_ERROR;
+            } else if (IS_NUMBER(peek(0)) && AS_NUMBER(peek(0)) == 0) {
+                // Return error if divisor is 0
+                runtimeError("Division by 0");
+                return INTERPRET_RUNTIME_ERROR;
+            }
+
+            int b = AS_NUMBER(pop());
+            int a = AS_NUMBER(pop());
+            push(NUMBER_VAL(a % b));
+            DISPATCH();
+        }
+        CASE_CODE(DIVIDE): {
+            if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
+                runtimeError("Operands must be numbers");
+                return INTERPRET_RUNTIME_ERROR;
+            } else if (IS_NUMBER(peek(0)) && AS_NUMBER(peek(0)) == 0) {
+                // Return error if divisor is 0
+                runtimeError("Division by 0");
+                return INTERPRET_RUNTIME_ERROR;
+            }
+            double b = AS_NUMBER(pop());
+            double a = AS_NUMBER(pop());
+            push(NUMBER_VAL(a / b));
+            DISPATCH();
+        }
+        CASE_CODE(EXPONENT): {
+            if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
+                runtimeError("Operands must be numbers");
+                return INTERPRET_RUNTIME_ERROR;
+            }
+            double b = AS_NUMBER(pop());
+            double a = AS_NUMBER(pop());
+            push(NUMBER_VAL(pow(a, b)));
+            DISPATCH();
+        }
+        CASE_CODE(NOT): {   
+            push(BOOL_VAL(isFalse(pop()))); 
+            DISPATCH();
+        }
+        CASE_CODE(NEGATE): {
+            if (!IS_NUMBER(peek(0))) {
+                runtimeError("Operand must be a number");
+                return INTERPRET_RUNTIME_ERROR;
+            }
+            push(NUMBER_VAL(-AS_NUMBER(pop())));
+            DISPATCH();
+        }
+        CASE_CODE(JUMP): {
+            uint16_t offset = READ_SHORT();
+            frame->ip += offset;
+            DISPATCH();
+        }
+        CASE_CODE(JUMP_IF_FALSE): {
+            uint16_t offset = READ_SHORT();
+            if (isFalse(peek(0))) frame->ip += offset;
+            DISPATCH();
+        }
+        CASE_CODE(JUMP_IF_FALSE_2): { // Pops the condition always. Couldn't think of anything better
+            uint16_t offset = READ_SHORT();
+            if (isFalse(peek(0))) {
+                frame->ip += offset;
+                pop();
+            }
+            DISPATCH();
+        }
+        CASE_CODE(LOOP): {
+            uint16_t offset = READ_SHORT();
+            frame->ip -= offset;
+            DISPATCH();
+        }
+        CASE_CODE(CALL): {
+            int argCount = READ_BYTE();
+            if (!callValue(peek(argCount), argCount)) {
+                return INTERPRET_RUNTIME_ERROR;
+            }
+            LOAD_FRAME();
+            DISPATCH();
+        }
+        CASE_CODE(CLOSURE): {
+            ObjFunction* function = AS_FUNCTION(READ_CONSTANT());
+            ObjClosure* closure = newClosure(&vm.gc, function);
+            push(OBJ_VAL(closure));
+            for (int i = 0; i < closure->upvalueCount; i++) {
+                uint8_t isLocal = READ_BYTE();
+                uint8_t index = READ_BYTE();
+                if (isLocal) {
+                    closure->upvalues[i] = captureUpvalue(frame->slots + index);
+                } else {
+                    closure->upvalues[i] = frame->closure->upvalues[index];
+                }
+            }
+            DISPATCH();
+        }
+        CASE_CODE(CLOSE_UPVALUE): {
+            closeUpvalues(vm.stackTop - 1);
+            pop();
+            DISPATCH();
+        }
+        CASE_CODE(RETURN): {
+            bool implicitReturn = READ_BYTE();
+            Value result;
+            if (implicitReturn) {
+                result = vm.impReturnStash;
+                vm.impReturnStash = NULL_VAL;
+            } else {
+                result = pop();
+            }
+
+            closeUpvalues(frame->slots);
+            vm.frameCount--;
+            if (vm.frameCount == 0) {
+                pop();
+                return INTERPRET_OK;
+            }
+
+            vm.stackTop = frame->slots;
+            push(result);
+            LOAD_FRAME();
+            DISPATCH();
+        }
+        CASE_CODE(STASH): {
+            vm.impReturnStash = pop();
+            DISPATCH();
+        }
+        CASE_CODE(SET_CREATE): {
+            ObjSet* set = newSet(&vm.gc);
+            push(OBJ_VAL(set));
+            DISPATCH();
+        }
+        CASE_CODE(SET_INSERT): {
+            uint8_t count = READ_BYTE();
+            assert(count > 0);
+            setInsertN(count);
+            DISPATCH();
+        }
+        CASE_CODE(SET_OMISSION): {
+            bool omissionParameter = READ_BYTE();
+            InterpretResult status = omission(true, omissionParameter);
+            if (status != INTERPRET_OK) return status;
+            DISPATCH();
+        }
+        CASE_CODE(SET_IN): {
+            if (!IS_SET(peek(0))) {
+                runtimeError("Right hand operand must be a set");
+                return INTERPRET_RUNTIME_ERROR;
+            }
+            ObjSet* set = AS_SET(pop());
+            Value value = pop();
+            push(BOOL_VAL(setContains(set, value)));
+            DISPATCH();
+        }
+        CASE_CODE(SET_INTERSECT): SET_OP_GC(OBJ_VAL, setIntersect); DISPATCH();
+        CASE_CODE(SET_UNION): SET_OP_GC(OBJ_VAL, setUnion); DISPATCH();
+        CASE_CODE(SET_DIFFERENCE): SET_OP_GC(OBJ_VAL, setDifference); DISPATCH();
+        CASE_CODE(SUBSET): SET_OP(BOOL_VAL, isProperSubset); DISPATCH();
+        CASE_CODE(SUBSETEQ): SET_OP(BOOL_VAL, isSubset); DISPATCH();
+        CASE_CODE(SIZE): {
+            int size = getSize(pop());
+            if (size == -1) {
+                runtimeError("Invalid operand type");
+                return INTERPRET_RUNTIME_ERROR;
+            }
+            push(NUMBER_VAL(size));
+            DISPATCH();
+        }
+        CASE_CODE(CREATE_TUPLE): {
+            int arity = READ_BYTE();
+            ObjTuple* tuple = newTuple(&vm.gc, arity);
+            for (int i = arity - 1; i >= 0; i--) {
+                tuple->elements[i] = pop();
+            }
+            push(OBJ_VAL(tuple));
+            DISPATCH();
+        }
+        CASE_CODE(TUPLE_OMISSION): {
+            bool omissionParameter = READ_BYTE();
+            InterpretResult status = omission(false, omissionParameter);
+            if (status != INTERPRET_OK) return status;
+            DISPATCH();
+        }
+        CASE_CODE(SUBSCRIPT): {
+            bool isSlice = READ_BYTE();
+            InterpretResult status;
+            if (isSlice) {
+                status = sliceObj();
+            } else {
+                status = indexObj();
+            }
+            if (status != INTERPRET_OK) return status;
+            DISPATCH();
+        }
+        CASE_CODE(CREATE_ITERATOR): {
+            if (!IS_OBJ(peek(0)) || !AS_OBJ(peek(0))->isIterable) {
+                runtimeError("Generator must iterate over a set, tuple, or a string");
+                return INTERPRET_RUNTIME_ERROR;
+            }
+            Obj* target = AS_OBJ(pop());
+            ObjIterator* iterator = newIterator(&vm.gc, target);
+            push(OBJ_VAL(iterator));
+            DISPATCH();
+        }
+        CASE_CODE(ITERATE): {
+            if (!IS_ITERATOR(peek(0))) {
+                runtimeError("(Internal) Missing iterator");
+                return INTERPRET_RUNTIME_ERROR;
+            }
+            ObjIterator* iterator = AS_ITERATOR(pop());
+            Value value;
+            bool hasCurrentVal = iterateObj(iterator, &value);
+            if (hasCurrentVal) push(value);
+            push(BOOL_VAL(hasCurrentVal));
+            DISPATCH();
+        }
+        CASE_CODE(ARB): {
+            if (!IS_SET(peek(0))) {
+                runtimeError("Expected set after some keyword");
+                return INTERPRET_RUNTIME_ERROR;
+            }
+            ObjSet* set = AS_SET(pop());
+            push(getArb(set));
+            DISPATCH();
+        }
+        CASE_CODE(IMPORT_LIB): {
+            ObjString* path = READ_STRING();
+            push(importModule(path));
+
+            if (IS_CLOSURE(peek(0))) {
+                ObjClosure* closure = AS_CLOSURE(pop());
+                call(closure, 0);
+                LOAD_FRAME();
+            } else if (IS_MODULE(peek(0))) {
+                // Built-in or cached
+                ObjModule* module = AS_MODULE(pop());
+                loadModule(module);
+            } else {
+                // Resolve error
+                pop();
+                return INTERPRET_RUNTIME_ERROR;
+            }
+            DISPATCH();
         }
     }
+
+    runtimeError("(Internal) Invalid Opcode");
+    return INTERPRET_RUNTIME_ERROR;
 #undef READ_BYTE
 #undef READ_SHORT
 #undef READ_CONSTANT

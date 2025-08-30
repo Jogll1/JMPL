@@ -113,14 +113,18 @@ void printObject(Value value, bool simple) {
             if (simple) {
                 printf("<set>");
             } else {
-                printSet(AS_SET(value));
+                unsigned char* str = setToString(AS_SET(value));
+                puts(str);
+                free(str);
             }
             break;
         case OBJ_TUPLE:
             if (simple) {
                 printf("<tuple>");
             } else {
-                printTuple(AS_TUPLE(value));
+                unsigned char* str = tupleToString(AS_TUPLE(value));
+                puts(str);
+                free(str);
             }
             break;
         case OBJ_ITERATOR:

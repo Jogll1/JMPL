@@ -18,7 +18,8 @@
 
 // Args
 
-#define NAN_BOXING
+#define JMPL_NAN_BOXING
+// #define JMPL_COMPUTED_GOTOS
 
 // Misc
 

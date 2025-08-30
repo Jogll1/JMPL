@@ -10,7 +10,7 @@ typedef struct VM VM;
 typedef struct Obj Obj;
 typedef struct ObjString ObjString;
 
-#ifdef NAN_BOXING
+#ifdef JMPL_NAN_BOXING
 
 #define SIGN_BIT ((uint64_t)0x8000000000000000)
 #define QNAN     ((uint64_t)0x7ffc000000000000) // Quiet NaN

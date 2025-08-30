@@ -97,7 +97,7 @@ static hash_t hashObject(Obj* obj) {
 }
 
 hash_t hashValue(Value value) {
-#ifdef NAN_BOXING
+#ifdef JMPL_NAN_BOXING
     if (IS_BOOL(value)) {
         return AS_BOOL(value) ? TRUE_HASH : FALSE_HASH;
     } else if (IS_NULL(value)) {

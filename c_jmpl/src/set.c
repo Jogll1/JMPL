@@ -34,7 +34,7 @@ static void printDebugSet(ObjSet* set) {
 static SetEntry* findEntry(SetEntry* entries, size_t capacity, Value key, hash_t hash) {
     // Map the key's hash code to an index in the array
     size_t index = hash & (capacity - 1);
-    size_t perturb = hash;
+    uint64_t perturb = hash;
     
     while (true) {
         SetEntry* entry = &entries[index];

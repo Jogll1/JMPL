@@ -486,6 +486,7 @@ static InterpretResult run() {
         double a = IS_CHAR(va) ? AS_NUMBER(AS_CHAR(va)) : AS_NUMBER(va); \
         push(BOOL_VAL(a op b)); \
     } while (false)
+
 #define SET_OP_GC(valueType, setFunction) \
     do { \
         if (!IS_SET(peek(0)) || !IS_SET(peek(1))) { \
@@ -500,6 +501,7 @@ static InterpretResult run() {
         popTemp(&vm.gc); \
         popTemp(&vm.gc); \
     } while (false)
+
 #define SET_OP(valueType, setFunction) \
     do { \
         if (!IS_SET(peek(0)) || !IS_SET(peek(1))) { \
@@ -512,22 +514,20 @@ static InterpretResult run() {
     } while (false)
 // ---
 
+#ifdef DEBUG_TRACE_EXECUTION
+    #define TRACE_EXECUTION() \
+        printStack(vm.stack, vm.stackTop); \
+        disassembleInstruction(&frame->closure->function->chunk, (int)(frame->ip - frame->closure->function->chunk.code));
+#else 
+    #define TRACE_EXECUTION() do {} while (false)
+#endif
+
     LOAD_FRAME();
 
     while(true) {
-#ifdef DEBUG_TRACE_EXECUTION
-        printf("          ");
-        for (Value* slot = vm.stack; slot < vm.stackTop; slot++) {
-            printf("[ ");
-            printValue(*slot, false);
-            printf(" ]");
-        }
-        printf("\n");
-        
-        disassembleInstruction(&frame->closure->function->chunk, (int)(frame->ip - frame->closure->function->chunk.code));
-#endif
+        TRACE_EXECUTION();
 
-        uint8_t instruction;
+        register uint8_t instruction;
         switch(instruction = READ_BYTE()) {
             case OP_CONSTANT: {
                 Value constant = READ_CONSTANT();

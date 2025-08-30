@@ -41,6 +41,7 @@ void printDebugTable(Table* table) {
 static Entry* findEntry(Entry* entries, int capacity, ObjString* key) {
     // Map the key's hash code to an index in the array
     uint64_t index = key->hash & (capacity - 1);
+    uint64_t perturb = key->hash;
     Entry* tombstone = NULL;
     while (true) {
         Entry* entry = &entries[index];
@@ -58,8 +59,9 @@ static Entry* findEntry(Entry* entries, int capacity, ObjString* key) {
             return entry;
         }
 
-        // Collision, so start linear probing
-        index = (index + 1) & (capacity - 1);
+        // Collision, so start probing
+        index = (index * 5 + 1 + perturb) & (capacity - 1);
+        perturb >>= 5;
     }
 }
 

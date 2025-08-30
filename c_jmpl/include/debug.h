@@ -10,6 +10,7 @@
 const unsigned char* getTokenName(TokenType type);
 
 void disassembleChunk(Chunk* chunk, const char* name);
+void printStack(Value* stack, Value* stackTop);
 int disassembleInstruction(Chunk* chunk, int offset);
 
 #endif

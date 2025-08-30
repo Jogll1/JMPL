@@ -149,6 +149,16 @@ static int closureInstruction(const char* name, Chunk* chunk, int offset) {
     return offset;
 }
 
+void printStack(Value* stack, Value* stackTop) {
+    printf("          ");
+    for (Value* slot = stack; slot < stackTop; slot++) {
+        printf("[ ");
+        printValue(*slot, false);
+        printf(" ]");
+    }
+    printf("\n");
+}
+
 int disassembleInstruction(Chunk* chunk, int offset) {
     printf("%04d ", offset);
     int line = getLine(chunk, offset);

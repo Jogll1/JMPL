@@ -11,7 +11,6 @@
 #include "gc.h"
 #include "hash.h"
 #include "../lib/c-stringbuilder/sb.h"
-#include "../lib/stricks/stx.h"
 
 #define SET_MAX_LOAD 0.65
 #define MAX_PRINT_ELEMENTS 100
@@ -283,51 +282,12 @@ void printSet(ObjSet* set) {
  * Must be freed.
  */
 unsigned char* setToString(ObjSet* set) {
-    // // Create an empty string builder
-    // StringBuilder* sb = sb_create();
-    // char* str = NULL;
-
-    // sb_append(sb, "{");
-    
-    // // Append elements
-    // int numElements = set->count;
-    // int count = 0;
-
-    // for (int i = 0; i < set->capacity; i++) {
-    //     Value value = getSetValue(set, i);
-    //     if (!IS_NULL(value)) {
-    //         // if (count == MAX_PRINT_ELEMENTS) {
-    //         //     sb_appendf(sb, "...");
-    //         //     break;
-    //         // }
-            
-    //         unsigned char* str = valueToString(value);
-    //         if (IS_OBJ(value) && IS_STRING(value)) {
-    //             sb_appendf(sb, "\"%s\"", str);
-    //         } else if (IS_CHAR(value)) {
-    //             sb_appendf(sb, "'%s'", str);
-    //         } else {
-    //             sb_appendf(sb, "%s", str);
-    //         }
-    //         free(str);
-
-    //         if (count < numElements - 1) sb_append(sb, ", ");
-    //         count++;
-    //     }
-    // }
-
-    // sb_append(sb, "}");
-    // str = sb_concat(sb);
-
-    // // Clean up
-    // sb_free(sb);
-
-    // return str;
-
-
     // Create an empty string builder
-    stx_t stxStr = stx_from("{");
+    StringBuilder* sb = sb_create();
+    char* str = NULL;
 
+    sb_append(sb, "{");
+    
     // Append elements
     int numElements = set->count;
     int count = 0;
@@ -335,20 +295,31 @@ unsigned char* setToString(ObjSet* set) {
     for (int i = 0; i < set->capacity; i++) {
         Value value = getSetValue(set, i);
         if (!IS_NULL(value)) {
+            // if (count == MAX_PRINT_ELEMENTS) {
+            //     sb_appendf(sb, "...");
+            //     break;
+            // }
+            
             unsigned char* str = valueToString(value);
             if (IS_OBJ(value) && IS_STRING(value)) {
-                stx_append_fmt(&stxStr, "\"%s\"", str);
+                sb_appendf(sb, "\"%s\"", str);
             } else if (IS_CHAR(value)) {
-                stx_append_fmt(&stxStr, "'%s'", str);
+                sb_appendf(sb, "'%s'", str);
             } else {
-                stx_append_fmt(&stxStr, "%s", str);
+                sb_appendf(sb, "%s", str);
             }
             free(str);
 
-            if (count < numElements - 1) stx_append(&stxStr, ", ", 2);
+            if (count < numElements - 1) sb_append(sb, ", ");
             count++;
         }
     }
 
-    return (unsigned char*)stxStr;
+    sb_append(sb, "}");
+    str = sb_concat(sb);
+
+    // Clean up
+    sb_free(sb);
+
+    return str;
 }

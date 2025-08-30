@@ -59,7 +59,7 @@ static Entry* findEntry(Entry* entries, int capacity, ObjString* key) {
             return entry;
         }
 
-        // Collision, so start probing
+        // Collision, so start linear probing
         index = (index * 5 + 1 + perturb) & (capacity - 1);
         perturb >>= 5;
     }
@@ -146,6 +146,7 @@ void tableAddAll(GC* gc, Table* from, Table* to) {
 ObjString* tableFindString(GC* gc, Table* table, const unsigned char* chars, int length, hash_t hash) {
     if (table->count == 0) return NULL;
     uint64_t index = hash & (table->capacity - 1);
+    uint64_t perturb = hash;
 
     while (true) {
         assert(index < table->capacity);
@@ -160,7 +161,8 @@ ObjString* tableFindString(GC* gc, Table* table, const unsigned char* chars, int
             return entry->key;
         }
 
-        index = (index + 1) & (table->capacity - 1);
+        index = (index * 5 + 1 + perturb) & (table->capacity - 1);
+        perturb >>= 5;
     }
 }
 
@@ -172,6 +174,7 @@ Entry* tableFindJoinedStrings(GC* gc, Table* table, const unsigned char* a, int 
 
     int length = aLen + bLen;
     uint64_t index = hash & (table->capacity - 1);
+    uint64_t perturb = hash;
     Entry* tombstone = NULL;
 
     // Find the concatenation of two strings
@@ -197,7 +200,8 @@ Entry* tableFindJoinedStrings(GC* gc, Table* table, const unsigned char* a, int 
         }
 
         // Collision, so start linear probing
-        index = (index + 1) & (table->capacity - 1);
+        index = (index * 5 + 1 + perturb) & (table->capacity - 1);
+        perturb >>= 5;
     }
     
     return tombstone;

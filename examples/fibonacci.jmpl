@@ -10,12 +10,12 @@ func op_fib(n) =
     Fibs := Fibs ∪ {(n, answer)}
     answer    
 
-let start = clock()
-println("Fib(34) = " + fib(34))
-println("Time: " + (clock() - start))
+// let start = clock()
+// println("Fib(34) = " + fib(34))
+// println("Time: " + (clock() - start))
 
-start := clock()
-println("Fib(34) = " + op_fib(34))
-println("Time: " + (clock() - start))
+// start := clock()
+// println("Fib(34) = " + op_fib(34))
+// println("Time: " + (clock() - start))
 
 println(Fibs)

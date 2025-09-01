@@ -7,7 +7,7 @@
 #include "chunk.h"
 #include "scanner.h"
 
-const unsigned char* getTokenName(TokenType type);
+const unsigned char* getTokenName(TokenKind type);
 
 void disassembleChunk(Chunk* chunk, const char* name);
 void printStack(Value* stack, Value* stackTop);

@@ -422,6 +422,8 @@ static Value importModule(ObjString* path) {
         // Check if its a built in module
         if (strcmp(path->utf8, "math") == 0) {
             return OBJ_VAL(defineMathLibrary());
+        } else if (strcmp(path->utf8, "random") == 0) {
+            return OBJ_VAL(defineRandomLibrary());
         } else {
             runtimeError("Could not resolve module at '%s'", absolutePath);
             return NULL_VAL;

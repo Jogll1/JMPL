@@ -89,7 +89,7 @@ static bool match(Scanner* scanner, unsigned char expected) {
     return true;
 }
 
-static Token makeToken(Scanner* scanner, TokenType type) {
+static Token makeToken(Scanner* scanner, TokenKind type) {
     Token token;
     token.type = type;
     token.start = scanner->start;
@@ -165,7 +165,7 @@ static bool isKeyword(Scanner* scanner, unsigned int start, int length, const un
     return scanner->current - scanner->start == start + length && memcmp(scanner->start + start, rest, length) == 0;
 }
 
-static TokenType checkKeyword(Scanner* scanner, unsigned int start, int length, const unsigned char* rest, TokenType type) {
+static TokenKind checkKeyword(Scanner* scanner, unsigned int start, int length, const unsigned char* rest, TokenKind type) {
     if (isKeyword(scanner, start, length, rest)) {
         return type;
     }
@@ -176,7 +176,7 @@ static TokenType checkKeyword(Scanner* scanner, unsigned int start, int length, 
 /**
  * @brief Switch identifier to possibly match it to a keyword.
  */
-static TokenType identifierType(Scanner* scanner) {
+static TokenKind identifierType(Scanner* scanner) {
     switch (scanner->start[0]) {
         case 'a': {
             if (scanner->current - scanner->start > 1) {

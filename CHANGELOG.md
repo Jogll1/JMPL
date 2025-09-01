@@ -82,17 +82,18 @@
 
 ## [v0.2.2] - 01/09/2025
 ### Added
-- New native functions
+- New native functions to core
     - `type(x)`
     - `input()`
-    - `toNum(x)`
-    - `toStr(x)`
-    - `toChar(x)`
+    - `num(x)`
+    - `str(x)`
+    - `char(x)`
 - Character data type, created with single quotes (`''`)
 - Several new escape sequence types (with 'H' meaning a hex character): `\uHHHH`, `\UHHHHHH`, `\xHH`, `\a`, `\b`, `\v`, `\f`, `\0`
 - Strings and tuple can now be sliced using `[x ... y]` subscript notation
 - Anonymous function expressions
 - Module system where modules can be imported using `with`
+- Added a module called `"random"` that provides functions with PRNG capabilities
 ### Changed
 - Any syntax that uses generators (for loops, set builders, quantifiers) can now use any iterable object instead of just sets.
 - Quantfiers now use a pipe (`|`) instead of a comma (`,`) to be consistent with set-builder and for-loop syntax

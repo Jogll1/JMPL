@@ -8,5 +8,5 @@ valgrind --leak-check=full \
          --track-origins=yes \
          --verbose \
          --log-file=valgrind-out.txt \
-         ./build/v0-2-2 ./test.jmpl 
+         ./build/jmpl0-2-2 ./test.jmpl 
 cat valgrind-out.txt

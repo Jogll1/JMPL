@@ -11,7 +11,7 @@
  * 
  * @param type The type to translate.
  */
-const unsigned char* getTokenName(TokenType type) {
+const unsigned char* getTokenName(TokenKind type) {
     switch (type) {
         case TOKEN_LEFT_PAREN:    return "LEFT_PAREN";
         case TOKEN_RIGHT_PAREN:   return "RIGHT_PAREN";

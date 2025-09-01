@@ -42,10 +42,10 @@ typedef enum {
 
     TOKEN_NEWLINE, TOKEN_INDENT, TOKEN_DEDENT, 
     TOKEN_ERROR, TOKEN_EOF
-} TokenType;
+} TokenKind;
 
 typedef struct {
-    TokenType type;
+    TokenKind type;
     const unsigned char* start;
     int length;
     int line;

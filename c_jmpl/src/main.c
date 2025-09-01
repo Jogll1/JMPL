@@ -11,7 +11,17 @@
 
 #define CURRENT_VERSION "0.2.2"
 
+#ifdef _WIN32
+    #include <windows.h>
+    #define getpid() GetCurrentProcessId()
+#else
+    #include <unistd.h>
+#endif
+
 static void repl() {
+    printf("JMPL v%s\n", CURRENT_VERSION);
+    printf("Note: if using Windows, terminal must be using code page 65001 to properly display mathematical symbols.\n");
+
     char line[1024];
 
     while(true) {
@@ -37,20 +47,18 @@ static void runFile(const unsigned char* path) {
 }
 
 int main(int argc, const char* argv[]) {
-    srand((unsigned int)time(NULL));
+    srand(time(NULL) ^ getpid());
 
     initVM();
 
     if (argc == 1) {
         // If no file argument, run the REPL
-        printf("JMPL v%s\n", CURRENT_VERSION);
-        printf("Note: if using Windows, terminal must be using code page 65001 to properly display mathematical symbols.\n");
         repl();
     } else if(argc == 2) {
         // If there's a file argument, run the file
         runFile(argv[1]);
     } else {
-        fprintf(stderr, "Usage: c_jmpl [path]\n");
+        fprintf(stderr, "Usage: jmpl [path]\n");
         exit(COMMAND_LINE_USAGE_ERROR);
     }
 

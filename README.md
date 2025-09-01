@@ -2,10 +2,10 @@
 
 This repository contains the JMPL interpreter (c_jmpl), example programs, and documentation.
 
-JMPL has support for UTF-8 encoding and many operators have Unicode alternatives. It is recommended to use a text-editor with Unicode capabilities or a plugin that allows you to easily insert Unicode characters. If using a Windows terminal, the code page should be changed to `65001` to properly display any Unicode character that may be outputted.
+JMPL has support for UTF-8 encoding and many operators have Unicode alternatives. It is recommended to use a text-editor with Unicode capabilities or a the <a href="https://marketplace.visualstudio.com/items?itemName=jogll1.vscode-jmpl">JMPL VS Code Extension</a> to insert special characters. If using a Windows terminal, the code page should be changed to `65001` to properly display any Unicode character that may be outputted.
 
 ## Running the Interpreter
-The current version of the interpreter is c_jmpl v0.2.2.
+The current version of the interpreter is c_jmpl v0.2.2. To run the interpreter, you can build it yourself or check `Releases` for pre-built versions.
 
 ### Prerequisites
 - CMake (Tested with version 4.1.0)
@@ -32,6 +32,7 @@ Running the interpreter with no source file will start the in-terminal REPL.
 ## Third-Party Code
 List of libraries used in this project:
 - <a href="https://github.com/cavaliercoder/c-stringbuilder">c-stringbuilder<a> by cavaliercodernk
+- <a href="https://github.com/imneme/pcg-c-basic">pgc-c-basic<a> by imneme
 
 ## Credits
 Implementation of the v0.1.0 interpreter was based off the book Crafting Interpreters by Bob Nystrom. 

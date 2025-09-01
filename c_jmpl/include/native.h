@@ -26,9 +26,9 @@ DEF_NATIVE(input);
 // --- Types ---
 
 DEF_NATIVE(type);
-DEF_NATIVE(toNum);
-DEF_NATIVE(toStr);
-DEF_NATIVE(toChar);
+DEF_NATIVE(num);
+DEF_NATIVE(str);
+DEF_NATIVE(char);
 
 ObjModule* defineCoreLibrary();
 
@@ -60,5 +60,16 @@ DEF_NATIVE(ceil);
 DEF_NATIVE(round);
 
 ObjModule* defineMathLibrary();
+
+// ==============================================================
+// ===================== Random             =====================
+// ==============================================================
+
+DEF_NATIVE(seed);
+DEF_NATIVE(random);
+DEF_NATIVE(randrange);
+DEF_NATIVE(randint);
+
+ObjModule* defineRandomLibrary();
 
 #endif

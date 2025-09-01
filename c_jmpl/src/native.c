@@ -11,9 +11,11 @@
 #include "vm.h"
 #include "native.h"
 #include "utils.h"
+#include "../lib/pcg/pcg_basic.h"
 
 #ifdef _WIN32
     #include <windows.h>
+    #define getpid() GetCurrentProcessId()
 #else
     #include <unistd.h>
 #endif
@@ -184,12 +186,12 @@ DEF_NATIVE(type) {
 }
 
 /**
- * toNum(x)
+ * num(x)
  * 
  * Casts a value to a number. Returns null for invalid types.
  * Valid types are bool, number, char, and string.
  */
-DEF_NATIVE(toNum) {
+DEF_NATIVE(num) {
     Value value = args[0];
 
     if (IS_BOOL(value)) {
@@ -208,11 +210,11 @@ DEF_NATIVE(toNum) {
 }
 
 /**
- * toStr(x)
+ * str(x)
  * 
  * Casts a value to an string. Works for all types.
  */
-DEF_NATIVE(toStr) {
+DEF_NATIVE(str) {
     Value value = args[0];
     unsigned char* str = valueToString(value);
     ObjString* string = copyString(&vm->gc, str, strlen(str));
@@ -221,11 +223,11 @@ DEF_NATIVE(toStr) {
 }
 
 /**
- * toChar(x)
+ * char(x)
  * 
  * Casts an integer to a char.
  */
-DEF_NATIVE(toChar) {
+DEF_NATIVE(char) {
     Value value = args[0];
     
     if (IS_INTEGER(value)) {
@@ -258,9 +260,9 @@ ObjModule* defineCoreLibrary() {
 
     // Types
     defineNative(core, "type", 1, LOAD_NATIVE(type));
-    defineNative(core, "toNum", 1, LOAD_NATIVE(toNum));
-    defineNative(core, "toStr", 1, LOAD_NATIVE(toStr));
-    defineNative(core, "toChar", 1, LOAD_NATIVE(toChar));
+    defineNative(core, "num", 1, LOAD_NATIVE(num));
+    defineNative(core, "str", 1, LOAD_NATIVE(str));
+    defineNative(core, "char", 1, LOAD_NATIVE(char));
 
     pushTemp(&vm.gc, OBJ_VAL(core));
     tableSet(&vm.gc, &vm.modules, core->name, OBJ_VAL(core));
@@ -500,4 +502,83 @@ ObjModule* defineMathLibrary() {
     popTemp(&vm.gc);
 
     return math;
+}
+
+// ==============================================================
+// ===================== Random             =====================
+// ==============================================================
+
+/**
+ * seed(x)
+ * 
+ * Sets the seed of the PRNG. Returns null.
+ */
+DEF_NATIVE(seed) {
+    if(!IS_NUMBER(args[0])) return NULL_VAL;
+
+    // Set the seed
+    pcg32_srandom((uint64_t)AS_NUMBER(round(args[0])), (intptr_t)&defineRandomLibrary);
+
+    return NULL_VAL;
+}
+
+/**
+ * random()
+ * 
+ * Returns a random double between 0 and 1.
+ */
+DEF_NATIVE(random) {
+    return NUMBER_VAL(ldexp(pcg32_random(), -32));
+}
+
+/**
+ * randrange(x, y)
+ * 
+ * Returns a random double between an inclusive range.
+ * 
+ */
+DEF_NATIVE(randrange) {
+    if(!IS_NUMBER(args[0]) || !IS_NUMBER(args[1])) return NULL_VAL;
+
+    int min = AS_NUMBER(args[0]);
+    int max = AS_NUMBER(args[1]);
+
+    return NUMBER_VAL(ldexp(pcg32_random(), -32) * (max - min + 1) + min);
+}
+
+/**
+ * randint(x, y)
+ * 
+ * Returns a random integer between an inclusive range.
+ */
+DEF_NATIVE(randint) {
+    if(!IS_NUMBER(args[0]) || !IS_NUMBER(args[1])) return NULL_VAL;
+
+    int min = (int)(round(AS_NUMBER(args[0])));
+    int max = (int)(round(AS_NUMBER(args[1])));
+
+    return NUMBER_VAL(pcg32_boundedrand(max - min + 1) + min);
+}
+
+
+/**
+ * @brief Define the natives in the random library.
+ */
+ObjModule* defineRandomLibrary() {
+    unsigned char* name = "random";
+    ObjModule* random = newModule(&vm.gc, copyString(&vm.gc, name, strlen(name)));
+
+    // Init PRNG
+    pcg32_srandom(time(NULL) ^ getpid(), (intptr_t)&printf);
+
+    defineNative(random, "seed", 1, LOAD_NATIVE(seed));
+    defineNative(random, "random", 0, LOAD_NATIVE(random));
+    defineNative(random, "randrange", 2, LOAD_NATIVE(randrange));
+    defineNative(random, "randint", 2, LOAD_NATIVE(randint));
+
+    pushTemp(&vm.gc, OBJ_VAL(random));
+    tableSet(&vm.gc, &vm.modules, random->name, OBJ_VAL(random));
+    popTemp(&vm.gc);
+
+    return random;
 }

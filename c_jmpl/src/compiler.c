@@ -185,7 +185,7 @@ static void advance(Parser* parser) {
  * If the current token has the given token type it calls advance().
  * If not, an error is displayed with errorAtCurrent().
  */
-static void consume(Parser* parser, TokenType type, const unsigned char* message) {
+static void consume(Parser* parser, TokenKind type, const unsigned char* message) {
     if (parser->current.type == type) {
         advance(parser);
         return;
@@ -203,11 +203,11 @@ static void skipNewlines(Parser* parser) {
     }
 }
 
-static bool check(Parser* parser, TokenType type) {
+static bool check(Parser* parser, TokenKind type) {
     return parser->current.type == type;
 }
 
-static bool match(Parser* parser, TokenType type) {
+static bool match(Parser* parser, TokenKind type) {
     if (!check(parser, type)) return false;
     advance(parser);
 
@@ -357,7 +357,7 @@ static void expression(Parser* parser, bool ignoreNewlines);
 static void statement(Parser* parser, bool blockAllowed, bool ignoreSeparator);
 static void expressionStatement(Parser* parser);
 static void declaration(Parser* parser);
-static ParseRule* getRule(TokenType type);
+static ParseRule* getRule(TokenKind type);
 static void parsePrecedence(Parser* parser, Precedence precendence, bool ignoreNewlines);
 
 static uint16_t identifierConstant(Parser* parser, Token* name) {
@@ -601,7 +601,7 @@ static uint8_t argumentList(Parser* parser) {
 static void binary(Parser* parser, bool canAssign) {
     (void)canAssign;
 
-    TokenType operatorType = parser->previous.type;
+    TokenKind operatorType = parser->previous.type;
     ParseRule* rule = getRule(operatorType);
     parsePrecedence(parser, (Precedence)(rule->precedence + 1), false);
 
@@ -1134,7 +1134,7 @@ static void variable(Parser* parser, bool canAssign) {
 static void unary(Parser* parser, bool canAssign) {
     (void)canAssign;
 
-    TokenType operatorType = parser->previous.type;
+    TokenKind operatorType = parser->previous.type;
 
     // Compile the operand
     parsePrecedence(parser, PREC_UNARY, false);
@@ -1155,7 +1155,7 @@ static void quantifier(Parser* parser) {
     current->function->name = copyString(parser->gc, "@quan", 5);
     current->implicitReturn = true;
 
-    TokenType operatorType = parser->previous.type;
+    TokenKind operatorType = parser->previous.type;
 
     // === FOR LOAN CODE ===
     uint8_t loopVarSlot = parseGenerator(parser);
@@ -1370,7 +1370,7 @@ static void parsePrecedence(Parser* parser, Precedence precendence, bool ignoreN
     }
 }
 
-static ParseRule* getRule(TokenType type) {
+static ParseRule* getRule(TokenKind type) {
     return &rules[type];
 }
 

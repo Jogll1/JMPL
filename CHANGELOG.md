@@ -80,7 +80,7 @@
 - Fixed garbage collector collecting sets while they are being created
 - Optimised Value code with NaN boxing
 
-## [v0.2.2] - 28/08/2025
+## [v0.2.2] - 01/09/2025
 ### Added
 - New native functions
     - `type(x)`
@@ -101,7 +101,7 @@
 - Made the `arb` keyword return a random member of a set
 - Optimisations for strings and sets
 - Strings and tuples can now be indexed with negative indices to get the last elements (this extends to slicing as well)
-- Moved math native functions to their own module
+- Moved math native functions to their own module called `"math"`
 - Characters can now be compared using >, >=, <, and, <= 
 - Made characters work with omission operations
 ### Fixed

@@ -23,9 +23,9 @@ MSVC: `cmake -G "Visual Studio VV YYYY" -S . -B .\build` (where VV is the versio
 ### Run
 To run the interpreter, run the exe:
 - Windows:
-  `./build/v0-2-2.exe path/to/file.jmpl`
+  `./build/jmpl0-2-2.exe path/to/file.jmpl`
 - Linux/Mac:
-  `./build/v0-2-2 path/to/file.jmpl`
+  `./build/jmpl0-2-2 path/to/file.jmpl`
 
 Running the interpreter with no source file will start the in-terminal REPL.
 

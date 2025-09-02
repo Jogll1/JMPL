@@ -428,13 +428,13 @@ static Value importModule(ObjString* path) {
     // Read library source and compile
     unsigned char* moduleSource = readFile(path->utf8);
     ObjFunction* function = compile(&vm.gc, moduleSource);
-    function->name = moduleName;
-    free(moduleSource);
-    
     if (function == NULL) {
         runtimeError("Could not compile module");
         return NULL_VAL;
     }
+
+    function->name = moduleName;
+    free(moduleSource);
 
     push(OBJ_VAL(function));
     ObjClosure* closure = newClosure(&vm.gc, function);

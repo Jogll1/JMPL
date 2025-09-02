@@ -144,7 +144,7 @@ static void errorAt(Parser* parser, Token* token, const char* message) {
     }
 
     fprintf(stderr, ": %s.\n", message);
-    exit(INTERNAL_SOFTWARE_ERROR); // TEMPORARY HACK TO FORCE PROGRAM TO EXIT WHEN THERE'S A COMPILER ERROR
+    // exit(INTERNAL_SOFTWARE_ERROR); // TEMPORARY HACK TO FORCE PROGRAM TO EXIT WHEN THERE'S A COMPILER ERROR
     parser->hadError = true;
 }
 
@@ -1556,7 +1556,8 @@ static void synchronise(Parser* parser) {
     parser->panicMode = false;
 
     while(parser->current.type != TOKEN_EOF) {
-        if(parser->previous.type == TOKEN_SEMICOLON) return;
+        if (parser->previous.type == TOKEN_SEMICOLON || parser->previous.type == TOKEN_NEWLINE) return;
+
         switch(parser->current.type) {
             case TOKEN_FUNCTION:
             case TOKEN_LET:
@@ -1632,7 +1633,7 @@ ObjFunction* compile(GC* gc, const unsigned char* source) {
 
     // Consume statements
     while(!match(&parser, TOKEN_EOF)) {
-        // Ignore lines that are just newlines or semicolons 
+        // Ignore lines that are just newlines or semicolons
         if (match(&parser, TOKEN_NEWLINE) || match(&parser, TOKEN_SEMICOLON)) continue;
 
         declaration(&parser);

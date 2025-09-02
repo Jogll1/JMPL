@@ -638,7 +638,7 @@ static InterpretResult run() {
         }
         CASE_CODE(MOD): {
             ASSERT_THAT(T_INT(0) && T_INT(0), "Operands must be integers");
-            ASSERT_THAT(AS_NUMBER(peek(0)) == 0, "Division by 0");
+            ASSERT_THAT(AS_NUMBER(peek(0)) != 0, "Division by 0");
 
             int b = (int)AS_NUMBER(pop());
             int a = (int)AS_NUMBER(pop());
@@ -647,7 +647,7 @@ static InterpretResult run() {
         }
         CASE_CODE(DIVIDE): {
             ASSERT_THAT(T_NUM(0) && T_NUM(0), "Operands must be numbers");
-            ASSERT_THAT(AS_NUMBER(peek(0)) == 0, "Division by 0");
+            ASSERT_THAT(AS_NUMBER(peek(0)) != 0, "Division by 0");
 
             BINARY_OP(/);
             DISPATCH();

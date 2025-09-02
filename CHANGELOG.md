@@ -110,3 +110,4 @@
 - Strings have been refactored to store character Unicode code points as well as UTF-8 bytes
     - Now Unicode strings can be indexed and sized correctly
 - Tuples concatenating no longer causes a memory leak
+- Compiler can now report multiple errors meaning the REPL no longer finishes when encountering a syntax error

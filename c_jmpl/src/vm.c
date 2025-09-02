@@ -19,6 +19,33 @@
 #include "gc.h"
 #include "iterator.h"
 
+// Check for types on the stack
+#define T_BOOL(n)     (IS_BOOL(peek(n)))
+#define T_NULL(n)     (IS_NULL(peek(n)))
+#define T_NUM(n)      (IS_NUMBER(peek(n)))
+#define T_INT(n)      (IS_INTEGER(peek(n)))
+#define T_CHAR(n)     (IS_CHAR(peek(n)))
+#define T_OBJ(n)      (IS_OBJ(peek(n)))
+
+#define T_CLOSURE(n)  (IS_CLOSURE(peek(n)))
+#define T_FUNC(n)     (IS_FUNCTION(peek(n)))
+#define T_NATIVE(n)   (IS_NATIVE(peek(n)))
+#define T_STRING(n)   (IS_STRING(peek(n)))
+#define T_MODULE(n)   (IS_MODULE(peek(n)))
+#define T_SET(n)      (IS_SET(peek(n)))
+#define T_TUPLE(n)    (IS_TUPLE(peek(n)))
+#define T_ITER(n)     (IS_ITERATOR(peek(n)))
+
+// Check for runtime errors - if !condition then return error
+#define ASSERT_THAT(condition, message) \
+    do { \
+        if (!(condition)) { \
+            runtimeError(message); \
+            return INTERPRET_RUNTIME_ERROR; \
+        } \
+    } while(false)
+
+
 // ToDo: swap this for a pointer
 VM vm;
 
@@ -106,7 +133,7 @@ static bool call(ObjClosure* closure, int argCount) {
         return false;
     }
 
-    if(vm.frameCount == FRAMES_MAX) {
+    if (vm.frameCount == FRAMES_MAX) {
         runtimeError("(Internal) Call stack overflow");
         return false;
     }
@@ -115,6 +142,7 @@ static bool call(ObjClosure* closure, int argCount) {
     frame->closure = closure;
     frame->ip = closure->function->chunk.code;
     frame->slots = vm.stackTop - argCount - 1;
+
     return true;
 }
 
@@ -216,71 +244,46 @@ static void setInsertN(int count) {
  * Can be [int, int ... int] or [char, char ... char].
  */
 static InterpretResult omission(bool isSet, bool hasNext) {
-    bool isIntOmission = IS_INTEGER(peek(0)) && IS_INTEGER(peek(1)) && (!hasNext || IS_INTEGER(peek(2)));
-    bool isCharOmission = IS_CHAR(peek(0)) && IS_CHAR(peek(1)) && (!hasNext || IS_CHAR(peek(2)));
-    if (!isIntOmission && !isCharOmission) {
-        runtimeError("Terms of an omission operation must be all integers or all characters");
-        return INTERPRET_RUNTIME_ERROR; 
-    }
+    bool isIntOmission = T_INT(0) && T_INT(1) && (!hasNext || T_INT(2));
+    bool isCharOmission = T_CHAR(0) && T_CHAR(1) && (!hasNext || T_CHAR(2));
+
+    ASSERT_THAT(isIntOmission || isCharOmission, "Terms of an omission operation must be all integers or all bcharacters");
 
     int last = (int)(isCharOmission ? AS_CHAR(pop()) : AS_NUMBER(pop()));
-    int next;
+    int next = 0;
     if (hasNext) {
         next =  (int)(isCharOmission ? AS_CHAR(pop()) : AS_NUMBER(pop()));
     }
     int first =  (int)(isCharOmission ? AS_CHAR(pop()) : AS_NUMBER(pop()));
 
-    int gap = 1;
-    if (hasNext) {
-        gap = abs(next - first);
-
-        if (gap == 0) {
-            runtimeError("Omission gap cannot be zero");
-            return INTERPRET_RUNTIME_ERROR; 
-        }
-    }
+    int gap = hasNext ? abs(next - first) : 1;
+    ASSERT_THAT(gap != 0, "Omission gap cannot be zero");
 
     int size = (int)floorl((double)abs(first - last) / (double)gap) + 1;
 
-#define CAST(num) (isCharOmission ? CHAR_VAL(num) : NUMBER_VAL(num))
+    int current = first;
+    int step = first < last ? gap : -gap;
 
     if (isSet) {
         ObjSet* set = AS_SET(pop());
         pushTemp(&vm.gc, OBJ_VAL(set));
 
-        if (last > first) {
-            for (int i = first; i <= last; i += gap) {
-                setInsert(&vm.gc, set, CAST(i));
-            }   
-        } else {
-            for (int i = first; i >= last; i -= gap) {
-                setInsert(&vm.gc, set, CAST(i));
-            }   
+        for (int i = 0; i < size; i++) {
+            setInsert(&vm.gc, set, isCharOmission ? CHAR_VAL(current) : NUMBER_VAL(current));
+            current += step;
         }
 
-        popTemp(&vm.gc);
+        popTemp(&vm.gc); // set
         push(OBJ_VAL(set));
     } else {
         ObjTuple* tuple = newTuple(&vm.gc, size);
-        
-        int i = 0;
-        if (last > first) {
-            int i = 0;
-            for (int j = first; j <= last; j += gap) {
-                tuple->elements[i] = CAST(j);
-                i++;
-            }   
-        } else {
-            for (int j = first; j >= last; j -= gap) {
-                tuple->elements[i] = CAST(j);
-                i++;
-            }   
-        }
 
+        for (int i = 0; i < size; i++) {
+            tuple->elements[i] = isCharOmission ? CHAR_VAL(current) : NUMBER_VAL(current);
+            current += step;
+        }
         push(OBJ_VAL(tuple));
     }
-
-#undef CAST
 
     return INTERPRET_OK;
 }
@@ -288,12 +291,12 @@ static InterpretResult omission(bool isSet, bool hasNext) {
 /**
  * @brief Determines if a value is falsey.
  * 
- * @param value The value to determine the Boolean value of
+ * @param value The value to determine the boolean value of
  * 
- * Values are false if they are null, false, 0, empty string, empty set, or an empty tuple.
+ * Values are false if they are null, false, 0, or an empty object.
  */
 static bool isFalse(Value value) {
-    // Return false if null, false, 0, or empty string
+    // Return false if null, false, 0, or empty object
     return IS_NULL(value) || 
            (IS_NUMBER(value) && AS_NUMBER(value) == 0) || 
            (IS_BOOL(value) && !AS_BOOL(value)) ||
@@ -336,79 +339,54 @@ static int getSize(Value value) {
 }
 
 static InterpretResult indexObj() {
-    if (!IS_INTEGER(peek(0))) {
-        runtimeError("Index must be an integer");
-        return INTERPRET_RUNTIME_ERROR;
-    }
+    ASSERT_THAT(T_INT(0), "Index must be an integer");
+
     int index = (signed int)AS_NUMBER(pop());
+    int length;
 
     Value value = pop();
     if (IS_TUPLE(value)) {
-        ObjTuple* tuple = AS_TUPLE(value);
-        int intLength = (int)tuple->size;
-        if (index < -intLength || index >= intLength) {
-            runtimeError("Tuple index out of range");
-            return INTERPRET_RUNTIME_ERROR;
-        }
-
-        push(indexTuple(tuple, index));
+        length = (int)AS_TUPLE(value)->size;
     } else if (IS_STRING(value)) {
-        ObjString* string = AS_STRING(value);
-        int intLength = (int)string->length;
-        if (index < -intLength || index >= intLength) {
-            runtimeError("String index out of range");
-            return INTERPRET_RUNTIME_ERROR;
-        }
-
-        push(indexString(string, index));
+        length = (int)AS_STRING(value)->length;
     } else {
-        runtimeError("Object cannot be indexed");
-        return INTERPRET_RUNTIME_ERROR;
+        ASSERT_THAT(false, "Object cannot be indexed");
     }
+
+    ASSERT_THAT(index >= -length && index < length, "Index out of range");
+
+    push(IS_TUPLE(value) ? indexTuple(AS_TUPLE(value), index) : indexString(AS_STRING(value), index));
 
     return INTERPRET_OK;
 }
 
 static InterpretResult sliceObj() {
-    if (!IS_INTEGER(peek(0)) && !IS_NULL(peek(0)) || !IS_INTEGER(peek(1)) && !IS_NULL(peek(1))) {
-        runtimeError("Slice index must be an integer or null");
-        return INTERPRET_RUNTIME_ERROR;
-    }
+    ASSERT_THAT((T_INT(0) || T_NULL(0)) && (T_INT(1) || T_NULL(1)), "Slice indices must be integers or null");
 
     Value end = pop();
     Value start = pop();
+
     int startIndex = IS_NULL(start) ? 0 : (signed int)AS_NUMBER(start);
     int endIndex;
+    int length;
 
     Value value = pop();
     if (IS_TUPLE(value)) {
-        ObjTuple* tuple = AS_TUPLE(value);
-        int intLength = (int)tuple->size;
-
-        endIndex = IS_NULL(end) ? tuple->size - 1 : (signed int)AS_NUMBER(end);
-        
-        if (startIndex < -intLength || endIndex < -intLength) {
-            runtimeError("Tuple slice index out of range");
-            return INTERPRET_RUNTIME_ERROR;
-        }
-
-        push(OBJ_VAL(sliceTuple(&vm.gc, tuple, startIndex, endIndex)));
+        length = (int)AS_TUPLE(value)->size;
     } else if (IS_STRING(value)) {
-        ObjString* string = AS_STRING(value);
-        int intLength = (int)string->length;
-
-        endIndex = IS_NULL(end) ? string->length - 1 : (signed int)AS_NUMBER(end);
-
-        if (startIndex < -intLength || endIndex < -intLength) {
-            runtimeError("String slice index out of range");
-            return INTERPRET_RUNTIME_ERROR;
-        }
-
-        push(OBJ_VAL(sliceString(&vm.gc, string, startIndex, endIndex)));
+        length = (int)AS_STRING(value)->length;
     } else {
-        runtimeError("Object cannot be indexed");
-        return INTERPRET_RUNTIME_ERROR;
+        ASSERT_THAT(false, "Object cannot be sliced");
     }
+
+    endIndex = IS_NULL(end) ? length - 1 : (signed int)AS_NUMBER(end);
+    ASSERT_THAT(startIndex >= -length && endIndex >= -length, "Slice index out of range");
+
+    push(
+        IS_TUPLE(value) ?
+        OBJ_VAL(sliceTuple(&vm.gc, AS_TUPLE(value), startIndex, endIndex)) :
+        OBJ_VAL(sliceString(&vm.gc, AS_STRING(value), startIndex, endIndex))
+    );
 
     return INTERPRET_OK;
 }
@@ -476,25 +454,25 @@ static InterpretResult run() {
 #define READ_STRING()   AS_STRING(READ_CONSTANT())
 #define LOAD_FRAME()    (frame = &vm.frames[vm.frameCount - 1])
 // --- Ugly ---
+#define BINARY_OP(op) \
+    do { \
+        double b = AS_NUMBER(pop()); \
+        double a = AS_NUMBER(pop()); \
+        push(NUMBER_VAL(a op b)); \
+    } while (false)
 #define ORDER_OP(op) \
     do { \
-        if (!(IS_NUMBER(peek(0)) || IS_CHAR(peek(0))) || !(IS_NUMBER(peek(1)) || IS_CHAR(peek(1)))) { \
-            runtimeError("Operands must be numbers or characters"); \
-            return INTERPRET_RUNTIME_ERROR; \
-        } \
+        ASSERT_THAT((T_NUM(0) || T_CHAR(0)) && (T_NUM(1) || T_CHAR(1)), "Operands must be numbers or characters"); \
         Value vb = pop(); \
         Value va = pop(); \
-        double b = IS_CHAR(vb) ? AS_NUMBER(AS_CHAR(vb)) : AS_NUMBER(vb); \
-        double a = IS_CHAR(va) ? AS_NUMBER(AS_CHAR(va)) : AS_NUMBER(va); \
+        double b = IS_CHAR(vb) ? AS_NUMBER(NUMBER_VAL(AS_CHAR(vb))) : AS_NUMBER(vb); \
+        double a = IS_CHAR(va) ? AS_NUMBER(NUMBER_VAL(AS_CHAR(va))) : AS_NUMBER(va); \
         push(BOOL_VAL(a op b)); \
     } while (false)
 
 #define SET_OP_GC(valueType, setFunction) \
     do { \
-        if (!IS_SET(peek(0)) || !IS_SET(peek(1))) { \
-            runtimeError("Operands must be sets"); \
-            return INTERPRET_RUNTIME_ERROR; \
-        } \
+        ASSERT_THAT(T_SET(0) && T_SET(1), "Operands must be sets"); \
         ObjSet* setB = AS_SET(pop()); \
         ObjSet* setA = AS_SET(pop()); \
         pushTemp(&vm.gc, OBJ_VAL(setA)); \
@@ -506,10 +484,7 @@ static InterpretResult run() {
 
 #define SET_OP(valueType, setFunction) \
     do { \
-        if (!IS_SET(peek(0)) || !IS_SET(peek(1))) { \
-            runtimeError("Operands must be sets"); \
-            return INTERPRET_RUNTIME_ERROR; \
-        } \
+        ASSERT_THAT(T_SET(0) && T_SET(1), "Operands must be sets"); \
         ObjSet* setB = AS_SET(pop()); \
         ObjSet* setA = AS_SET(pop()); \
         push(valueType(setFunction(setA, setB))); \
@@ -631,80 +606,55 @@ static InterpretResult run() {
         CASE_CODE(LESS): ORDER_OP(<); DISPATCH();
         CASE_CODE(LESS_EQUAL): ORDER_OP(<=); DISPATCH();
         CASE_CODE(ADD): {
-            if (IS_STRING(peek(0)) || IS_STRING(peek(1))) {
+            if (T_STRING(0) || T_STRING(1)) {
                 // Concatenate if at least one operand is a string
                 Value b = pop();
                 Value a = pop();
                 push(OBJ_VAL(concatenateStringsHelper(&vm.gc, a, b)));
-            } else if (IS_TUPLE(peek(0)) && IS_TUPLE(peek(1))) {
+            } else if (T_TUPLE(0) && T_TUPLE(1)) {
                 ObjTuple* b = AS_TUPLE(pop());
                 ObjTuple* a = AS_TUPLE(pop());
                 push(OBJ_VAL(concatenateTuple(&vm.gc, a, b)));
-            } else if (IS_NUMBER(peek(0)) && IS_NUMBER(peek(1))) {
+            } else if (T_NUM(0) && T_NUM(1)) {
                 // Else, numerically add
-                double b = AS_NUMBER(pop());
-                double a = AS_NUMBER(pop());
-                push(NUMBER_VAL(a + b));
+                BINARY_OP(+);
             } else {
-                runtimeError("Invalid operand type(s)");
-                return INTERPRET_RUNTIME_ERROR;
+                ASSERT_THAT(false, "Invalid operand type(s)");
             }
+
             DISPATCH();
         }
         CASE_CODE(SUBTRACT): {
-            if(!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
-                runtimeError("Operands must be numbers");
-                return INTERPRET_RUNTIME_ERROR;
-            }
-            double b = AS_NUMBER(pop());
-            double a = AS_NUMBER(pop());
-            push(NUMBER_VAL(a - b));
+            ASSERT_THAT(T_NUM(0) && T_NUM(1), "Operands must be numbers");
+
+            BINARY_OP(-);
             DISPATCH();
         }
         CASE_CODE(MULTIPLY): {
-            if(!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
-                runtimeError("Operands must be numbers");
-                return INTERPRET_RUNTIME_ERROR;
-            }
-            double b = AS_NUMBER(pop());
-            double a = AS_NUMBER(pop());
-            push(NUMBER_VAL(a * b));
+            ASSERT_THAT(T_NUM(0) && T_NUM(1), "Operands must be numbers");
+
+            BINARY_OP(*);
             DISPATCH();
         }
         CASE_CODE(MOD): {
-            if (!IS_INTEGER(peek(0)) || !IS_INTEGER(peek(1))) {
-                runtimeError("Operands must be integers");
-                return INTERPRET_RUNTIME_ERROR;
-            } else if (IS_NUMBER(peek(0)) && AS_NUMBER(peek(0)) == 0) {
-                // Return error if divisor is 0
-                runtimeError("Division by 0");
-                return INTERPRET_RUNTIME_ERROR;
-            }
+            ASSERT_THAT(T_INT(0) && T_INT(0), "Operands must be integers");
+            ASSERT_THAT(AS_NUMBER(peek(0)) == 0, "Division by 0");
 
-            int b = AS_NUMBER(pop());
-            int a = AS_NUMBER(pop());
+            int b = (int)AS_NUMBER(pop());
+            int a = (int)AS_NUMBER(pop());
             push(NUMBER_VAL(a % b));
             DISPATCH();
         }
         CASE_CODE(DIVIDE): {
-            if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
-                runtimeError("Operands must be numbers");
-                return INTERPRET_RUNTIME_ERROR;
-            } else if (IS_NUMBER(peek(0)) && AS_NUMBER(peek(0)) == 0) {
-                // Return error if divisor is 0
-                runtimeError("Division by 0");
-                return INTERPRET_RUNTIME_ERROR;
-            }
-            double b = AS_NUMBER(pop());
-            double a = AS_NUMBER(pop());
-            push(NUMBER_VAL(a / b));
+            ASSERT_THAT(T_NUM(0) && T_NUM(0), "Operands must be numbers");
+            ASSERT_THAT(AS_NUMBER(peek(0)) == 0, "Division by 0");
+
+            BINARY_OP(/);
             DISPATCH();
         }
         CASE_CODE(EXPONENT): {
-            if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
-                runtimeError("Operands must be numbers");
-                return INTERPRET_RUNTIME_ERROR;
-            }
+            ASSERT_THAT(T_NUM(0) && T_NUM(1), "Operands must be numbers");
+
             double b = AS_NUMBER(pop());
             double a = AS_NUMBER(pop());
             push(NUMBER_VAL(pow(a, b)));
@@ -715,10 +665,8 @@ static InterpretResult run() {
             DISPATCH();
         }
         CASE_CODE(NEGATE): {
-            if (!IS_NUMBER(peek(0))) {
-                runtimeError("Operand must be a number");
-                return INTERPRET_RUNTIME_ERROR;
-            }
+            ASSERT_THAT(T_NUM(0), "Operand must be a number");
+
             push(NUMBER_VAL(-AS_NUMBER(pop())));
             DISPATCH();
         }
@@ -817,10 +765,8 @@ static InterpretResult run() {
             DISPATCH();
         }
         CASE_CODE(SET_IN): {
-            if (!IS_SET(peek(0))) {
-                runtimeError("Right hand operand must be a set");
-                return INTERPRET_RUNTIME_ERROR;
-            }
+            ASSERT_THAT(T_SET(0), "Right hand operand must be a set");
+
             ObjSet* set = AS_SET(pop());
             Value value = pop();
             push(BOOL_VAL(setContains(set, value)));
@@ -833,10 +779,8 @@ static InterpretResult run() {
         CASE_CODE(SUBSETEQ): SET_OP(BOOL_VAL, isSubset); DISPATCH();
         CASE_CODE(SIZE): {
             int size = getSize(pop());
-            if (size == -1) {
-                runtimeError("Invalid operand type");
-                return INTERPRET_RUNTIME_ERROR;
-            }
+            ASSERT_THAT(size != -1, "Invalid operand type");
+
             push(NUMBER_VAL(size));
             DISPATCH();
         }
@@ -867,20 +811,16 @@ static InterpretResult run() {
             DISPATCH();
         }
         CASE_CODE(CREATE_ITERATOR): {
-            if (!IS_OBJ(peek(0)) || !AS_OBJ(peek(0))->isIterable) {
-                runtimeError("Generator must iterate over a set, tuple, or a string");
-                return INTERPRET_RUNTIME_ERROR;
-            }
+            ASSERT_THAT(T_OBJ(0) && AS_OBJ(peek(0))->isIterable, "Generator must iterate over a set, tuple, or a string");
+
             Obj* target = AS_OBJ(pop());
             ObjIterator* iterator = newIterator(&vm.gc, target);
             push(OBJ_VAL(iterator));
             DISPATCH();
         }
         CASE_CODE(ITERATE): {
-            if (!IS_ITERATOR(peek(0))) {
-                runtimeError("(Internal) Missing iterator");
-                return INTERPRET_RUNTIME_ERROR;
-            }
+            ASSERT_THAT(T_ITER(0), "(Internal) Missing iterator");
+
             ObjIterator* iterator = AS_ITERATOR(pop());
             Value value;
             bool hasCurrentVal = iterateObj(iterator, &value);
@@ -889,10 +829,8 @@ static InterpretResult run() {
             DISPATCH();
         }
         CASE_CODE(ARB): {
-            if (!IS_SET(peek(0))) {
-                runtimeError("Expected set after some keyword");
-                return INTERPRET_RUNTIME_ERROR;
-            }
+            ASSERT_THAT(T_SET(0), "Expected set after arb keyword");
+
             ObjSet* set = AS_SET(pop());
             push(getArb(set));
             DISPATCH();
@@ -901,11 +839,11 @@ static InterpretResult run() {
             ObjString* path = READ_STRING();
             push(importModule(path));
 
-            if (IS_CLOSURE(peek(0))) {
+            if (T_CLOSURE(0)) {
                 ObjClosure* closure = AS_CLOSURE(pop());
                 call(closure, 0);
                 LOAD_FRAME();
-            } else if (IS_MODULE(peek(0))) {
+            } else if (T_MODULE(0)) {
                 // Built-in or cached
                 ObjModule* module = AS_MODULE(pop());
                 loadModule(module);
@@ -918,8 +856,8 @@ static InterpretResult run() {
         }
     }
 
-    runtimeError("(Internal) Invalid Opcode");
-    return INTERPRET_RUNTIME_ERROR;
+    ASSERT_THAT(false, "(Internal) Invalid Opcode");
+#undef BINARY_OP
 #undef READ_BYTE
 #undef READ_SHORT
 #undef READ_CONSTANT

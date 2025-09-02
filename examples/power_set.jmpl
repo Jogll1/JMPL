@@ -1,12 +1,13 @@
 func power_set(S) = 
-    if S == {} then 
+    if #S == 0 then
         {{}}
     else
         let e = arb S
         let T = S \ {e}
-        power_set(T) ∪ {t ∪ {e} | t ∈ power_set(T)}
+        let P_T = power_set(T)
+        
+        P_T ∪ {t ∪ {e} | t ∈ P_T}
 
-// let S = {0, 1, 2, 3}
-// let pS = power_set(S)
-// println(pS)
-// println("# = " + (#pS))
+let S = power_set({0, 1, 2, 3})
+println(S)
+println("# = " + (#S))

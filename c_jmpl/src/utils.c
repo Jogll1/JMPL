@@ -278,3 +278,16 @@ uint32_t utf8ToUnicode(const unsigned char* input, int numBytes) {
 }
 
 #pragma endregion
+
+#pragma region Misc.
+
+int validateIndex(int index, size_t length) {
+    if (index < 0) index += length;
+    if (index >= length) index = length - 1;
+
+    assert(index >= 0);
+
+    return index;
+}
+
+#pragma endregion

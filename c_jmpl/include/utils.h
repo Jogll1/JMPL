@@ -2,6 +2,7 @@
 #define c_jmpl_utils_h
 
 #include <stdint.h>
+#include <assert.h>
 
 #include "common.h"
 
@@ -51,5 +52,9 @@ uint32_t utf8ToUnicode(const unsigned char* input, int numBytes);
 int8_t unicodeToUtf8(uint32_t codePoint, unsigned char* output);
 int8_t getCharByteCount(unsigned char byte);
 int8_t getCodePointByteCount(uint32_t codePoint);
+
+// Misc.
+
+int validateIndex(int index, size_t length);
 
 #endif

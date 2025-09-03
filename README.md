@@ -2,6 +2,8 @@
 
 This repository contains the JMPL interpreter (c_jmpl), example programs, and documentation.
 
+For support on learning JMPL and its documentation, use the <a href="https://github.com/Jogll1/JMPL/wiki">wiki</a>.
+
 JMPL has support for UTF-8 encoding and many operators have Unicode alternatives. It is recommended to use a text-editor with Unicode capabilities or the <a href="https://marketplace.visualstudio.com/items?itemName=jogll1.vscode-jmpl">JMPL VS Code Extension</a> to insert special characters. If using a Windows terminal, the code page should be changed to `65001` to properly display any Unicode character that may be outputted.
 
 ## Running the Interpreter

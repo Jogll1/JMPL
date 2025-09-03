@@ -114,7 +114,7 @@ void printObject(Value value, bool simple) {
                 printf("<set>");
             } else {
                 unsigned char* str = setToString(AS_SET(value));
-                printf(str);
+                printf("%s", str);
                 free(str);
             }
             break;
@@ -123,7 +123,7 @@ void printObject(Value value, bool simple) {
                 printf("<tuple>");
             } else {
                 unsigned char* str = tupleToString(AS_TUPLE(value));
-                printf(str);
+                printf("%s", str);
                 free(str);
             }
             break;

@@ -257,12 +257,16 @@ static InterpretResult omission(bool isSet, bool hasNext) {
     int first =  (int)(isCharOmission ? AS_CHAR(pop()) : AS_NUMBER(pop()));
 
     int gap = hasNext ? abs(next - first) : 1;
-    ASSERT_THAT(gap != 0, "Omission gap cannot be zero");
+    ASSERT_THAT(gap != 0, "Omission step cannot be zero");
 
-    int size = (int)floorl((double)abs(first - last) / (double)gap) + 1;
+    int size = 0;
+    // Check for {x, >x ... <x} and {x, <x ... >x} edge cases
+    if (!hasNext || !((first < next && first > last) || (first > next && first < last))) {
+        size = (int)floorl((double)abs(first - last) / (double)gap) + 1;
+    }
 
     int current = first;
-    int step = first < last ? gap : -gap;
+    int step = (first < last) ? gap : -gap;
 
     if (isSet) {
         ObjSet* set = AS_SET(pop());

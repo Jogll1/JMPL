@@ -1,10 +1,10 @@
 func power_set(S) = 
-    if #S == 0 then
+    if #S == 0 then               
         {{}}
     else
         let e = arb S
         let T = S \ {e}
-        let P_T = power_set(T)
+        let P_T = power_set(T)     
         
         P_T ∪ {t ∪ {e} | t ∈ P_T}
 

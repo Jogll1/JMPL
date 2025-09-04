@@ -47,7 +47,7 @@
     - `in` or `∈` - returns true if a value is a member of a set
 - Cardinality operator `#` - returns the size of any measurable value (sets, tuples, and numbers)
 - `for ... in` loop notation to iterate through elements of a set without order
-- Omission operation to form sets and tuples 
+- Range operation to form sets and tuples 
     - uses format {first, next ... last} where next is optional and all values are integers
 ### Changed
 - `¬=` (not equal operator) to be `/=`
@@ -104,10 +104,11 @@
 - Strings and tuples can now be indexed with negative indices to get the last elements (this extends to slicing as well)
 - Moved math native functions to their own module called `"math"`
 - Characters can now be compared using >, >=, <, and, <= 
-- Made characters work with omission operations
+- Made characters work with range operations
 ### Fixed
 - Fixed multiple garabage collection errors
 - Strings have been refactored to store character Unicode code points as well as UTF-8 bytes
     - Now Unicode strings can be indexed and sized correctly
 - Tuples concatenating no longer causes a memory leak
 - Compiler can now report multiple errors meaning the REPL no longer finishes when encountering a syntax error
+- Invalid ranges now create an empty set or tuple

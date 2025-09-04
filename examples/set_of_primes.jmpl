@@ -1,4 +1,6 @@
-func isPrime(x) = 
+with "math"
+
+func is_prime(x) = 
     if x ≤ 1 then return false
     let i = 2
     while i ≤ floor(x / 2) do
@@ -6,13 +8,13 @@ func isPrime(x) =
         i := i + 1
     true
 
-func nPrimes(n) = 
+func n_primes(n) = 
     let P = {}
     let i = 0
     while i < n do
-        if isPrime(i) then P := P ∪ {i}
+        if is_prime(i) then P := P ∪ {i}
         i := i + 1
     P
 
-let n = 1000
-println("Set of primes from 1 - " + n + " = " + nPrimes(n))
+// let n = 100
+// println("Set of primes from 1 - " + n + " = " + n_primes(n))

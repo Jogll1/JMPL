@@ -1,5 +1,5 @@
 func power_set(S) = 
-    if #S == 0 then               
+    if S == {} then               
         {{}}
     else
         let e = arb S

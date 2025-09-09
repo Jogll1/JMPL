@@ -112,3 +112,4 @@
 - Tuples concatenating no longer causes a memory leak
 - Compiler can now report multiple errors meaning the REPL no longer finishes when encountering a syntax error
 - Invalid ranges now create an empty set or tuple
+- Comments at the start of a control flow block no longer causes an error

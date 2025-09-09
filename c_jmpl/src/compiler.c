@@ -1460,6 +1460,7 @@ static void ifStatement(Parser* parser) {
     expression(parser, false);
     skipNewlines(parser);
     consume(parser, TOKEN_THEN, "Expected 'then' after condition");
+    skipNewlines(parser);
 
     int thenJump = emitJump(parser, OP_JUMP_IF_FALSE);
     emitByte(parser, OP_POP);
@@ -1471,7 +1472,10 @@ static void ifStatement(Parser* parser) {
     emitByte(parser, OP_POP);
 
     skipNewlines(parser); // Skip newlines to search for else
-    if (match(parser, TOKEN_ELSE)) statement(parser, true, false);
+    if (match(parser, TOKEN_ELSE)) {
+        skipNewlines(parser);
+        statement(parser, true, false);
+    }
     skipNewlines(parser);
     
     patchJump(parser, elseJump);
@@ -1530,6 +1534,7 @@ static void forStatement(Parser* parser) {
     if (match(parser, TOKEN_PIPE)) {
         expression(parser, false);
         consume(parser, TOKEN_DO, "Expected expression");
+        skipNewlines(parser);
 
         // Skip statement if predicate is false
         int skipJump = emitJump(parser, OP_JUMP_IF_FALSE_2);
@@ -1542,6 +1547,7 @@ static void forStatement(Parser* parser) {
 
     } else {
         consume(parser, TOKEN_DO, "Expected expression");
+        skipNewlines(parser);
         statement(parser, true, false);
     }
 

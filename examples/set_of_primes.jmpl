@@ -8,13 +8,11 @@ func is_prime(x) =
         i := i + 1
     true
 
-func n_primes(n) = 
-    let P = {}
-    let i = 0
-    while i < n do
-        if is_prime(i) then P := P ∪ {i}
-        i := i + 1
-    P
+func n_primes(N) = {n ∈ {2 ... N} | is_prime(n)}
+
+// or (slower)
+
+func simple_n_primes(N) = {n ∈ {2 ... N} | ∀d ∈ {2, 3 ... floor(n / 2)} | n mod d ≠ 0}
 
 // let n = 100
 // println("Set of primes from 1 - " + n + " = " + n_primes(n))

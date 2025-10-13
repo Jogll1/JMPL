@@ -47,4 +47,4 @@ and code snippets.
 
 Check out my <a href="https://jogll1.github.io/blog.html">blog</a> for updates and news about JMPL.
 
-Check out my paper on JMPL for the URSS showcase called <a href="https://urss.warwick.ac.uk/items/show/768">Implementation of a High-level Set Theoretic Programming Language</a>.
+Check out my undergraduate research paper on JMPL called <a href="https://urss.warwick.ac.uk/items/show/768">Implementation of a High-level Set Theoretic Programming Language</a>.
